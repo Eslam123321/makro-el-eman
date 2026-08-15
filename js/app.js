@@ -5,163 +5,42 @@
    ========================================================================== */
 
 const DEFAULT_DATABASE = {
-  // Products System (STRICTLY NO SKU, ONLY SACKS 'شكارة')
-  products: [
-    { id: 'PRD-101', name: 'مكرونة قلم (شكارة 10 كجم)', unit: 'شكارة', stock: 450, costPrice: 180, sellPrice: 220, category: 'درجة أولى' },
-    { id: 'PRD-102', name: 'مكرونة اسباجيتي (شكارة 10 كجم)', unit: 'شكارة', stock: 320, costPrice: 185, sellPrice: 225, category: 'درجة أولى' },
-    { id: 'PRD-103', name: 'مكرونة شعرية (شكارة 25 كجم)', unit: 'شكارة', stock: 200, costPrice: 430, sellPrice: 510, category: 'درجة أولى' },
-    { id: 'PRD-104', name: 'مكرونة لسان عصفور (شكارة 25 كجم)', unit: 'شكارة', stock: 180, costPrice: 440, sellPrice: 520, category: 'درجة أولى' },
-    { id: 'PRD-105', name: 'مكرونة خواتم (شكارة 25 كجم)', unit: 'شكارة', stock: 260, costPrice: 420, sellPrice: 500, category: 'درجة ثانية' },
-    { id: 'PRD-106', name: 'مكرونة عقلة (شكارة 50 كجم)', unit: 'شكارة', stock: 110, costPrice: 820, sellPrice: 980, category: 'جامبو' }
-  ],
-
-  // Customers & Debtors (CRM)
-  customers: [
-    { id: 'CUST-1', name: 'شركة البركة لتجارة الجملة', phone: '01012345678', address: 'طنطا - السوق القديم', totalDebt: 12500, creditLimit: 50000, rating: 'VIP الذهبي', dueDate: '2026-08-10', notes: 'عميل مميز' },
-    { id: 'CUST-2', name: 'محلات الهداية للمواد الغذائية', phone: '01198765432', address: 'المحلة الكبرى - شارع البحر', totalDebt: 4500, creditLimit: 30000, rating: 'عميل فضي', dueDate: '2026-08-14', notes: 'سداد منتظم' },
-    { id: 'CUST-3', name: 'مؤسسة النور للتوزيع', phone: '01234567890', address: 'المنصورة - حي الجامعة', totalDebt: 0, creditLimit: 60000, rating: 'VIP الذهبي', dueDate: '', notes: 'دفع كاش فور السحب' },
-    { id: 'CUST-4', name: 'شركة الفجر للتوريدات العمومية', phone: '01099887766', address: 'بنها - الموقف الجديد', totalDebt: 8200, creditLimit: 25000, rating: 'عميل فضي', dueDate: '2026-08-09', notes: 'يستحق الدفع خلال يومين' }
-  ],
-
-  // Invoices System (ZERO TAX GUARANTEE)
-  invoices: [
-    {
-      id: 'INV-2026-001',
-      date: '2026-08-08 14:30:00',
-      customerName: 'شركة البركة لتجارة الجملة',
-      customerId: 'CUST-1',
-      items: [
-        { id: 'PRD-101', name: 'مكرونة قلم (شكارة 10 كجم)', unit: 'شكارة', qty: 50, price: 220, total: 11000 },
-        { id: 'PRD-103', name: 'مكرونة شعرية (شكارة 25 كجم)', unit: 'شكارة', qty: 20, price: 510, total: 10200 }
-      ],
-      subtotal: 21200,
-      discount: 200,
-      tax: 0,
-      grandTotal: 21000,
-      paidAmount: 8500,
-      remainingAmount: 12500,
-      paymentType: 'جزئي',
-      status: 'مؤكدة'
-    },
-    {
-      id: 'INV-2026-002',
-      date: '2026-08-08 16:15:00',
-      customerName: 'مؤسسة النور للتوزيع',
-      customerId: 'CUST-3',
-      items: [
-        { id: 'PRD-102', name: 'مكرونة اسباجيتي (شكارة 10 كجم)', unit: 'شكارة', qty: 30, price: 225, total: 6750 }
-      ],
-      subtotal: 6750,
-      discount: 50,
-      tax: 0,
-      grandTotal: 6700,
-      paidAmount: 6700,
-      remainingAmount: 0,
-      paymentType: 'كاش',
-      status: 'مؤكدة'
-    }
-  ],
-
-  // HR & Employees Payroll System
-  employees: [
-    { id: 'EMP-1', name: 'أحمد محمود العبد', phone: '01098765432', jobTitle: 'مشرف خط إنتاج', baseSalary: 8500, hireDate: '2024-01-15', payDay: 30, advances: 1200, absences: 1, netSalary: 7016, status: 'نشط' },
-    { id: 'EMP-2', name: 'محمد علي السيد', phone: '01123456789', jobTitle: 'فني تشغيل وتعبئة', baseSalary: 6500, hireDate: '2024-06-01', payDay: 1, advances: 500, absences: 0, netSalary: 6000, status: 'نشط' },
-    { id: 'EMP-3', name: 'محمود سعد علي', phone: '01011223344', jobTitle: 'سائق توزيع (ط د أ 4582)', baseSalary: 7500, hireDate: '2025-01-10', payDay: 1, advances: 1000, absences: 0, netSalary: 6500, status: 'نشط', truckPlate: 'ط د أ 4582' },
-    { id: 'EMP-4', name: 'مصطفى رجب خليل', phone: '01144556677', jobTitle: 'سائق توزيع (م ن ج 1294)', baseSalary: 7000, hireDate: '2025-02-01', payDay: 30, advances: 0, absences: 0, netSalary: 7000, status: 'نشط', truckPlate: 'م ن ج 1294' },
-    { id: 'EMP-5', name: 'وليد خالد العوضي', phone: '01277889900', jobTitle: 'سائق توزيع (ق ب ر 7831)', baseSalary: 7200, hireDate: '2025-03-01', payDay: 25, advances: 500, absences: 1, netSalary: 6460, status: 'نشط', truckPlate: 'ق ب ر 7831' }
-  ],
-
-  // Production Lines Status
+  products: [],
+  customers: [],
+  invoices: [],
+  employees: [],
   productionLines: [
-    { id: 'LINE-1', name: 'خط إنتاج الاسباجيتي', status: 'نشط', dailyCapacity: 1200, todayOutput: 850 },
-    { id: 'LINE-2', name: 'خط إنتاج القلم والشعرية', status: 'نشط', dailyCapacity: 2000, todayOutput: 1400 },
-    { id: 'LINE-3', name: 'خط التعبئة والتغليف الآلي', status: 'نشط', dailyCapacity: 3500, todayOutput: 2900 }
+    { id: 'LINE-1', name: 'خط إنتاج الاسباجيتي', status: 'نشط', dailyCapacity: 1200, todayOutput: 0 },
+    { id: 'LINE-2', name: 'خط إنتاج القلم والشعرية', status: 'نشط', dailyCapacity: 2000, todayOutput: 0 },
+    { id: 'LINE-3', name: 'خط التعبئة والتغليف الآلي', status: 'نشط', dailyCapacity: 3500, todayOutput: 0 }
   ],
-
-  // Operating Expenses
-  expenses: [
-    { id: 'EXP-101', title: 'شراء شكاير تعبئة وتغليف فارغة', category: 'خامات ومواد', amount: 3500, date: '2026-08-08 10:15:00', notes: 'دفعة 5000 شكارة فارغة' },
-    { id: 'EXP-102', title: 'صيانة ومكابس خط الإنتاج الأول', category: 'صيانة', amount: 1800, date: '2026-08-07 18:40:00', notes: 'قطع غيار سير وسيور' },
-    { id: 'EXP-103', title: 'فاتورة كهرباء المصنع', category: 'مرافق', amount: 9400, date: '2026-08-05 11:00:00', notes: 'استهلاك الشهر الحالي' }
-  ],
-
-  // Notifications Center Engine
-  notifications: [
-    { id: 'NOTIF-1', title: 'تنبيه استحقاق سداد قريب', message: 'تستحق دفعات شركة الفجر للتوريدات العمومية (8,200 ج.م) غداً', date: '2026-08-08 18:00', type: 'warning' },
-    { id: 'NOTIF-2', title: 'تنبيه مخزون مكرونة', message: 'مكرونة عقلة (شكارة 50 كجم) اقترب رصيدها من النفاد بالمخزن (110 شكارة)', date: '2026-08-08 12:30', type: 'danger' },
-    { id: 'NOTIF-3', title: 'فاتورة مبيعات جديدة', message: 'تم إصدار فاتورة INV-2026-002 بقيمة 6,700 ج.م للعميل مؤسسة النور', date: '2026-08-08 16:15', type: 'info' }
-  ],
-
-  // Suppliers & Mills System (سعر وحساب مختلف لكل مطحن)
-  suppliers: [
-    { id: 'SUP-101', name: 'مطاحن الدلتا ومصر العليا', phone: '01055443322', address: 'طنطا - المنطقة الصناعية', flourType: 'دقيق فاخر استخراج 72%', unitPrice: 16500, totalBalance: 45000, notes: 'توريد أسبوعي ممتاز' },
-    { id: 'SUP-102', name: 'شركة مطاحن الفرسان للدقيق', phone: '01122334455', address: 'المحلة الكبرى - طريق طنطا', flourType: 'دقيق قمح استخراج 80%', unitPrice: 15800, totalBalance: 18000, notes: 'أسعار تنافسية' },
-    { id: 'SUP-103', name: 'مطاحن النجم الذهبي فاخر', phone: '01288776655', address: 'المنصورة - التجميع الصناعي', flourType: 'دقيق استخراج 72% مخصص للمكرونة', unitPrice: 17000, totalBalance: 0, notes: 'دفع نقدي فور التوريد' }
-  ],
-
-  // Attendance & Absence Records (سجل الحضور والغياب بالتاريخ الكامل)
-  attendanceRecords: [
-    { id: 'ATT-101', empId: 'EMP-1', empName: 'أحمد محمود العبد', date: '2026-08-02', dayName: 'الأحد', month: 'أغسطس 2026', year: '2026', type: 'غياب', notes: 'غياب بدون إذن مسبق' },
-    { id: 'ATT-102', empId: 'EMP-5', empName: 'وليد خالد العوضي', date: '2026-08-04', dayName: 'الثلاثاء', month: 'أغسطس 2026', year: '2026', type: 'غياب', notes: 'عذر صيانة السيارة' }
-  ],
-
-  // Delivery Fleet Trucks (أسطول عربيات التوصيل والسيارات بدون مناديب)
-  deliveryTrucks: [
-    { id: 'TRK-101', driverName: 'محمود سعد علي', plateNumber: 'ط د أ 4582', phone: '01011223344', status: 'في الطريق للتوصيل' },
-    { id: 'TRK-102', driverName: 'مصطفى رجب خليل', plateNumber: 'م ن ج 1294', phone: '01144556677', status: 'جاهزة بالمصنع' },
-    { id: 'TRK-103', driverName: 'وليد خالد العوضي', plateNumber: 'ق ب ر 7831', phone: '01277889900', status: 'صيانة دورية' }
-  ],
-
-  // Users & Permissions Management System
+  expenses: [],
+  notifications: [],
+  suppliers: [],
+  attendanceRecords: [],
+  attendanceLog: [],
+  deliveryTrucks: [],
+  treasury: 0,
   users: [
     {
       id: 'USR-1',
-      name: 'المدير العام المسؤول (Super Admin)',
+      name: 'المدير العام للمصنع',
       username: 'admin',
-      email: 'admin@eleman.com',
+      email: 'admin@speed-up.tech',
       password: 'admin',
       role: 'مدير عام',
       status: 'نشط',
-      createdAt: '2024-01-01',
+      createdAt: '2026-01-01',
       permissions: ['dashboard', 'sales', 'inventory', 'suppliers', 'customers', 'hr', 'expenses', 'reports', 'users', 'notifications']
-    },
-    {
-      id: 'USR-2',
-      name: 'محمود سعد (مسؤول المبيعات)',
-      username: 'sales',
-      email: 'sales@eleman.com',
-      password: 'sales',
-      role: 'مسؤول مبيعات',
-      status: 'نشط',
-      createdAt: '2024-03-10',
-      permissions: ['dashboard', 'sales', 'customers']
-    },
-    {
-      id: 'USR-3',
-      name: 'طارق عبد الله (أمين المخازن)',
-      username: 'inventory',
-      email: 'inventory@eleman.com',
-      password: '123',
-      role: 'أمين مخزن',
-      status: 'نشط',
-      createdAt: '2024-04-15',
-      permissions: ['dashboard', 'inventory', 'reports']
-    },
-    {
-      id: 'USR-4',
-      name: 'خالد مصطفى (المحاسب المالي)',
-      username: 'accountant',
-      email: 'accountant@eleman.com',
-      password: '123',
-      role: 'محاسب مالي',
-      status: 'نشط',
-      createdAt: '2024-05-01',
-      permissions: ['dashboard', 'sales', 'expenses', 'reports', 'suppliers']
     }
-  ],
-
-  treasury: 145000
+  ]
 };
+
+const DB_VERSION = '2026_08_15_v3_clean_zero';
+if (localStorage.getItem('eleman_db_version') !== DB_VERSION) {
+  localStorage.setItem('eleman_erp_db', JSON.stringify(DEFAULT_DATABASE));
+  localStorage.setItem('eleman_db_version', DB_VERSION);
+}
 
 // Storage Manager
 class StorageManager {
@@ -171,53 +50,30 @@ class StorageManager {
       this.saveDB(DEFAULT_DATABASE);
       return DEFAULT_DATABASE;
     }
-    const parsed = JSON.parse(data);
-    if (!parsed.productionLines) parsed.productionLines = DEFAULT_DATABASE.productionLines;
-    if (!parsed.notifications) parsed.notifications = DEFAULT_DATABASE.notifications;
-    if (!parsed.attendanceLog) parsed.attendanceLog = parsed.attendanceRecords || DEFAULT_DATABASE.attendanceRecords;
-    parsed.attendanceRecords = parsed.attendanceLog;
-    if (!parsed.deliveryTrucks || parsed.deliveryTrucks.length === 0) parsed.deliveryTrucks = DEFAULT_DATABASE.deliveryTrucks;
-    if (!parsed.employees || parsed.employees.length === 0) parsed.employees = DEFAULT_DATABASE.employees;
-    if (!parsed.users || parsed.users.length === 0) parsed.users = DEFAULT_DATABASE.users;
-
-    // Clean up repName from delivery trucks
-    (parsed.deliveryTrucks || []).forEach(t => {
-      delete t.repName;
-    });
-
-    // Auto-sync all fleet drivers into employees list
-    (parsed.deliveryTrucks || []).forEach(t => {
-      if (t.driverName) {
-        const found = parsed.employees.find(e => e.name === t.driverName || (e.truckPlate && e.truckPlate === t.plateNumber));
-        if (!found) {
-          parsed.employees.push({
-            id: `EMP-${parsed.employees.length + 1}`,
-            name: t.driverName,
-            phone: t.phone || '',
-            jobTitle: `سائق توزيع (${t.plateNumber})`,
-            baseSalary: 7500,
-            hireDate: '2025-01-10',
-            payDay: 1,
-            advances: 0,
-            absences: 0,
-            netSalary: 7500,
-            status: 'نشط',
-            truckPlate: t.plateNumber
-          });
-        } else {
-          found.truckPlate = t.plateNumber;
-          if (t.phone) found.phone = t.phone;
-        }
-      }
-    });
-
-    return parsed;
+    try {
+      const parsed = JSON.parse(data);
+      if (!Array.isArray(parsed.products)) parsed.products = [];
+      if (!Array.isArray(parsed.customers)) parsed.customers = [];
+      if (!Array.isArray(parsed.invoices)) parsed.invoices = [];
+      if (!Array.isArray(parsed.employees)) parsed.employees = [];
+      if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
+      if (!Array.isArray(parsed.suppliers)) parsed.suppliers = [];
+      if (!Array.isArray(parsed.notifications)) parsed.notifications = [];
+      if (!Array.isArray(parsed.attendanceLog)) parsed.attendanceLog = [];
+      if (!Array.isArray(parsed.deliveryTrucks)) parsed.deliveryTrucks = [];
+      if (!Array.isArray(parsed.users) || parsed.users.length === 0) parsed.users = DEFAULT_DATABASE.users;
+      if (typeof parsed.treasury !== 'number') parsed.treasury = 0;
+      return parsed;
+    } catch(e) {
+      this.saveDB(DEFAULT_DATABASE);
+      return DEFAULT_DATABASE;
+    }
   }
 
   static saveDB(db) {
     localStorage.setItem('eleman_erp_db', JSON.stringify(db));
     if (typeof FirebaseSync !== 'undefined' && typeof FirebaseSync.pushToCloud === 'function') {
-      FirebaseSync.pushToCloud();
+      FirebaseSync.pushToCloud(true);
     }
   }
 }

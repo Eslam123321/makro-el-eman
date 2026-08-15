@@ -60,17 +60,17 @@ const FirebaseSync = {
         this.updateSyncBadge('online');
 
         // Merge and update local state if cloud data has valid structure
-        if (cloudData && typeof cloudData === 'object' && cloudData.invoices) {
+        if (cloudData && typeof cloudData === 'object' && Array.isArray(cloudData.users)) {
           const isDifferent = JSON.stringify(cloudData) !== JSON.stringify(App.db);
           if (isDifferent) {
             App.db = cloudData;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(App.db));
+            localStorage.setItem('eleman_erp_db', JSON.stringify(App.db));
             this.refreshActivePageUI();
           }
         }
       } else {
         // Document does not exist in cloud yet -> Initial Cloud Seeding
-        console.log('⚡ Initializing cloud database with local schema...');
+        console.log('⚡ Initializing cloud database with clean schema...');
         this.pushToCloud(true);
       }
     }, (error) => {
@@ -95,7 +95,8 @@ const FirebaseSync = {
 
         // Clean deep clone of data
         const payload = JSON.parse(JSON.stringify(App.db));
-        await this.docRef.set(payload, { merge: true });
+        // Overwrite full state so additions and deletions sync accurately
+        await this.docRef.set(payload);
 
         this.isSyncing = false;
         this.isCloudOnline = true;
