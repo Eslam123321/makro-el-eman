@@ -40,6 +40,13 @@ const FirebaseSync = {
 
       // Start listening to live cloud updates
       this.listenToCloud();
+
+      // Check one-time cloud zero database reset
+      if (localStorage.getItem('eleman_cloud_reset_v5_zero') !== 'done') {
+        localStorage.setItem('eleman_cloud_reset_v5_zero', 'done');
+        this.pushToCloud(true);
+      }
+
       console.log('✅ Firebase Cloud Engine initialized successfully for makro-el-eman');
     } catch (err) {
       console.error('Firebase initialization error:', err);

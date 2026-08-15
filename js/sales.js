@@ -175,7 +175,7 @@ function renderCurrentInvoiceItems() {
         </div>
       </td>
       <td>
-        <input type="number" min="0" value="${item.price}" class="form-control text-center font-bold" style="width: 95px; height: 32px; padding: 2px;" onclick="this.select()" oninput="updateInvoiceItemRealtime(${idx}, 'price', this.value)">
+        <input type="text" value="${App.formatCurrency(item.price)}" class="form-control text-center font-bold" style="width: 100px; height: 32px; padding: 2px; background: var(--bg-main);" disabled readonly title="سعر الشكارة ثابت ومحدد مسبقاً في المخزن">
       </td>
       <td><strong class="text-success" id="item-total-val-${idx}">${App.formatCurrency(item.total)}</strong></td>
       <td>
@@ -341,6 +341,9 @@ function loadInvoicesTable(invoicesData = null) {
     return;
   }
 
+  const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
+  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+
   tbody.innerHTML = invoices.map(inv => `
     <tr>
       <td><strong>${inv.id}</strong></td>
@@ -348,15 +351,95 @@ function loadInvoicesTable(invoicesData = null) {
       <td>${App.formatTimestamp(inv.date)}</td>
       <td><span class="badge ${inv.paymentType === 'كاش' ? 'badge-success' : 'badge-warning'}">${inv.paymentType}</span></td>
       <td><strong class="text-success">${App.formatCurrency(inv.grandTotal)}</strong></td>
-      <td><span class="badge ${inv.status === 'مؤكدة' ? 'badge-success' : 'badge-warning'}">${inv.status}</span></td>
+      <td><span class="badge ${inv.status === 'مؤكدة' ? 'badge-success' : (inv.status === 'مرتجعة بالكامل' ? 'badge-danger' : 'badge-warning')}">${inv.status}</span></td>
       <td>
-        <div class="flex gap-2">
-          <button class="btn btn-secondary btn-sm" onclick="previewInvoice('${inv.id}')" title="معاينة"><i class="fa-solid fa-eye"></i> معاينة الفاتورة</button>
-          <button class="btn btn-whatsapp btn-sm" onclick="sendInvoiceWhatsApp('${inv.id}')" title="إرسال عبر الواتساب"><i class="fa-brands fa-whatsapp"></i> الواتساب</button>
+        <div class="flex gap-1 flex-wrap">
+          <button class="btn btn-secondary btn-sm" onclick="previewInvoice('${inv.id}')" title="معاينة"><i class="fa-solid fa-eye text-primary-color"></i> معاينة</button>
+          <button class="btn btn-whatsapp btn-sm" onclick="sendInvoiceWhatsApp('${inv.id}')" title="إرسال عبر الواتساب"><i class="fa-brands fa-whatsapp"></i> واتساب</button>
+          ${isSuperAdmin ? `
+            ${inv.status !== 'مرتجعة بالكامل' ? `<button class="btn btn-secondary btn-sm" onclick="returnInvoice('${inv.id}')" title="إرجاع الفاتورة ورد الشكاير للمخزن" style="color: #d97706;"><i class="fa-solid fa-rotate-left"></i> مرتجع</button>` : ''}
+            <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${inv.id}')" title="حذف الفاتورة نهائياً"><i class="fa-solid fa-trash"></i> حذف</button>
+          ` : ''}
         </div>
       </td>
     </tr>
   `).join('');
+}
+
+// Return / Refund Invoice (Restores stock to inventory and adjusts finances - Super Admin Only)
+function returnInvoice(invId) {
+  const currentUser = App.getCurrentUser();
+  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+  if (!isSuperAdmin) {
+    App.showToast('عفواً، خاصية إرجاع الفواتير مقتصرة على حساب المدير العام فقط!', 'danger');
+    return;
+  }
+
+  const invIndex = (App.db.invoices || []).findIndex(i => i.id === invId);
+  if (invIndex === -1) return;
+  const inv = App.db.invoices[invIndex];
+
+  if (inv.status === 'مرتجعة بالكامل') {
+    App.showToast('هذه الفاتورة تم إرجاعها بالفعل مسبقاً!', 'warning');
+    return;
+  }
+
+  if (confirm(`هل أنت متأكد من إرجاع الفاتورة (${inv.id}) للعميل (${inv.customerName})؟ سيتم إعادة عدد الشكاير المباعة (${inv.items.reduce((s, i) => s + (i.qty || 0), 0)} شكارة) إلى رصيد المخزن فوراً.`)) {
+    // 1. Restore stock in products inventory
+    (inv.items || []).forEach(item => {
+      const prod = (App.db.products || []).find(p => p.id === item.id || p.name === item.name);
+      if (prod) {
+        prod.stock = (prod.stock || 0) + (item.qty || 0);
+      }
+    });
+
+    // 2. Adjust customer debt if remaining balance existed
+    if (inv.remainingAmount > 0) {
+      const cust = (App.db.customers || []).find(c => c.name === inv.customerName || c.id === inv.customerId);
+      if (cust) {
+        cust.totalDebt = Math.max(0, (cust.totalDebt || 0) - inv.remainingAmount);
+      }
+    }
+
+    // 3. Adjust treasury if paid cash was received
+    if (inv.paidAmount > 0) {
+      App.db.treasury = Math.max(0, (App.db.treasury || 0) - inv.paidAmount);
+    }
+
+    inv.status = 'مرتجعة بالكامل';
+    if (typeof App.logActivity === 'function') {
+      App.logActivity('إرجاع فاتورة مبيعات ↩️', `تم عمل إرجاع ومرتجع للفاتورة (${inv.id}) بقيمة (${App.formatCurrency(inv.grandTotal)}) وإعادة الشكاير للمخزن`, 'warning');
+    }
+
+    App.save();
+    loadInvoicesTable();
+    renderPageSummaryCards('sales', 'sales-summary-cards');
+    App.showToast(`تم إرجاع الفاتورة (${inv.id}) وإعادة كافة الشكاير إلى رصيد المخزن بنجاح ↩️📦`, 'success');
+  }
+}
+
+// Delete Invoice Completely (Super Admin Only)
+function deleteInvoice(invId) {
+  const currentUser = App.getCurrentUser();
+  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+  if (!isSuperAdmin) {
+    App.showToast('عفواً، خاصية حذف الفواتير مقتصرة على حساب المدير العام فقط!', 'danger');
+    return;
+  }
+
+  const inv = (App.db.invoices || []).find(i => i.id === invId);
+  if (!inv) return;
+
+  if (confirm(`تحذير: هل أنت متأكد من الحذف النهائي للفاتورة (${inv.id})؟ سيتم مسحها نهائياً من قاعدة البيانات والسحابة.`)) {
+    App.db.invoices = (App.db.invoices || []).filter(i => i.id !== invId);
+    if (typeof App.logActivity === 'function') {
+      App.logActivity('حذف فاتورة مبيعات 🗑️', `تم حذف الفاتورة (${inv.id}) نهائياً من السيستم`, 'danger');
+    }
+    App.save();
+    loadInvoicesTable();
+    renderPageSummaryCards('sales', 'sales-summary-cards');
+    App.showToast(`تم حذف الفاتورة (${inv.id}) نهائياً من النظام والسحابة 🗑️`, 'danger');
+  }
 }
 
 // Quick Invoice Preview Card Modal

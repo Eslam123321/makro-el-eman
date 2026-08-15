@@ -141,11 +141,43 @@ function loadEmployeesTable() {
             <button class="btn btn-secondary btn-sm" onclick="openAddAdvanceModal('${emp.id}')" title="صرف سلفة"><i class="fa-solid fa-hand-holding-hand text-warning"></i> سلفة</button>
             <button class="btn btn-primary btn-sm" onclick="disburseSalary('${emp.id}')" title="صرف الراتب"><i class="fa-solid fa-money-check-dollar"></i> صرف الراتب 💰</button>
             <button class="btn btn-secondary btn-sm" onclick="openDeductionModal('${emp.id}')" title="خصم مالي إداري"><i class="fa-solid fa-minus text-danger"></i> خصم</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${emp.id}')" title="حذف الموظف نهائياً"><i class="fa-solid fa-trash"></i> حذف</button>
           </div>
         </td>
       </tr>
     `;
   }).join('');
+}
+
+// Delete Employee (Super Admin Only)
+function deleteEmployee(empId) {
+  const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
+  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+  if (!isSuperAdmin) {
+    App.showToast('عفواً، صلاحية حذف الموظفين مقتصرة على حساب المدير العام فقط!', 'danger');
+    return;
+  }
+
+  const emp = (App.db.employees || []).find(e => e.id === empId);
+  if (!emp) return;
+
+  if (confirm(`تحذير: هل أنت متأكد من رغبتك في حذف الموظف (${emp.name}) - (${emp.jobTitle})؟ سيتم مسح بياناته وسجل حضوره نهائياً من قاعدة البيانات والسحابة.`)) {
+    const empName = emp.name;
+    // Remove from employees list
+    App.db.employees = (App.db.employees || []).filter(e => e.id !== empId);
+    // Remove attendance logs for this employee
+    App.db.attendanceLog = (App.db.attendanceLog || []).filter(a => a.empId !== empId);
+
+    if (typeof App.logActivity === 'function') {
+      App.logActivity('حذف موظف من النظام 🗑️', `تم حذف الموظف (${empName}) وسجل حضوره نهائياً من السيستم`, 'danger');
+    }
+
+    App.save();
+    loadEmployeesTable();
+    loadDailyAttendanceTable();
+    if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('hr', 'hr-summary-cards-container');
+    App.showToast(`تم حذف الموظف (${empName}) نهائياً من النظام والسحابة 🗑️`, 'danger');
+  }
 }
 
 // Filter Section 2 (Attendance Table)
