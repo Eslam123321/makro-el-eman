@@ -208,6 +208,9 @@ const App = {
 
   formatCurrency(amount) {
     const num = Math.round(parseFloat(amount) || 0);
+    if (num < 0) {
+      return `-${new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 0 }).format(Math.abs(num))} ج.م`;
+    }
     return new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 0 }).format(num) + ' ج.م';
   },
 
@@ -995,6 +998,21 @@ async function downloadInvoiceAsImage() {
 
   App.showToast('جاري استخراج وتنزيل الفاتورة كصورة عالية الدقة (PNG)... 🖼️', 'info');
 
+  // Ensure html2canvas is available
+  if (typeof html2canvas === 'undefined') {
+    try {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    } catch (e) {
+      console.warn('Could not load html2canvas from CDN, trying fallback...');
+    }
+  }
+
   if (document.fonts && document.fonts.ready) {
     try {
       await document.fonts.ready;
@@ -1008,6 +1026,7 @@ async function downloadInvoiceAsImage() {
       allowTaint: true,
       backgroundColor: '#ffffff',
       letterRendering: false,
+      logging: false,
       scrollY: 0,
       scrollX: 0
     });
@@ -1025,7 +1044,7 @@ async function downloadInvoiceAsImage() {
         }
         const blobUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.download = `Invoice-${Date.now()}.png`;
+        link.download = `فاتورة-${Date.now()}.png`;
         link.href = blobUrl;
         document.body.appendChild(link);
         link.click();
@@ -1038,7 +1057,7 @@ async function downloadInvoiceAsImage() {
     }
   } catch (err) {
     console.error('downloadInvoiceAsImage error:', err);
-    App.showToast('تعذر تحويل الفاتورة لصورة', 'danger');
+    App.showToast('تعذر تحويل الفاتورة لصورة - يرجى المحاولة مجدداً', 'danger');
   }
 }
 

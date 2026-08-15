@@ -85,20 +85,57 @@ function loadDashboardData() {
   const currentCOGS = getCOGS(filteredInvoices);
   const currentNetProfit = currentSales - currentCOGS - currentExp;
 
-  const totalDebts = customers.reduce((a, b) => a + b.totalDebt, 0);
-  const cashLiquidity = App.db.treasury;
+  // Complete Financial Balance (Liquidity, Customer Debts, Supplier Dues)
+  const totalDebts = (customers || []).reduce((a, b) => a + (b.totalDebt || 0), 0);
+  const supplierDues = (App.db.suppliers || []).reduce((a, b) => a + (b.totalBalance || 0), 0);
+  const cashLiquidity = App.db.treasury || 0;
+  const netFinancial = cashLiquidity + totalDebts - supplierDues;
 
   // Render Daily, Monthly, Yearly Breakdowns
   if (document.getElementById('sales-today-val')) document.getElementById('sales-today-val').textContent = App.formatCurrency(salesToday);
   if (document.getElementById('sales-month-val')) document.getElementById('sales-month-val').textContent = App.formatCurrency(salesMonth);
   if (document.getElementById('sales-year-val')) document.getElementById('sales-year-val').textContent = App.formatCurrency(salesYear);
 
-  if (document.getElementById('profit-today-val')) document.getElementById('profit-today-val').textContent = App.formatCurrency(profitToday);
-  if (document.getElementById('profit-month-val')) document.getElementById('profit-month-val').textContent = App.formatCurrency(profitMonth);
-  if (document.getElementById('profit-year-val')) document.getElementById('profit-year-val').textContent = App.formatCurrency(profitYear);
+  // Profit / Loss Dynamic Coloring & Labels
+  const profitTodayTitleEl = document.getElementById('profit-today-title');
+  const profitTodayValEl = document.getElementById('profit-today-val');
+  const profitIconBox = document.getElementById('profit-icon-box');
 
+  if (profitTodayValEl) {
+    profitTodayValEl.textContent = App.formatCurrency(profitToday);
+    if (profitToday < 0) {
+      profitTodayValEl.className = 'text-danger font-bold';
+      if (profitTodayTitleEl) profitTodayTitleEl.innerHTML = 'صافي خسائر اليوم <span style="font-size: 0.75rem; color: #dc2626;">(عجز مصاريف)</span>';
+      if (profitIconBox) profitIconBox.className = 'summary-card-icon icon-rose';
+    } else {
+      profitTodayValEl.className = 'text-success font-bold';
+      if (profitTodayTitleEl) profitTodayTitleEl.textContent = 'أرباح اليوم الصافية';
+      if (profitIconBox) profitIconBox.className = 'summary-card-icon icon-blue';
+    }
+  }
+
+  const profitMonthValEl = document.getElementById('profit-month-val');
+  if (profitMonthValEl) {
+    profitMonthValEl.textContent = App.formatCurrency(profitMonth);
+    profitMonthValEl.className = profitMonth < 0 ? 'text-danger font-bold' : 'text-success font-bold';
+  }
+
+  const profitYearValEl = document.getElementById('profit-year-val');
+  if (profitYearValEl) {
+    profitYearValEl.textContent = App.formatCurrency(profitYear);
+    profitYearValEl.className = profitYear < 0 ? 'text-danger font-bold' : 'text-success font-bold';
+  }
+
+  // Render Comprehensive Cash, Debts & Supplier Dues
   if (document.getElementById('cash-liquidity')) document.getElementById('cash-liquidity').textContent = App.formatCurrency(cashLiquidity);
   if (document.getElementById('total-debts')) document.getElementById('total-debts').textContent = App.formatCurrency(totalDebts);
+  if (document.getElementById('supplier-dues-val')) document.getElementById('supplier-dues-val').textContent = App.formatCurrency(supplierDues);
+  
+  const netFinEl = document.getElementById('net-financial-balance');
+  if (netFinEl) {
+    netFinEl.textContent = App.formatCurrency(netFinancial);
+    netFinEl.className = netFinancial < 0 ? 'text-danger font-bold' : 'text-success font-bold';
+  }
 
   // Check low stock products
   const lowStockProds = products.filter(p => p.stock < 150);
@@ -225,14 +262,18 @@ function renderDashboardBarChart(sales, expenses, profit) {
 
   if (window.myBarChart) window.myBarChart.destroy();
 
+  const isLoss = profit < 0;
+  const profitLabel = isLoss ? 'صافي الخسائر (عجز مصاريف)' : 'صافي الأرباح الفعلية';
+  const profitColor = isLoss ? '#dc2626' : '#2563eb';
+
   window.myBarChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['إجمالي المبيعات', 'التكاليف والمصروفات', 'صافي الأرباح الفعلية'],
+      labels: ['إجمالي المبيعات', 'التكاليف والمصروفات', profitLabel],
       datasets: [{
         label: 'المبلغ بالجنيه المصري (EGP)',
         data: [sales, expenses, profit],
-        backgroundColor: ['#059669', '#e11d48', '#2563eb'],
+        backgroundColor: ['#059669', '#e11d48', profitColor],
         borderRadius: 10,
         borderSkipped: false
       }]

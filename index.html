@@ -83,31 +83,35 @@
           <!-- Net Profit Breakdown -->
           <div class="card p-5">
             <div class="flex justify-between items-center mb-3">
-              <span class="text-sm text-muted font-bold">أرباح اليوم الصافية</span>
-              <div class="summary-card-icon icon-blue" style="width: 36px; height: 36px; font-size: 1rem;"><i class="fa-solid fa-calculator"></i></div>
+              <span class="text-sm text-muted font-bold" id="profit-today-title">أرباح اليوم الصافية</span>
+              <div class="summary-card-icon icon-blue" id="profit-icon-box" style="width: 36px; height: 36px; font-size: 1rem;"><i class="fa-solid fa-calculator"></i></div>
             </div>
-            <h2 class="text-primary-color font-bold" id="profit-today-val">0 ج.م</h2>
+            <h2 class="font-bold" id="profit-today-val">0 ج.م</h2>
             <div class="text-xs text-muted mt-2 border-t pt-2 flex justify-between">
-              <span>أرباح الشهر: <strong id="profit-month-val" class="text-success">0 ج.م</strong></span>
-              <span>أرباح السنة: <strong id="profit-year-val" class="text-success">0 ج.م</strong></span>
+              <span>أرباح الشهر: <strong id="profit-month-val">0 ج.م</strong></span>
+              <span>أرباح السنة: <strong id="profit-year-val">0 ج.م</strong></span>
             </div>
           </div>
 
-          <!-- Cash & Debts Card -->
+          <!-- Cash, Debts & Supplier Dues Card (المركز المالي الشامل) -->
           <div class="card p-5">
-            <div class="flex justify-between items-center mb-3">
-              <span class="text-sm text-muted font-bold">السيولة والديون</span>
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm text-muted font-bold">السيولة ومستحقات المطاحن والديون</span>
               <div class="summary-card-icon icon-amber" style="width: 36px; height: 36px; font-size: 1rem;"><i class="fa-solid fa-vault"></i></div>
             </div>
-            <div class="flex justify-between items-center mt-1">
+            <div class="grid grid-cols-2 gap-2 mt-1">
               <div>
-                <span class="text-xs text-muted">الخزينة المتاحة</span>
-                <h3 class="text-warning font-bold" id="cash-liquidity">0 ج.م</h3>
+                <span class="text-xs text-muted">الخزينة (كاش):</span>
+                <h4 class="text-primary-color font-bold" id="cash-liquidity">0 ج.م</h4>
               </div>
-              <div class="text-left border-r pr-4">
-                <span class="text-xs text-muted">ديون للتحصيل</span>
-                <h3 class="text-danger font-bold" id="total-debts">0 ج.م</h3>
+              <div class="text-left border-r pr-2">
+                <span class="text-xs text-muted">ديون للعملاء (لنا):</span>
+                <h4 class="text-warning font-bold" id="total-debts">0 ج.م</h4>
               </div>
+            </div>
+            <div class="text-xs text-muted mt-2 border-t pt-2 flex justify-between items-center">
+              <span>مستحقات المطاحن (علينا): <strong id="supplier-dues-val" class="text-danger font-bold">0 ج.م</strong></span>
+              <span>الصافي: <strong id="net-financial-balance" class="text-success font-bold">0 ج.م</strong></span>
             </div>
           </div>
 
