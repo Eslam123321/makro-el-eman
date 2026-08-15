@@ -1585,17 +1585,6 @@ function renderAppLayout(activePage = 'dashboard') {
       topHeaderActions.append(notifWrapper);
     }
 
-    // Inject Firebase Real-time Cloud Status Badge
-    if (!document.getElementById('firebase-sync-badge')) {
-      const syncBadge = document.createElement('span');
-      syncBadge.id = 'firebase-sync-badge';
-      syncBadge.className = 'badge badge-success';
-      syncBadge.style.cursor = 'pointer';
-      syncBadge.onclick = () => { if (typeof FirebaseSync !== 'undefined') FirebaseSync.forceManualSync(); };
-      syncBadge.innerHTML = `<i class="fa-solid fa-cloud-bolt fa-fade"></i> <span>سحابي متصل ⚡</span>`;
-      topHeaderActions.prepend(syncBadge);
-    }
-
     if (!document.getElementById('header-quick-search-btn')) {
       const searchBtn = document.createElement('button');
       searchBtn.id = 'header-quick-search-btn';
@@ -1809,3 +1798,94 @@ function printDashboardComprehensiveReport(customFilter = null) {
 
   openModal('dashboard-report-modal');
 }
+
+/* ==========================================================================
+   PWA Installation Engine & Service Worker Registration
+   ========================================================================== */
+let deferredPWAInstallPrompt = null;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('✅ Service Worker registered successfully for PWA'))
+      .catch(err => console.warn('Service Worker registration failed:', err));
+  });
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPWAInstallPrompt = e;
+  
+  // Show customized installation prompt if not previously dismissed in session
+  if (!sessionStorage.getItem('pwa_install_prompt_shown')) {
+    setTimeout(() => {
+      showPWAInstallModal();
+    }, 1200);
+  }
+});
+
+function showPWAInstallModal() {
+  if (document.getElementById('pwa-install-banner-modal')) return;
+
+  const modal = document.createElement('div');
+  modal.id = 'pwa-install-banner-modal';
+  modal.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    left: 20px;
+    right: 20px;
+    max-width: 450px;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 2px solid #059669;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.25), 0 0 20px rgba(5,150,105,0.2);
+    padding: 16px 18px;
+    z-index: 999999;
+    font-family: 'Cairo', sans-serif;
+    direction: rtl;
+    text-align: right;
+    animation: pwaSlideUp 0.35s ease-out;
+  `;
+
+  modal.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+      <img src="image/logo.png" alt="شعار" style="width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; background: #ecfdf5; border-radius: 10px; padding: 3px; border: 1px solid #a7f3d0;">
+      <div>
+        <h3 style="margin: 0; color: #0f172a; font-size: 1.02rem; font-weight: 800;">تثبيت تطبيق مصنع الإيمان 📲</h3>
+        <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.78rem;">هل تريد تثبيت التطبيق على جهازك لسهولة وسرعة الوصول بدون متصفح؟</p>
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button type="button" onclick="dismissPWAInstall()" style="background: #f1f5f9; color: #475569; border: none; border-radius: 8px; padding: 7px 14px; font-weight: 700; font-size: 0.82rem; cursor: pointer; font-family: 'Cairo', sans-serif;">لاحقاً</button>
+      <button type="button" onclick="triggerPWAInstall()" style="background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; border: none; border-radius: 8px; padding: 7px 16px; font-weight: 800; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 12px rgba(5,150,105,0.3); font-family: 'Cairo', sans-serif; display: flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-download"></i> تثبيت التطبيق الآن ⚡
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  sessionStorage.setItem('pwa_install_prompt_shown', 'true');
+}
+
+function triggerPWAInstall() {
+  if (deferredPWAInstallPrompt) {
+    deferredPWAInstallPrompt.prompt();
+    deferredPWAInstallPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        App.showToast('تم بدء تثبيت تطبيق مصنع الإيمان على جهازك بنجاح! 📲✨', 'success');
+      }
+      deferredPWAInstallPrompt = null;
+      dismissPWAInstall();
+    });
+  } else {
+    dismissPWAInstall();
+    App.showToast('لتثبيت التطبيق على الآيفون: اضغط على زر المشاركة (Share) ثم اختر "إضافة إلى الشاشة الرئيسية" (Add to Home Screen) 📲', 'info');
+  }
+}
+
+function dismissPWAInstall() {
+  const modal = document.getElementById('pwa-install-banner-modal');
+  if (modal) modal.remove();
+}
+

@@ -543,6 +543,18 @@ a:hover { color: var(--primary-hover); }
   transform: scale(1.02);
 }
 
+@keyframes pwaSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+
 /* Out of Stock Card Disabled Styling */
 .out-of-stock-card {
   opacity: 0.65;
