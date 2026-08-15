@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مصنع الإيمان للمكرونة | الموردين والمطاحن</title>
+  
+  <link rel="icon" type="image/png" href="image/logo.png">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+      <header class="top-header">
+        <div class="flex items-center gap-3">
+          <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fa-solid fa-bars"></i></button>
+          <div class="header-title">
+            <h1>إدارة الموردين والمطاحن (Suppliers & Flour Mills)</h1>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة سجل المطاحن 𝓅</button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        
+        <!-- Top Page Summary Banner Cards -->
+        <div class="page-summary-cards" id="suppliers-summary-cards"></div>
+
+        <!-- Embedded Form Card: Add New Supplier / Flour Mill -->
+        <div class="card mb-6" id="add-supplier-section">
+          <div class="flex items-center gap-3 mb-4 pb-3 border-b">
+            <div class="brand-icon" style="width: 40px; height: 40px; font-size: 1.1rem;">
+              <i class="fa-solid fa-wheat-awn"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg">إضافة مطحن / مورد دقيق جديد 🌾</h3>
+              <p class="text-xs text-muted">تسجيل بيانات المطحن وتحديد سعر توريد الطن المخصص لمتابعة الشحنات والمسحوبات</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>اسم المطحن / المورد</label>
+              <input type="text" id="sup-name" class="form-control" placeholder="مثال: مطاحن الدلتا ومصر العليا">
+            </div>
+            <div class="form-group">
+              <label>رقم الهاتف للتواصل</label>
+              <input type="text" id="sup-phone" class="form-control" placeholder="010XXXXXXXX">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>درجة نوع الدقيق المورد</label>
+              <select id="sup-flour-type" class="form-control">
+                <option value="دقيق فاخر استخراج 72%">دقيق فاخر استخراج 72%</option>
+                <option value="دقيق قمح استخراج 80%">دقيق قمح استخراج 80%</option>
+                <option value="دقيق صلب ممتاز للمكرونة">دقيق صلب ممتاز للمكرونة</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>سعر التوريد المحدد لهذا المطحن (جنيه / طن)</label>
+              <input type="number" id="sup-price" class="form-control" placeholder="16500" min="0">
+            </div>
+          </div>
+
+          <div class="form-group mb-4">
+            <label>عنوان المطحن / الفرع</label>
+            <input type="text" id="sup-address" class="form-control" placeholder="طنطا - المنطقة الصناعية">
+          </div>
+
+          <div class="form-group mb-4">
+            <label>ملاحظات وشروط التعامل</label>
+            <input type="text" id="sup-notes" class="form-control" placeholder="ملاحظات اختيارية">
+          </div>
+
+          <div class="flex justify-end pt-2 border-t">
+            <button class="btn btn-primary" onclick="saveNewSupplier()"><i class="fa-solid fa-check ml-1"></i> حفظ المطحن بالسجل 🌾</button>
+          </div>
+        </div>
+
+        <!-- Suppliers & Mills Table Section -->
+        <div class="card mb-6">
+          <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+            <div>
+              <h3>سجل مطاحن وموردي الدقيق الخام (سعر وحساب مختلف لكل مطحن)</h3>
+              <p class="text-sm text-muted">متابعة شحنات الدقيق الموردة ومسحوبات ومستحقات المطاحن</p>
+            </div>
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" class="form-control" placeholder="بحث باسم المطحن أو الهاتف..." onkeyup="filterSuppliers(this.value)">
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="table" id="suppliers-table">
+              <thead>
+                <tr>
+                  <th>كود المطحن</th>
+                  <th>اسم المطحن / المورد</th>
+                  <th>رقم الهاتف والعنوان</th>
+                  <th>نوع الدقيق المورد</th>
+                  <th>سعر التوريد المخصص</th>
+                  <th>المستحقات المتبقية للمطحن</th>
+                  <th>إجراءات الإدارة والتوريد</th>
+                </tr>
+              </thead>
+              <tbody id="suppliers-list-tbody">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="footer-container"></div>
+    </main>
+  </div>
+
+  <!-- Modal 2: Record Flour Supply Batch -->
+  <div class="modal-backdrop" id="supply-batch-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-truck-ramp-box"></i>
+          <h3>تسجيل شحنة توريد دقيق خام من المطحن</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('supply-batch-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="batch-sup-id">
+        <p class="text-sm font-semibold mb-3 text-primary-color" id="batch-sup-title"></p>
+        
+        <div class="form-group mb-4">
+          <label>كمية الدقيق الموردة (بالطن)</label>
+          <input type="number" id="batch-tons-qty" class="form-control" placeholder="مثال: 10 طن" min="0.5" step="0.5">
+        </div>
+
+        <div class="form-group mb-4">
+          <label>سعر الطن المعتمد لهذه الشحنة (جنيه)</label>
+          <input type="number" id="batch-unit-price" class="form-control" placeholder="السعر الافتراضي للمطحن">
+        </div>
+
+        <div class="form-group">
+          <label>رقم فاتورة / إذن استلام المطحن</label>
+          <input type="text" id="batch-ref-num" class="form-control" placeholder="مثال: REC-9921">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('supply-batch-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="processFlourSupplyBatch()"><i class="fa-solid fa-calculator"></i> تسجيل التوريد وتحديث المستحقات</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Pay Supplier / Mill Balance -->
+  <div class="modal-backdrop" id="pay-supplier-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-hand-holding-dollar"></i>
+          <h3>سداد دفعة مالية للمطحن</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('pay-supplier-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="pay-sup-id">
+        <p class="text-sm font-semibold mb-4 text-primary-color" id="pay-sup-title"></p>
+
+        <div class="form-group mb-4">
+          <label>المبلغ المسدد للمطحن من الخزنة (جنيه)</label>
+          <input type="number" id="pay-sup-amount" class="form-control" placeholder="ادخل المبلغ المسدد" min="1">
+        </div>
+
+        <div class="form-group">
+          <label>طريقة السداد / رقم الشيك أو الإيصال</label>
+          <input type="text" id="pay-sup-notes" class="form-control" placeholder="تحويل بنكي / نقدي / شيك">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('pay-supplier-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="processSupplierPayment()"><i class="fa-solid fa-check"></i> الخصم من الخزنة والتأكيد</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Supplier Ledger Statement -->
+  <div class="modal-backdrop" id="supplier-statement-modal">
+    <div class="modal-card modal-card-lg printable-modal">
+      <div class="modal-header no-print">
+        <div class="modal-title">
+          <i class="fa-solid fa-file-invoice"></i>
+          <h3>كشف حساب وحسابات المطحن التفصيلية</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('supplier-statement-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" id="supplier-statement-body">
+        <!-- Dynamic via JS -->
+      </div>
+
+      <div class="modal-footer no-print">
+        <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة كشف حساب المطحن</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Edit Supplier / Mill -->
+  <div class="modal-backdrop" id="edit-supplier-modal">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-pen-to-square"></i>
+          <h3>تعديل بيانات المطحن / المورد والسعر المخصص</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('edit-supplier-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="edit-sup-id">
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="form-group">
+            <label>اسم المطحن / المورد</label>
+            <input type="text" id="edit-sup-name" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>رقم الهاتف للتواصل</label>
+            <input type="text" id="edit-sup-phone" class="form-control">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="form-group">
+            <label>درجة نوع الدقيق المورد</label>
+            <select id="edit-sup-flour-type" class="form-control">
+              <option value="دقيق فاخر استخراج 72%">دقيق فاخر استخراج 72%</option>
+              <option value="دقيق قمح استخراج 80%">دقيق قمح استخراج 80%</option>
+              <option value="دقيق صلب ممتاز للمكرونة">دقيق صلب ممتاز للمكرونة</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>سعر التوريد المحدد للمطحن (جنيه / طن)</label>
+            <input type="number" id="edit-sup-price" class="form-control" min="0">
+          </div>
+        </div>
+
+        <div class="form-group mb-4">
+          <label>عنوان المطحن / الفرع</label>
+          <input type="text" id="edit-sup-address" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label>ملاحظات وشروط التعامل</label>
+          <input type="text" id="edit-sup-notes" class="form-control">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('edit-supplier-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="updateSupplier()"><i class="fa-solid fa-save"></i> حفظ التعديلات</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Cloud SDK & Sync Engine -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-sync.js"></script>
+  <script src="js/logo.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/suppliers.js"></script>
+</body>
+</html>

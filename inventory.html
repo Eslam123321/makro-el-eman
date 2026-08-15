@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مصنع الإيمان للمكرونة | المخازن والمنتجات</title>
+  
+  <link rel="icon" type="image/png" href="image/logo.png">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+      <header class="top-header">
+        <div class="flex items-center gap-3">
+          <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fa-solid fa-bars"></i></button>
+          <div class="header-title">
+            <h1>إدارة المخازن ومنتجات المكرونة (بدون SKU)</h1>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn-primary" onclick="openInventoryReportModal()"><i class="fa-solid fa-file-invoice-dollar"></i> طباعة تقرير الجرد والمخزون 𝓅</button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        
+        <!-- Top Summary Banner Cards -->
+        <div class="page-summary-cards" id="inventory-summary-cards"></div>
+
+        <!-- Embedded Form Card: Add New Pasta Product -->
+        <div class="card mb-6" id="add-product-section">
+          <div class="flex items-center gap-3 mb-4 pb-3 border-b">
+            <div class="brand-icon" style="width: 40px; height: 40px; font-size: 1.1rem;">
+              <i class="fa-solid fa-box-open"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg">إضافة صنف مكرونة جديد (بالشكارة)</h3>
+              <p class="text-xs text-muted">أدخل اسم المنتج، درجة الفئة، الكمية والمكسب المحدد للتخزين بالمخزن</p>
+            </div>
+          </div>
+
+          <div class="form-group mb-4">
+            <label>اسم المنتج وتفاصيل العبوة</label>
+            <input type="text" id="prod-name" class="form-control" placeholder="مثال: مكرونة اسباجيتي (شكارة 10 كجم)">
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>درجة الفئة</label>
+              <select id="prod-category" class="form-control">
+                <option value="درجة أولى">درجة أولى (فاخر)</option>
+                <option value="درجة ثانية">درجة ثانية</option>
+                <option value="جامبو">شكاير جامبو 50 كجم</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>وحدة القياس والتعبئة</label>
+              <input type="text" class="form-control" value="شكارة (مغلقة)" disabled readonly style="background: var(--bg-main);">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="form-group">
+              <label>الكمية المتاحة (عدد الشكاير)</label>
+              <input type="number" id="prod-stock" class="form-control" placeholder="100" min="0">
+            </div>
+            <div class="form-group">
+              <label>سعر التكلفة للشكارة (جنيه)</label>
+              <input type="number" id="prod-cost" class="form-control" placeholder="180" min="0">
+            </div>
+            <div class="form-group">
+              <label>سعر البيع للشكارة (جنيه)</label>
+              <input type="number" id="prod-sell" class="form-control" placeholder="220" min="0">
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-2 border-t">
+            <button class="btn btn-primary" onclick="saveNewProduct()"><i class="fa-solid fa-check ml-1"></i> حفظ الصنف بالمخزن 📦</button>
+          </div>
+        </div>
+
+        <!-- Inventory List Table -->
+        <div class="card mb-6">
+          <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+            <div>
+              <h3>قائمة أصناف المكرونة التابعة للمصنع</h3>
+              <p class="text-sm text-muted">جميع الأصناف بالشكارة فقط مع حساب التكلفة المرجحة التلقائية</p>
+            </div>
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" class="form-control" placeholder="بحث باسم المنتج أو الفئة..." onkeyup="filterProducts(this.value)">
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="table" id="inventory-table">
+              <thead>
+                <tr>
+                  <th>كود الصنف</th>
+                  <th>اسم المنتج والفئة</th>
+                  <th>وحدة التعبئة</th>
+                  <th>المخزون الحالي</th>
+                  <th>متوسط سعر التكلفة</th>
+                  <th>سعر البيع للشكارة</th>
+                  <th>إجراءات الإدارة</th>
+                </tr>
+              </thead>
+              <tbody id="inventory-list-tbody">
+                <!-- Injected via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="footer-container"></div>
+    </main>
+  </div>
+
+  <!-- Modal Card 2: Add New Supply Batch Modal -->
+  <div class="modal-backdrop" id="add-batch-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-truck-ramp-box"></i>
+          <h3>توريد شحنة شكاير جديدة</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('add-batch-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="batch-prod-id">
+        <p class="text-sm font-semibold mb-4 text-primary-color" id="batch-prod-title"></p>
+        
+        <div class="form-group">
+          <label>كمية الشكارة الموردة الجديدة</label>
+          <input type="number" id="batch-qty" class="form-control" placeholder="ادخل عدد الشكاير الموردة" min="1">
+        </div>
+        <div class="form-group">
+          <label>سعر تكلفة الشكارة في الشحنة الجديدة (جنيه)</label>
+          <input type="number" id="batch-cost" class="form-control" placeholder="سعر التكلفة الجديد">
+        </div>
+
+        <p class="text-xs text-muted mt-2">* يقوم النظام بحساب متوسط سعر التكلفة المرجح تلقائياً عند تأكيد التوريد.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('add-batch-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="processNewBatchSupply()"><i class="fa-solid fa-calculator"></i> تحديث المخزون والتكلفة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Card 3: Edit Product Modal -->
+  <div class="modal-backdrop" id="edit-product-modal">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-pen-to-square"></i>
+          <h3>تعديل بيانات الصنف</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('edit-product-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="edit-prod-id">
+        <div class="form-group mb-4">
+          <label>اسم المنتج</label>
+          <input type="text" id="edit-prod-name" class="form-control">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="form-group">
+            <label>درجة الفئة</label>
+            <select id="edit-prod-category" class="form-control">
+              <option value="درجة أولى">درجة أولى (فاخر)</option>
+              <option value="درجة ثانية">درجة ثانية</option>
+              <option value="جامبو">شكاير جامبو 50 كجم</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>الكمية المتاحة بالشكارة</label>
+            <input type="number" id="edit-prod-stock" class="form-control">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="form-group">
+            <label>سعر التكلفة للشكارة</label>
+            <input type="number" id="edit-prod-cost" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>سعر البيع للشكارة</label>
+            <input type="number" id="edit-prod-sell" class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('edit-product-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="updateProduct()"><i class="fa-solid fa-save"></i> حفظ التعديلات</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Card 4: Comprehensive Inventory & Stocktaking Audit Report Modal -->
+  <div class="modal-backdrop" id="inventory-report-modal">
+    <div class="modal-card modal-card-lg printable-modal" style="max-width: 980px;">
+      <div class="modal-header no-print">
+        <div class="modal-title">
+          <i class="fa-solid fa-boxes-packing text-primary-color"></i>
+          <h3>إصدار وطباعة تقرير الجرد العام وحركة المخزون</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('inventory-report-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Filter Controls Bar (No-Print) -->
+        <div class="no-print bg-slate-50 p-4 rounded-xl border mb-4">
+          <div class="grid grid-cols-3 gap-3 items-end">
+            <div class="form-group mb-0">
+              <label class="text-xs font-bold mb-1 block"><i class="fa-solid fa-calendar-days text-primary-color ml-1"></i> تحديد فترة الجرد:</label>
+              <select id="inv-report-period" class="form-control text-xs" onchange="handleInvReportPeriodChange(this.value)">
+                <option value="today">جرد اليوم الحالي ☀️</option>
+                <option value="day_specific">جرد يوم محدد (تاريخ معين) 📅</option>
+                <option value="current_month" selected>جرد الشهر الحالي 🗓️</option>
+                <option value="month_01">شهر يناير (1) ❄️</option>
+                <option value="month_02">شهر فبراير (2) 📅</option>
+                <option value="month_03">شهر مارس (3) 🌸</option>
+                <option value="month_04">شهر أبريل (4) 🌿</option>
+                <option value="month_05">شهر مايو (5) ☀️</option>
+                <option value="month_06">شهر يونيو (6) ☀️</option>
+                <option value="month_07">شهر يوليو (7) 🏖️</option>
+                <option value="month_08">شهر أغسطس (8) 🌾</option>
+                <option value="month_09">شهر سبتمبر (9) 🍂</option>
+                <option value="month_10">شهر أكتوبر (10) 🍁</option>
+                <option value="month_11">شهر نوفمبر (11) 🌧️</option>
+                <option value="month_12">شهر ديسمبر (12) ❄️</option>
+                <option value="year">جرد السنة الحالية كاملة 📊</option>
+                <option value="custom">فترة مخصصة (من - إلى) 📆</option>
+                <option value="all">الجرد الشامل لكافة الأصناف بالمخزن 📦</option>
+              </select>
+            </div>
+
+            <!-- Specific Day Input -->
+            <div class="form-group mb-0" id="inv-single-day-group" style="display: none;">
+              <label class="text-xs font-bold mb-1 block">اختر اليوم المحدد:</label>
+              <input type="date" id="inv-single-date" class="form-control text-xs" onchange="renderInventoryReportContent()">
+            </div>
+
+            <!-- Custom Range: From -->
+            <div class="form-group mb-0" id="inv-custom-start-group" style="display: none;">
+              <label class="text-xs font-bold mb-1 block">من تاريخ:</label>
+              <input type="date" id="inv-start-date" class="form-control text-xs" onchange="renderInventoryReportContent()">
+            </div>
+
+            <!-- Custom Range: To -->
+            <div class="form-group mb-0" id="inv-custom-end-group" style="display: none;">
+              <label class="text-xs font-bold mb-1 block">إلى تاريخ:</label>
+              <input type="date" id="inv-end-date" class="form-control text-xs" onchange="renderInventoryReportContent()">
+            </div>
+
+            <div class="form-group mb-0">
+              <label class="text-xs font-bold mb-1 block">تصفية حسب فئة المنتج:</label>
+              <select id="inv-category-filter" class="form-control text-xs" onchange="renderInventoryReportContent()">
+                <option value="all">كافة الفئات والدرجات (الكل)</option>
+                <option value="درجة أولى">درجة أولى (فاخر)</option>
+                <option value="درجة ثانية">درجة ثانية</option>
+                <option value="جامبو">شكاير جامبو 50 كجم</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Render Container for Printable Inventory Report -->
+        <div id="inventory-report-content-container">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+      <div class="modal-footer no-print">
+        <button class="btn btn-secondary" onclick="closeModal('inventory-report-modal')">إغلاق</button>
+        <button class="btn btn-primary" onclick="printInventoryReport()"><i class="fa-solid fa-print"></i> طباعة التقرير فوراً 𝓅</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Cloud SDK & Sync Engine -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-sync.js"></script>
+  <script src="js/logo.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/inventory.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderPageSummaryCards('inventory', 'inventory-summary-cards');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مصنع الإيمان للمكرونة | إدارة المستخدمين والصلاحيات</title>
+  
+  <link rel="icon" type="image/png" href="image/logo.png">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap">
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+      <header class="top-header">
+        <div class="flex items-center gap-3">
+          <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fa-solid fa-bars"></i></button>
+          <div class="header-title">
+            <h1>إدارة المستخدمين والحسابات ومصفوفة الصلاحيات</h1>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة كشف الحسابات 𝓅</button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        
+        <!-- Top Summary Banner Cards -->
+        <div class="page-summary-cards" id="users-summary-cards"></div>
+
+        <!-- Embedded Form Card: Add New User Account -->
+        <div class="card mb-6" id="add-user-section">
+          <div class="flex items-center gap-3 mb-4 pb-3 border-b">
+            <div class="brand-icon" style="width: 40px; height: 40px; font-size: 1.1rem;">
+              <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg">إضافة حساب مستخدم جديد وتحديد الصلاحيات 🛡️</h3>
+              <p class="text-xs text-muted">أنشئ حساباً جديداً باسم مستخدم وكلمة مرور وحدد بدقة الأقسام والصفحات المسموح له بالدخول إليها</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>الاسم الكامل للمستخدم <span class="text-danger">*</span></label>
+              <input type="text" id="new-user-name" class="form-control" placeholder="مثال: محمود سعد علي">
+            </div>
+            <div class="form-group">
+              <label>المسمى الوظيفي / الرتبة <span class="text-danger">*</span></label>
+              <select id="new-user-role" class="form-control" onchange="handleRolePresetChange(this.value)">
+                <option value="مسؤول مبيعات">مسؤول مبيعات وفواتير</option>
+                <option value="أمين مخزن">أمين مخازن وجودة</option>
+                <option value="محاسب مالي">محاسب مالي وخزينة</option>
+                <option value="مشرف موارد بشرية">مشرف موارد بشرية (HR)</option>
+                <option value="مدير عام">مدير عام (صلاحيات كاملة)</option>
+                <option value="مخصص">صلاحيات مخصصة يدوياً</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>اسم المستخدم للدخول (Username) <span class="text-danger">*</span></label>
+              <input type="text" id="new-user-username" class="form-control" placeholder="مثال: mahmoud">
+            </div>
+            <div class="form-group">
+              <label>كلمة المرور السرية <span class="text-danger">*</span></label>
+              <input type="text" id="new-user-password" class="form-control" placeholder="كلمة مرور قوية (مثال: 123456)">
+            </div>
+          </div>
+
+          <!-- Permissions Checkboxes Matrix -->
+          <div class="p-4 bg-slate-50 rounded-xl border mb-4">
+            <div class="flex justify-between items-center mb-3">
+              <h4 class="font-bold text-sm text-primary-color flex items-center gap-2">
+                <i class="fa-solid fa-shield-halved"></i> مصفوفة الصلاحيات الممنوحة للحساب:
+              </h4>
+              <div class="flex gap-2">
+                <button type="button" class="btn btn-secondary btn-xs" onclick="toggleAllPermissions('new', true)">تحديد الكل ✅</button>
+                <button type="button" class="btn btn-secondary btn-xs" onclick="toggleAllPermissions('new', false)">إلغاء الكل ❌</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3" id="new-user-permissions-grid">
+              <label class="p-3 bg-white border rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" name="new-perm" value="dashboard" checked>
+                <span class="text-xs font-bold"><i class="fa-solid fa-chart-pie ml-1 text-primary-color"></i> لوحة التحكم الرئيسية</span>
+              </label>
+
+              <label class="p-3 bg-white border rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" name="new-perm" value="sales" checked>
+                <span class="text-xs font-bold"><i class="fa-solid fa-file-invoice-dollar ml-1 text-emerald-600"></i> المبيعات وإصدار الفواتير</span>
+              </label>
+
+              <label class="p-3 bg-white border rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" name="new-perm" value="inventory">
+                <span class="text-xs font-bold"><i class="fa-solid fa-boxes-stacked ml-1 text-blue-600"></i> المخازن وتوريد الشكاير</span>
+              </label>
+
+              <label class="p-3 bg-white border rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" name="new-perm" value="customers" checked>
+                <span class="text-xs font-bold"><i class="fa-solid fa-users ml-1 text-purple-600"></i> حسابات ومديونيات العملاء</span>
+              </label>
+
+              <label class="p-3 bg-white border rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" name="new-perm" value="suppliers">
+                <span class="text-xs font-bold"><i class="fa-solid fa-truck-field ml-1 text-amber-600"></i> الموردين ومطاحن الدقيق</span>
+              </label>
+
+              <label class="p-3 bg-white border rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" name="new-perm" value="expenses">
+                <span class="text-xs font-bold"><i class="fa-solid fa-wallet ml-1 text-rose-600"></i> المصروفات وحركة الخزينة</span>
+              </label>
+
+              <label class="p-3 bg-white border rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" name="new-perm" value="hr">
+                <span class="text-xs font-bold"><i class="fa-solid fa-user-tie ml-1 text-indigo-600"></i> الموارد البشرية والرواتب والغياب</span>
+              </label>
+
+              <label class="p-3 bg-white border rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" name="new-perm" value="reports">
+                <span class="text-xs font-bold"><i class="fa-solid fa-chart-line ml-1 text-teal-600"></i> الجرد والتقارير المالية والأسطول</span>
+              </label>
+
+              <label class="p-3 bg-white border rounded-lg flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" name="new-perm" value="users">
+                <span class="text-xs font-bold"><i class="fa-solid fa-users-gear ml-1 text-red-600"></i> إدارة المستخدمين والصلاحيات</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-2 border-t">
+            <button class="btn btn-primary" onclick="saveNewUserAccount()"><i class="fa-solid fa-check ml-1"></i> حفظ وتفعيل الحساب الجديد 🛡️</button>
+          </div>
+        </div>
+
+        <!-- Users Matrix Table -->
+        <div class="card mb-6">
+          <div class="flex justify-between items-center mb-4 flex-wrap gap-3 border-b pb-4">
+            <div>
+              <h3>سجل حسابات النظام ومصفوفة التحكم في الصلاحيات</h3>
+              <p class="text-sm text-muted">إمكانية تعطيل الحسابات، تعديل الصلاحيات، تغيير كلمات المرور، أو الحذف الفوري</p>
+            </div>
+            <div class="search-box" style="min-width: 260px;">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" class="form-control" placeholder="بحث بالاسم، اسم المستخدم، أو الرتبة..." onkeyup="filterUsersTable(this.value)">
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="table" id="users-table">
+              <thead>
+                <tr>
+                  <th>كود الحساب</th>
+                  <th>اسم المستخدم وكود الدخول</th>
+                  <th>المسمى والرتبة</th>
+                  <th style="min-width: 260px;">الصلاحيات الممنوحة</th>
+                  <th>تاريخ الإنشاء</th>
+                  <th>حالة الحساب</th>
+                  <th style="min-width: 260px;">الإجراءات والتحكم</th>
+                </tr>
+              </thead>
+              <tbody id="users-list-tbody">
+                <!-- Injected via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="footer-container"></div>
+    </main>
+  </div>
+
+  <!-- Edit User Modal -->
+  <div class="modal-backdrop" id="edit-user-modal">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-user-pen text-primary-color"></i>
+          <h3>تعديل بيانات الحساب ومصفوفة الصلاحيات</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('edit-user-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="edit-user-id">
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="form-group">
+            <label>الاسم الكامل</label>
+            <input type="text" id="edit-user-name" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>المسمى الوظيفي / الرتبة</label>
+            <input type="text" id="edit-user-role" class="form-control">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="form-group">
+            <label>اسم المستخدم للدخول (Username)</label>
+            <input type="text" id="edit-user-username" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>كلمة المرور الجديدة</label>
+            <input type="text" id="edit-user-password" class="form-control" placeholder="ادخل كلمة المرور الجديدة">
+          </div>
+        </div>
+
+        <!-- Edit Permissions Grid -->
+        <div class="p-4 bg-slate-50 rounded-xl border mb-2">
+          <div class="flex justify-between items-center mb-3">
+            <h4 class="font-bold text-xs text-primary-color"><i class="fa-solid fa-shield-halved"></i> تعديل الصلاحيات الممنوحة:</h4>
+            <div class="flex gap-2">
+              <button type="button" class="btn btn-secondary btn-xs" onclick="toggleAllPermissions('edit', true)">تحديد الكل</button>
+              <button type="button" class="btn btn-secondary btn-xs" onclick="toggleAllPermissions('edit', false)">إلغاء الكل</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3" id="edit-user-permissions-grid">
+            <label class="p-2 bg-white border rounded-lg flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="edit-perm" value="dashboard">
+              <span class="text-xs font-bold">لوحة التحكم</span>
+            </label>
+            <label class="p-2 bg-white border rounded-lg flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="edit-perm" value="sales">
+              <span class="text-xs font-bold">المبيعات والفواتير</span>
+            </label>
+            <label class="p-2 bg-white border rounded-lg flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="edit-perm" value="inventory">
+              <span class="text-xs font-bold">المخازن وتوريد الشكاير</span>
+            </label>
+            <label class="p-2 bg-white border rounded-lg flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="edit-perm" value="customers">
+              <span class="text-xs font-bold">حسابات ومديونيات العملاء</span>
+            </label>
+            <label class="p-2 bg-white border rounded-lg flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="edit-perm" value="suppliers">
+              <span class="text-xs font-bold">الموردين ومطاحن الدقيق</span>
+            </label>
+            <label class="p-2 bg-white border rounded-lg flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="edit-perm" value="expenses">
+              <span class="text-xs font-bold">المصروفات والخزينة</span>
+            </label>
+            <label class="p-2 bg-white border rounded-lg flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="edit-perm" value="hr">
+              <span class="text-xs font-bold">الموارد البشرية والرواتب</span>
+            </label>
+            <label class="p-2 bg-white border rounded-lg flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="edit-perm" value="reports">
+              <span class="text-xs font-bold">الجرد والتقارير والأسطول</span>
+            </label>
+            <label class="p-2 bg-white border rounded-lg flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="edit-perm" value="users">
+              <span class="text-xs font-bold">إدارة المستخدمين والصلاحيات</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('edit-user-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="updateUserAccount()"><i class="fa-solid fa-save"></i> حفظ التعديلات 💾</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Cloud SDK & Sync Engine -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-sync.js"></script>
+  <script src="js/logo.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/users.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderPageSummaryCards('users', 'users-summary-cards');
+    });
+  </script>
+</body>
+</html>

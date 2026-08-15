@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مصنع الإيمان للمكرونة | المصروفات والخزنة</title>
+  
+  <link rel="icon" type="image/png" href="image/logo.png">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+      <header class="top-header">
+        <div class="flex items-center gap-3">
+          <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fa-solid fa-bars"></i></button>
+          <div class="header-title">
+            <h1>إدارة المصروفات والخزنة (Expenses & Treasury)</h1>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة سجل المصروفات 𝓅</button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        
+        <!-- Top Page Summary Banner Cards -->
+        <div class="page-summary-cards" id="expenses-summary-cards"></div>
+
+        <!-- Embedded Form Card: Add New Operating Expense -->
+        <div class="card mb-6" id="add-expense-section">
+          <div class="flex items-center gap-3 mb-4 pb-3 border-b">
+            <div class="brand-icon" style="width: 40px; height: 40px; font-size: 1.1rem;">
+              <i class="fa-solid fa-receipt"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg">تسجيل مصروف تشغيلي بالختم الزمني (Auto-Timestamp)</h3>
+              <p class="text-xs text-muted">تسجيل مصروف خامات الشكاير، الصيانة، الكهرباء، النقل والمرافق وخصمها فوراً من الخزنة</p>
+            </div>
+          </div>
+
+          <div class="form-group mb-4">
+            <label>بيان المصروف</label>
+            <input type="text" id="exp-title" class="form-control" placeholder="مثال: شراء شكاير تعبئة وتغليف فارغة">
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>فئة البند</label>
+              <select id="exp-category" class="form-control">
+                <option value="خامات ومواد">خامات ومواد (شكاير وخيوط)</option>
+                <option value="صيانة">صيانة خطوط إنتاج</option>
+                <option value="مرافق">مرافق (كهرباء ومياه وغاز)</option>
+                <option value="نقل وشحن">نقل وسولار وسيارة توزيع</option>
+                <option value="نثريات">نثريات وإدارية</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>المبلغ المستقطع (جنيه)</label>
+              <input type="number" id="exp-amount" class="form-control" placeholder="1000" min="1">
+            </div>
+          </div>
+
+          <div class="form-group mb-4">
+            <label>ملاحظات إضافية</label>
+            <input type="text" id="exp-notes" class="form-control" placeholder="ملاحظات توضيحية اختياري">
+          </div>
+
+          <div class="flex justify-between items-center pt-2 border-t">
+            <p class="text-xs text-muted"><i class="fa-regular fa-clock"></i> يتم أخذ الوقت والتاريخ الحالي تلقائياً بالختم الزمني الآلي (Auto-Timestamp).</p>
+            <button class="btn btn-primary" onclick="saveNewExpense()"><i class="fa-solid fa-check ml-1"></i> تسجيل المصروف وخصمه من الخزنة 💸</button>
+          </div>
+        </div>
+
+        <!-- Expenses List Table -->
+        <div class="card mb-6">
+          <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+            <div>
+              <h3>سجل المصروفات بالختم الزمني التلقائي (Auto-Timestamp)</h3>
+              <p class="text-sm text-muted">تسجيل خامات الشكاير، الصيانة، الكهرباء، والنقل والمرافق</p>
+            </div>
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" class="form-control" placeholder="بحث ببيان المصروف أو الفئة..." onkeyup="filterExpenses(this.value)">
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="table" id="expenses-table">
+              <thead>
+                <tr>
+                  <th>كود المصروف</th>
+                  <th>البيان والتفاصيل</th>
+                  <th>الفئة / البند</th>
+                  <th>المبلغ المستقطع</th>
+                  <th>الختم الزمني (التاريخ والوقت)</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="expenses-list-tbody">
+                <!-- Injected via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="footer-container"></div>
+    </main>
+  </div>
+
+  <!-- Firebase Cloud SDK & Sync Engine -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-sync.js"></script>
+  <script src="js/logo.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/expenses.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderPageSummaryCards('expenses', 'expenses-summary-cards');
+    });
+  </script>
+</body>
+</html>

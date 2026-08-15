@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مصنع الإيمان للمكرونة | حسابات العملاء والديون</title>
+  
+  <link rel="icon" type="image/png" href="image/logo.png">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+      <header class="top-header">
+        <div class="header-title">
+          <h1>حسابات العملاء والمديونيات (CRM)</h1>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة كشف العملاء 𝓅</button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        
+        <!-- Automated 2-Day Payment Due Alerts Container -->
+        <div id="due-alerts-container"></div>
+
+        <!-- Embedded Form Card: Add New Customer -->
+        <div class="card mb-6" id="add-customer-section">
+          <div class="flex items-center gap-3 mb-4 pb-3 border-b">
+            <div class="brand-icon" style="width: 40px; height: 40px; font-size: 1.1rem;">
+              <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg">إضافة عميل جديد ورصيد ائتماني</h3>
+              <p class="text-xs text-muted">تسجيل بيانات العميل الجديد وتحديد الحد الائتماني والأولوية</p>
+            </div>
+          </div>
+
+          <div class="form-group mb-4">
+            <label>اسم العميل / الشركة</label>
+            <input type="text" id="cust-name" class="form-control" placeholder="اسم التجارة أو العميل">
+          </div>
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>رقم الهاتف / الواتساب</label>
+              <input type="text" id="cust-phone" class="form-control" placeholder="01012345678">
+            </div>
+            <div class="form-group">
+              <label>تصنيف العميل</label>
+              <select id="cust-rating" class="form-control">
+                <option value="VIP الذهبي">VIP الذهبي (مميز جداً)</option>
+                <option value="عميل فضي">عميل فضي (سداد منتظم)</option>
+                <option value="عميل عادي">عميل عادي</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>العنوان والتفاصيل</label>
+              <input type="text" id="cust-address" class="form-control" placeholder="المحافظة - المركز">
+            </div>
+            <div class="form-group">
+              <label>الحد الائتماني الأقصى (جنيه)</label>
+              <input type="number" id="cust-limit" class="form-control" value="50000" min="1000">
+            </div>
+          </div>
+
+          <div class="form-group mb-4">
+            <label>تاريخ استحقاق الدفعات (اختياري)</label>
+            <input type="date" id="cust-duedate" class="form-control">
+          </div>
+
+          <div class="flex justify-end pt-2 border-t">
+            <button class="btn btn-primary" onclick="saveNewCustomer()"><i class="fa-solid fa-check ml-1"></i> حفظ العميل بالسجل 👤</button>
+          </div>
+        </div>
+
+        <!-- Customers Table -->
+        <div class="card mb-6">
+          <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+            <div>
+              <h3>سجل العملاء والمديونيات المتبقية</h3>
+              <p class="text-sm text-muted">متابعة الحدود الائتمانية والمسحوبات وكشوف الحساب المطبوعة</p>
+            </div>
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" class="form-control" placeholder="بحث باسم العميل أو رقم الهاتف..." onkeyup="filterCustomers(this.value)">
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="table" id="customers-table">
+              <thead>
+                <tr>
+                  <th>كود العميل</th>
+                  <th>اسم العميل والعنوان</th>
+                  <th>رقم الهاتف</th>
+                  <th>تصنيف العميل</th>
+                  <th>المديونية والحد الائتماني</th>
+                  <th>ميعاد الاستحقاق</th>
+                  <th>إجراءات الحساب</th>
+                </tr>
+              </thead>
+              <tbody id="customers-list-tbody">
+                <!-- Injected via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="footer-container"></div>
+    </main>
+  </div>
+
+  <!-- Modal Card 2: Receive Payment Receipt Modal -->
+  <div class="modal-backdrop" id="receive-payment-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-hand-holding-dollar"></i>
+          <h3>تحصيل دفعة مالية من العميل</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('receive-payment-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="pay-cust-id">
+        <p class="text-sm font-semibold mb-4 text-primary-color" id="pay-cust-title"></p>
+        
+        <div class="form-group">
+          <label>المبلغ المحصل نقداً (جنيه)</label>
+          <input type="number" id="pay-amount" class="form-control" placeholder="المبلغ المسدد" min="1">
+        </div>
+
+        <p class="text-xs text-muted mt-2">* يتم إيداع المبلغ المحصل تلقائياً في خزينة المصنع وتحديث رصيد العميل.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('receive-payment-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="processPaymentReceipt()"><i class="fa-solid fa-circle-check"></i> تأصيل وإيداع بالخزنة 💰</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Card 3: Printable Statement of Account Modal -->
+  <div class="modal-backdrop" id="statement-modal">
+    <div class="modal-card modal-card-lg printable-modal">
+      <div class="modal-header no-print">
+        <div class="modal-title">
+          <i class="fa-solid fa-file-invoice"></i>
+          <h3>كشف حساب عميل تفصيلي</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('statement-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" id="statement-modal-body">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="modal-footer no-print">
+        <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة كشف الحساب</button>
+        <button class="btn btn-primary" onclick="closeModal('statement-modal')">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Card 4: Global Invoice Preview Modal -->
+  <div class="modal-backdrop" id="preview-invoice-modal">
+    <div class="modal-card modal-card-lg printable-modal">
+      <div class="modal-header no-print">
+        <div class="modal-title">
+          <i class="fa-solid fa-file-invoice"></i>
+          <h3>معاينة الفاتورة الرسمية قبل الطباعة والتنزيل</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('preview-invoice-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" id="invoice-preview-container">
+        <!-- Dynamic content -->
+      </div>
+
+      <div class="modal-footer no-print">
+        <button class="btn btn-secondary" id="btn-print-inv" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة الفاتورة 𝓅</button>
+        <button class="btn btn-primary" id="btn-pdf-inv" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> تصدير PDF 📄</button>
+        <button class="btn btn-secondary" id="btn-img-inv" onclick="downloadInvoiceAsImage()"><i class="fa-solid fa-image text-primary-color"></i> تنزيل كصورة 🖼️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Cloud SDK & Sync Engine -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-sync.js"></script>
+  <script src="js/logo.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/customers.js"></script>
+</body>
+</html>

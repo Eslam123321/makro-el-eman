@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مصنع الإيمان للمكرونة | لوحة التحكم والتحليل الزمني</title>
+  
+  <link rel="icon" type="image/png" href="image/logo.png">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script>
+    if (!localStorage.getItem('eleman_current_user')) {
+      window.location.href = 'login.html';
+    }
+  </script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="flex items-center gap-3">
+          <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fa-solid fa-bars"></i></button>
+          <div class="header-title">
+            <h1>لوحة التحكم والتحليل التنفيذي</h1>
+            <div class="header-date-ticker" id="date-ticker"></div>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn-secondary" onclick="openModal('new-shift-modal')">
+            <i class="fa-solid fa-industry text-primary-color"></i> تسجيل وردية إنتاج 🏭
+          </button>
+          <a href="sales.html" class="btn btn-primary"><i class="fa-solid fa-plus"></i> فاتورة مبيعات جديدة ⚡</a>
+        </div>
+      </header>
+
+      <div class="content-body">
+        
+        <!-- Time Filter Bar & Quick Shortcuts -->
+        <div class="flex justify-between items-center flex-wrap gap-4 mb-6">
+          <div class="quick-shortcuts-bar mb-0" style="margin-bottom: 0;">
+            <span class="text-xs font-bold text-muted ml-2">تصفية الفترة الزمنية 📅:</span>
+            <button class="shortcut-pill time-filter-btn" id="filter-btn-today" onclick="setDashboardTimeFilter('today')">اليوم ☀️</button>
+            <button class="shortcut-pill time-filter-btn" id="filter-btn-month" onclick="setDashboardTimeFilter('month')">الشهر الحالي 🗓️</button>
+            <button class="shortcut-pill time-filter-btn" id="filter-btn-year" onclick="setDashboardTimeFilter('year')">السنة الحالية 📅</button>
+            <button class="shortcut-pill time-filter-btn btn-primary" id="filter-btn-all" onclick="setDashboardTimeFilter('all')">كافة الأوقات 📊</button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button class="btn btn-secondary btn-sm" onclick="printDashboardComprehensiveReport()"><i class="fa-solid fa-print text-primary-color"></i> طباعة تقرير شامل 𝓅</button>
+          </div>
+        </div>
+
+        <!-- Low Stock Warning Banner -->
+        <div id="low-stock-banner" class="card mb-6 p-4 justify-between items-center" style="background: var(--accent-amber-light); border-color: var(--accent-amber-border); display: none;"></div>
+
+        <!-- Detailed Breakdown Metrics: Daily, Monthly, Yearly Sales & Net Profit -->
+        <h3 class="font-bold mb-3"><i class="fa-solid fa-chart-line text-primary-color ml-1"></i> ملخص المبيعات والأرباح الزمنية (اليومي والشهرية والسنوي)</h3>
+        <div class="grid grid-cols-3 gap-6 mb-6">
+          
+          <!-- Sales Card Breakdown -->
+          <div class="card p-5">
+            <div class="flex justify-between items-center mb-3">
+              <span class="text-sm text-muted font-bold">مبيعات اليوم (اليومي)</span>
+              <div class="summary-card-icon icon-emerald" style="width: 36px; height: 36px; font-size: 1rem;"><i class="fa-solid fa-calendar-day"></i></div>
+            </div>
+            <h2 class="text-success font-bold" id="sales-today-val">0 ج.م</h2>
+            <div class="text-xs text-muted mt-2 border-t pt-2 flex justify-between">
+              <span>الشهر الحالي: <strong id="sales-month-val" class="text-primary-color">0 ج.م</strong></span>
+              <span>السنة الحالية: <strong id="sales-year-val" class="text-primary-color">0 ج.م</strong></span>
+            </div>
+          </div>
+
+          <!-- Net Profit Breakdown -->
+          <div class="card p-5">
+            <div class="flex justify-between items-center mb-3">
+              <span class="text-sm text-muted font-bold">أرباح اليوم الصافية</span>
+              <div class="summary-card-icon icon-blue" style="width: 36px; height: 36px; font-size: 1rem;"><i class="fa-solid fa-calculator"></i></div>
+            </div>
+            <h2 class="text-primary-color font-bold" id="profit-today-val">0 ج.م</h2>
+            <div class="text-xs text-muted mt-2 border-t pt-2 flex justify-between">
+              <span>أرباح الشهر: <strong id="profit-month-val" class="text-success">0 ج.م</strong></span>
+              <span>أرباح السنة: <strong id="profit-year-val" class="text-success">0 ج.م</strong></span>
+            </div>
+          </div>
+
+          <!-- Cash & Debts Card -->
+          <div class="card p-5">
+            <div class="flex justify-between items-center mb-3">
+              <span class="text-sm text-muted font-bold">السيولة والديون</span>
+              <div class="summary-card-icon icon-amber" style="width: 36px; height: 36px; font-size: 1rem;"><i class="fa-solid fa-vault"></i></div>
+            </div>
+            <div class="flex justify-between items-center mt-1">
+              <div>
+                <span class="text-xs text-muted">الخزينة المتاحة</span>
+                <h3 class="text-warning font-bold" id="cash-liquidity">0 ج.م</h3>
+              </div>
+              <div class="text-left border-r pr-4">
+                <span class="text-xs text-muted">ديون للتحصيل</span>
+                <h3 class="text-danger font-bold" id="total-debts">0 ج.م</h3>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Dual Analytics Charts Grid -->
+        <div class="grid grid-cols-3 gap-6 mb-8">
+          
+          <div class="card" style="grid-column: span 2;">
+            <div class="flex justify-between items-center mb-4">
+              <div>
+                <h3>منحنى الإيرادات والمصروفات والأرباح الصافية</h3>
+                <p class="text-sm text-muted">مقارنة بصرية بين المبيعات وتكاليف التصنيع والربح الصافي للفترة المختارة</p>
+              </div>
+            </div>
+            <div style="height: 310px; position: relative;">
+              <canvas id="financeChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="flex justify-between items-center mb-4">
+              <div>
+                <h3>توزيع مبيعات الشكاير</h3>
+                <p class="text-sm text-muted">نسبة سحب أنواع المكرونة بالشكارة</p>
+              </div>
+            </div>
+            <div style="height: 310px; position: relative;">
+              <canvas id="salesDonutChart"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Clickable Recent Invoices Table -->
+        <div class="card mb-6">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3>سجل أحدث فواتير المبيعات الصادرة (اضغط على الفاتورة للمعاينة والطباعة)</h3>
+              <p class="text-sm text-muted">يمكن الضغط على أي فاتورة لفتح كارت المعاينة والتصدير والتنزيل كصورة</p>
+            </div>
+            <a href="sales.html" class="btn btn-secondary btn-sm">عرض كافة الفواتير ↗</a>
+          </div>
+
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>رقم الفاتورة (اضغط للفتح)</th>
+                  <th>اسم العميل</th>
+                  <th>التاريخ والوقت</th>
+                  <th>طريقة الدفع</th>
+                  <th>الإجمالي الصافي</th>
+                  <th>معاينة وإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="recent-invoices-tbody">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="footer-container"></div>
+    </main>
+  </div>
+
+  <!-- Modal Card 1: Register Daily Production Shift Output -->
+  <div class="modal-backdrop" id="new-shift-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-industry"></i>
+          <h3>تسجيل انتاج وردية مصنع جديدة</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('new-shift-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group mb-4">
+          <label>اختر خط الإنتاج</label>
+          <select id="shift-line-select" class="form-control">
+            <option value="LINE-1">خط إنتاج الاسباجيتي</option>
+            <option value="LINE-2">خط إنتاج القلم والشعرية</option>
+            <option value="LINE-3">خط التعبئة والتغليف الآلي</option>
+          </select>
+        </div>
+
+        <div class="form-group mb-4">
+          <label>صنف المكرونة المصنعة</label>
+          <select id="shift-prod-select" class="form-control"></select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="form-group">
+            <label>عدد الشكاير المنتجة بالوردية</label>
+            <input type="number" id="shift-qty" class="form-control" placeholder="مثال: 500" min="1">
+          </div>
+          <div class="form-group">
+            <label>تكلفة تصنيع الشكارة (جنيه)</label>
+            <input type="number" id="shift-cost" class="form-control" placeholder="مثال: 180" min="1">
+          </div>
+        </div>
+
+        <p class="text-xs text-muted mt-2">* يتم إضافة الشكاير المصنعة أوتوماتيكياً لرصيد المخزن وتحديث متوسط التكلفة التلقائي.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('new-shift-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveProductionShift()"><i class="fa-solid fa-check"></i> تسجيل وإيداع بالمخزن 🏭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Card 2: Global Invoice Preview -->
+  <div class="modal-backdrop" id="preview-invoice-modal">
+    <div class="modal-card modal-card-lg printable-modal">
+      <div class="modal-header no-print">
+        <div class="modal-title">
+          <i class="fa-solid fa-file-invoice"></i>
+          <h3>معاينة الفاتورة الرسمية قبل الطباعة والتنزيل</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('preview-invoice-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" id="invoice-preview-container">
+        <!-- Dynamic content -->
+      </div>
+
+      <div class="modal-footer no-print">
+        <button class="btn btn-secondary" id="btn-print-inv"><i class="fa-solid fa-print"></i> طباعة الفاتورة 𝓅</button>
+        <button class="btn btn-primary" id="btn-pdf-inv"><i class="fa-solid fa-file-pdf"></i> تصدير PDF 📄</button>
+        <button class="btn btn-secondary" id="btn-img-inv"><i class="fa-solid fa-image text-primary-color"></i> تنزيل كصورة 🖼️</button>
+        <button class="btn btn-whatsapp" id="btn-wa-inv"><i class="fa-brands fa-whatsapp"></i> الواتساب 💬</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Card 3: Printable Executive Dashboard Comprehensive Report -->
+  <div class="modal-backdrop" id="dashboard-report-modal">
+    <div class="modal-card modal-card-lg printable-modal">
+      <div class="modal-header no-print">
+        <div class="modal-title">
+          <i class="fa-solid fa-print"></i>
+          <h3>معاينة التقرير التنفيذي الشامل للطباعة</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('dashboard-report-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" id="dashboard-report-body">
+        <!-- Dynamic content via JS -->
+      </div>
+
+      <div class="modal-footer no-print">
+        <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة التقرير الآن 𝓅</button>
+        <button class="btn btn-primary" onclick="closeModal('dashboard-report-modal')">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Cloud SDK & Sync Engine -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-sync.js"></script>
+  <script src="js/logo.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

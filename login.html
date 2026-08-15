@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مصنع الإيمان للمكرونة | تسجيل الدخول الإداري</title>
+  
+  <link rel="icon" type="image/png" href="image/logo.png">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap">
+
+  <style>
+    body {
+      background: radial-gradient(circle at 10% 20%, #ecfdf5 0%, #f8fafc 50%, #ffffff 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: rgba(5, 150, 105, 0.08);
+      border-radius: 50%;
+      top: -100px;
+      right: -100px;
+      filter: blur(60px);
+    }
+
+    body::after {
+      content: '';
+      position: absolute;
+      width: 350px;
+      height: 350px;
+      background: rgba(37, 99, 235, 0.06);
+      border-radius: 50%;
+      bottom: -80px;
+      left: -80px;
+      filter: blur(60px);
+    }
+
+    .login-card-box {
+      width: 100%;
+      max-width: 440px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.12);
+      padding: 2.75rem 2.25rem;
+      position: relative;
+      z-index: 10;
+    }
+
+    .login-brand-logo-img {
+      width: 88px;
+      height: 88px;
+      object-fit: contain;
+      margin: 0 auto 1.25rem auto;
+      display: block;
+      filter: drop-shadow(0 6px 12px rgba(5, 150, 105, 0.25));
+    }
+
+    .login-footer-credits {
+      margin-top: 2.25rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-color);
+      padding-top: 1.25rem;
+      font-weight: 500;
+    }
+
+    .login-footer-credits strong {
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-card-box animate-fade-in">
+    <div class="text-center mb-6">
+      <img src="image/logo.png" alt="شعار مصنع الإيمان للمكرونة" class="login-brand-logo-img">
+      <h2 style="font-size: 1.65rem; color: #0f172a; font-weight: 800;">مصنع الإيمان للمكرونة</h2>
+      <p class="text-xs text-muted mt-1">نظام ERP الإداري المتكامل لإدارة الإنتاج والمبيعات والمخازن</p>
+    </div>
+
+    <form onsubmit="handleLogin(event)">
+      <div class="form-group mb-4">
+        <label><i class="fa-regular fa-user ml-1 text-primary-color"></i> اسم المستخدم للدخول (Username)</label>
+        <input type="text" id="username" class="form-control" placeholder="ادخل اسم المستخدم" autocomplete="username" required>
+      </div>
+
+      <div class="form-group mb-6">
+        <label><i class="fa-solid fa-lock ml-1 text-primary-color"></i> كلمة المرور السرية</label>
+        <div style="position: relative;">
+          <input type="password" id="password" class="form-control" placeholder="ادخل كلمة المرور السرية" autocomplete="current-password" required style="padding-left: 40px;">
+          <button type="button" onclick="togglePasswordVisibility()" style="position: absolute; left: 12px; top: 11px; background: none; border: none; color: var(--text-muted); cursor: pointer;" title="إظهار / إخفاء كلمة المرور">
+            <i class="fa-regular fa-eye" id="toggle-pwd-icon"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full" style="padding: 0.875rem; font-size: 1rem; font-weight: bold;">
+        <i class="fa-solid fa-right-to-bracket ml-2"></i> تسجيل الدخول للنظام 🚀
+      </button>
+    </form>
+
+    <div class="login-footer-credits">
+      <p>حقوق البرمجة والتطوير محفوظة © 2026 | بواسطة شركة <a href="https://speed-up.tech/" target="_blank" rel="noopener noreferrer" style="color: #059669; font-weight: 800; text-decoration: underline;">Speed Up 🚀</a></p>
+    </div>
+  </div>
+
+  <!-- Firebase Cloud SDK & Sync Engine -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-sync.js"></script>
+  <script src="js/logo.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    function togglePasswordVisibility() {
+      const pwd = document.getElementById('password');
+      const icon = document.getElementById('toggle-pwd-icon');
+      if (pwd.type === 'password') {
+        pwd.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        pwd.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const uInput = document.getElementById('username').value.trim();
+      const pInput = document.getElementById('password').value.trim();
+
+      if (!uInput || !pInput) {
+        App.showToast('رجاء إدخال اسم المستخدم وكلمة المرور', 'warning');
+        return;
+      }
+
+      // Always reload fresh DB from Storage
+      App.db = StorageManager.getDB();
+      const users = App.db.users || [];
+      const foundUser = users.find(u => 
+        (u.username && u.username.toLowerCase() === uInput.toLowerCase())
+      );
+
+      if (!foundUser || foundUser.password !== pInput) {
+        App.showToast('اسم المستخدم أو كلمة المرور غير صحيحة! يرجى التأكد من البيانات والمحاولة مجدداً.', 'danger');
+        return;
+      }
+
+      if (foundUser.status === 'معطل') {
+        App.showToast('عفواً، هذا الحساب معطل حالياً من قبل إدارة المصنع. يرجى التواصل مع المدير العام.', 'danger');
+        return;
+      }
+
+      // Save User Session
+      App.setCurrentUser(foundUser);
+      if (typeof App.logActivity === 'function') {
+        App.logActivity('تسجيل دخول إلى النظام 🔐', `قام بتسجيل الدخول إلى لوحة التحكم بنجاح`, 'info', foundUser);
+      }
+      App.showToast(`أهلاً بك يا ${foundUser.name}! جاري الدخول للوحة التحكم... ✨`, 'success');
+
+      setTimeout(() => {
+        // Redirect to dashboard or user's first allowed page
+        window.location.href = 'index.html';
+      }, 500);
+    }
+  </script>
+</body>
+</html>

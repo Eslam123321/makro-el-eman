@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مصنع الإيمان للمكرونة | مركز الإشعارات والتنبيهات</title>
+  
+  <link rel="icon" type="image/png" href="image/logo.png">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+      <header class="top-header">
+        <div class="flex items-center gap-3">
+          <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fa-solid fa-bars"></i></button>
+          <div class="header-title">
+            <h1>مركز الإشعارات والتنبيهات الإدارية</h1>
+          </div>
+        </div>
+
+        <div class="header-actions flex-wrap gap-2">
+          <button class="btn btn-secondary btn-sm" onclick="App.printAllNotifications()"><i class="fa-solid fa-print"></i> طباعة كافة الإشعارات 𝓅</button>
+          <button class="btn btn-danger btn-sm" onclick="App.clearAllNotifications()"><i class="fa-solid fa-trash"></i> مسح جميع الإشعارات 🗑️</button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        
+        <div class="card mb-6">
+          <div class="flex justify-between items-center mb-6 border-b pb-4 flex-wrap gap-2">
+            <div>
+              <h3>قائمة الإشعارات الحية والتنبيهات العاجلة</h3>
+              <p class="text-sm text-muted">استعراض وتدقيق تنبيهات الديون والمخزون والفواتير والعمليات</p>
+            </div>
+            <span class="badge badge-blue" id="notifs-total-count">0 إشعار</span>
+          </div>
+
+          <div id="notifications-full-list" class="flex flex-col gap-3">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <div id="footer-container"></div>
+    </main>
+  </div>
+
+  <!-- Modal: Printable Notifications Modal -->
+  <div class="modal-backdrop" id="notif-print-modal">
+    <div class="modal-card modal-card-lg printable-modal">
+      <div class="modal-header no-print">
+        <div class="modal-title">
+          <i class="fa-solid fa-print"></i>
+          <h3>معاينة طباعة الإشعارات والتنبيهات</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('notif-print-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" id="notif-printable-body">
+        <!-- Dynamic via JS -->
+      </div>
+
+      <div class="modal-footer no-print">
+        <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة الإشعارات الآن 𝓅</button>
+        <button class="btn btn-primary" onclick="closeModal('notif-print-modal')">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Cloud SDK & Sync Engine -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-sync.js"></script>
+  <script src="js/logo.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderAppLayout('notifications');
+      loadNotificationsPage();
+    });
+
+    function loadNotificationsPage() {
+      const container = document.getElementById('notifications-full-list');
+      const countBadge = document.getElementById('notifs-total-count');
+      if (!container) return;
+
+      const notifs = App.db.notifications;
+      if (countBadge) countBadge.textContent = `${notifs.length} إشعار`;
+
+      if (notifs.length === 0) {
+        container.innerHTML = `
+          <div class="text-center p-8 text-muted">
+            <i class="fa-solid fa-bell-slash text-4xl mb-3 block" style="font-size: 2.5rem;"></i>
+            <p>لا يوجد إشعارات حالياً في النظام</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = notifs.map(n => `
+        <div class="card p-4 flex justify-between items-center flex-wrap gap-3 mobile-stack-col" style="border-right: 5px solid ${n.type === 'danger' ? '#e11d48' : (n.type === 'warning' ? '#d97706' : '#2563eb')}">
+          <div class="flex items-center gap-3 mobile-w-full">
+            <div class="summary-card-icon ${n.type === 'danger' ? 'icon-rose' : (n.type === 'warning' ? 'icon-amber' : 'icon-blue')}">
+              <i class="fa-solid ${n.type === 'danger' ? 'fa-triangle-exclamation' : (n.type === 'warning' ? 'fa-bell' : 'fa-info-circle')}"></i>
+            </div>
+            <div style="flex: 1;">
+              <strong style="font-size: 1.025rem;">${n.title}</strong>
+              <p class="text-sm text-secondary mt-1">${n.message}</p>
+              <span class="text-xs text-muted mt-1 block"><i class="fa-regular fa-clock ml-1"></i> ${n.date}</span>
+            </div>
+          </div>
+
+          <div class="flex gap-2 mobile-w-full justify-between mt-2" style="border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+            <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="App.printNotification('${n.id}')" title="طباعة الإشعار"><i class="fa-solid fa-print"></i> طباعة</button>
+            <button class="btn btn-danger btn-sm" style="flex: 1;" onclick="App.deleteNotification('${n.id}')" title="حذف الإشعار"><i class="fa-solid fa-trash"></i> حذف</button>
+          </div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

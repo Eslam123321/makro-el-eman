@@ -1,0 +1,1911 @@
+/* ==========================================================================
+   مصنع الإيمان للمكرونة - ERP Masterpiece Core Engine
+   Pure JavaScript (ES6+) - Speed Up Enterprise Architecture
+   Developed by Speed Up (https://speed-up.tech/)
+   ========================================================================== */
+
+const DEFAULT_DATABASE = {
+  // Products System (STRICTLY NO SKU, ONLY SACKS 'شكارة')
+  products: [
+    { id: 'PRD-101', name: 'مكرونة قلم (شكارة 10 كجم)', unit: 'شكارة', stock: 450, costPrice: 180, sellPrice: 220, category: 'درجة أولى' },
+    { id: 'PRD-102', name: 'مكرونة اسباجيتي (شكارة 10 كجم)', unit: 'شكارة', stock: 320, costPrice: 185, sellPrice: 225, category: 'درجة أولى' },
+    { id: 'PRD-103', name: 'مكرونة شعرية (شكارة 25 كجم)', unit: 'شكارة', stock: 200, costPrice: 430, sellPrice: 510, category: 'درجة أولى' },
+    { id: 'PRD-104', name: 'مكرونة لسان عصفور (شكارة 25 كجم)', unit: 'شكارة', stock: 180, costPrice: 440, sellPrice: 520, category: 'درجة أولى' },
+    { id: 'PRD-105', name: 'مكرونة خواتم (شكارة 25 كجم)', unit: 'شكارة', stock: 260, costPrice: 420, sellPrice: 500, category: 'درجة ثانية' },
+    { id: 'PRD-106', name: 'مكرونة عقلة (شكارة 50 كجم)', unit: 'شكارة', stock: 110, costPrice: 820, sellPrice: 980, category: 'جامبو' }
+  ],
+
+  // Customers & Debtors (CRM)
+  customers: [
+    { id: 'CUST-1', name: 'شركة البركة لتجارة الجملة', phone: '01012345678', address: 'طنطا - السوق القديم', totalDebt: 12500, creditLimit: 50000, rating: 'VIP الذهبي', dueDate: '2026-08-10', notes: 'عميل مميز' },
+    { id: 'CUST-2', name: 'محلات الهداية للمواد الغذائية', phone: '01198765432', address: 'المحلة الكبرى - شارع البحر', totalDebt: 4500, creditLimit: 30000, rating: 'عميل فضي', dueDate: '2026-08-14', notes: 'سداد منتظم' },
+    { id: 'CUST-3', name: 'مؤسسة النور للتوزيع', phone: '01234567890', address: 'المنصورة - حي الجامعة', totalDebt: 0, creditLimit: 60000, rating: 'VIP الذهبي', dueDate: '', notes: 'دفع كاش فور السحب' },
+    { id: 'CUST-4', name: 'شركة الفجر للتوريدات العمومية', phone: '01099887766', address: 'بنها - الموقف الجديد', totalDebt: 8200, creditLimit: 25000, rating: 'عميل فضي', dueDate: '2026-08-09', notes: 'يستحق الدفع خلال يومين' }
+  ],
+
+  // Invoices System (ZERO TAX GUARANTEE)
+  invoices: [
+    {
+      id: 'INV-2026-001',
+      date: '2026-08-08 14:30:00',
+      customerName: 'شركة البركة لتجارة الجملة',
+      customerId: 'CUST-1',
+      items: [
+        { id: 'PRD-101', name: 'مكرونة قلم (شكارة 10 كجم)', unit: 'شكارة', qty: 50, price: 220, total: 11000 },
+        { id: 'PRD-103', name: 'مكرونة شعرية (شكارة 25 كجم)', unit: 'شكارة', qty: 20, price: 510, total: 10200 }
+      ],
+      subtotal: 21200,
+      discount: 200,
+      tax: 0,
+      grandTotal: 21000,
+      paidAmount: 8500,
+      remainingAmount: 12500,
+      paymentType: 'جزئي',
+      status: 'مؤكدة'
+    },
+    {
+      id: 'INV-2026-002',
+      date: '2026-08-08 16:15:00',
+      customerName: 'مؤسسة النور للتوزيع',
+      customerId: 'CUST-3',
+      items: [
+        { id: 'PRD-102', name: 'مكرونة اسباجيتي (شكارة 10 كجم)', unit: 'شكارة', qty: 30, price: 225, total: 6750 }
+      ],
+      subtotal: 6750,
+      discount: 50,
+      tax: 0,
+      grandTotal: 6700,
+      paidAmount: 6700,
+      remainingAmount: 0,
+      paymentType: 'كاش',
+      status: 'مؤكدة'
+    }
+  ],
+
+  // HR & Employees Payroll System
+  employees: [
+    { id: 'EMP-1', name: 'أحمد محمود العبد', phone: '01098765432', jobTitle: 'مشرف خط إنتاج', baseSalary: 8500, hireDate: '2024-01-15', payDay: 30, advances: 1200, absences: 1, netSalary: 7016, status: 'نشط' },
+    { id: 'EMP-2', name: 'محمد علي السيد', phone: '01123456789', jobTitle: 'فني تشغيل وتعبئة', baseSalary: 6500, hireDate: '2024-06-01', payDay: 1, advances: 500, absences: 0, netSalary: 6000, status: 'نشط' },
+    { id: 'EMP-3', name: 'محمود سعد علي', phone: '01011223344', jobTitle: 'سائق توزيع (ط د أ 4582)', baseSalary: 7500, hireDate: '2025-01-10', payDay: 1, advances: 1000, absences: 0, netSalary: 6500, status: 'نشط', truckPlate: 'ط د أ 4582' },
+    { id: 'EMP-4', name: 'مصطفى رجب خليل', phone: '01144556677', jobTitle: 'سائق توزيع (م ن ج 1294)', baseSalary: 7000, hireDate: '2025-02-01', payDay: 30, advances: 0, absences: 0, netSalary: 7000, status: 'نشط', truckPlate: 'م ن ج 1294' },
+    { id: 'EMP-5', name: 'وليد خالد العوضي', phone: '01277889900', jobTitle: 'سائق توزيع (ق ب ر 7831)', baseSalary: 7200, hireDate: '2025-03-01', payDay: 25, advances: 500, absences: 1, netSalary: 6460, status: 'نشط', truckPlate: 'ق ب ر 7831' }
+  ],
+
+  // Production Lines Status
+  productionLines: [
+    { id: 'LINE-1', name: 'خط إنتاج الاسباجيتي', status: 'نشط', dailyCapacity: 1200, todayOutput: 850 },
+    { id: 'LINE-2', name: 'خط إنتاج القلم والشعرية', status: 'نشط', dailyCapacity: 2000, todayOutput: 1400 },
+    { id: 'LINE-3', name: 'خط التعبئة والتغليف الآلي', status: 'نشط', dailyCapacity: 3500, todayOutput: 2900 }
+  ],
+
+  // Operating Expenses
+  expenses: [
+    { id: 'EXP-101', title: 'شراء شكاير تعبئة وتغليف فارغة', category: 'خامات ومواد', amount: 3500, date: '2026-08-08 10:15:00', notes: 'دفعة 5000 شكارة فارغة' },
+    { id: 'EXP-102', title: 'صيانة ومكابس خط الإنتاج الأول', category: 'صيانة', amount: 1800, date: '2026-08-07 18:40:00', notes: 'قطع غيار سير وسيور' },
+    { id: 'EXP-103', title: 'فاتورة كهرباء المصنع', category: 'مرافق', amount: 9400, date: '2026-08-05 11:00:00', notes: 'استهلاك الشهر الحالي' }
+  ],
+
+  // Notifications Center Engine
+  notifications: [
+    { id: 'NOTIF-1', title: 'تنبيه استحقاق سداد قريب', message: 'تستحق دفعات شركة الفجر للتوريدات العمومية (8,200 ج.م) غداً', date: '2026-08-08 18:00', type: 'warning' },
+    { id: 'NOTIF-2', title: 'تنبيه مخزون مكرونة', message: 'مكرونة عقلة (شكارة 50 كجم) اقترب رصيدها من النفاد بالمخزن (110 شكارة)', date: '2026-08-08 12:30', type: 'danger' },
+    { id: 'NOTIF-3', title: 'فاتورة مبيعات جديدة', message: 'تم إصدار فاتورة INV-2026-002 بقيمة 6,700 ج.م للعميل مؤسسة النور', date: '2026-08-08 16:15', type: 'info' }
+  ],
+
+  // Suppliers & Mills System (سعر وحساب مختلف لكل مطحن)
+  suppliers: [
+    { id: 'SUP-101', name: 'مطاحن الدلتا ومصر العليا', phone: '01055443322', address: 'طنطا - المنطقة الصناعية', flourType: 'دقيق فاخر استخراج 72%', unitPrice: 16500, totalBalance: 45000, notes: 'توريد أسبوعي ممتاز' },
+    { id: 'SUP-102', name: 'شركة مطاحن الفرسان للدقيق', phone: '01122334455', address: 'المحلة الكبرى - طريق طنطا', flourType: 'دقيق قمح استخراج 80%', unitPrice: 15800, totalBalance: 18000, notes: 'أسعار تنافسية' },
+    { id: 'SUP-103', name: 'مطاحن النجم الذهبي فاخر', phone: '01288776655', address: 'المنصورة - التجميع الصناعي', flourType: 'دقيق استخراج 72% مخصص للمكرونة', unitPrice: 17000, totalBalance: 0, notes: 'دفع نقدي فور التوريد' }
+  ],
+
+  // Attendance & Absence Records (سجل الحضور والغياب بالتاريخ الكامل)
+  attendanceRecords: [
+    { id: 'ATT-101', empId: 'EMP-1', empName: 'أحمد محمود العبد', date: '2026-08-02', dayName: 'الأحد', month: 'أغسطس 2026', year: '2026', type: 'غياب', notes: 'غياب بدون إذن مسبق' },
+    { id: 'ATT-102', empId: 'EMP-5', empName: 'وليد خالد العوضي', date: '2026-08-04', dayName: 'الثلاثاء', month: 'أغسطس 2026', year: '2026', type: 'غياب', notes: 'عذر صيانة السيارة' }
+  ],
+
+  // Delivery Fleet Trucks (أسطول عربيات التوصيل والسيارات بدون مناديب)
+  deliveryTrucks: [
+    { id: 'TRK-101', driverName: 'محمود سعد علي', plateNumber: 'ط د أ 4582', phone: '01011223344', status: 'في الطريق للتوصيل' },
+    { id: 'TRK-102', driverName: 'مصطفى رجب خليل', plateNumber: 'م ن ج 1294', phone: '01144556677', status: 'جاهزة بالمصنع' },
+    { id: 'TRK-103', driverName: 'وليد خالد العوضي', plateNumber: 'ق ب ر 7831', phone: '01277889900', status: 'صيانة دورية' }
+  ],
+
+  // Users & Permissions Management System
+  users: [
+    {
+      id: 'USR-1',
+      name: 'المدير العام المسؤول (Super Admin)',
+      username: 'admin',
+      email: 'admin@eleman.com',
+      password: 'admin',
+      role: 'مدير عام',
+      status: 'نشط',
+      createdAt: '2024-01-01',
+      permissions: ['dashboard', 'sales', 'inventory', 'suppliers', 'customers', 'hr', 'expenses', 'reports', 'users', 'notifications']
+    },
+    {
+      id: 'USR-2',
+      name: 'محمود سعد (مسؤول المبيعات)',
+      username: 'sales',
+      email: 'sales@eleman.com',
+      password: 'sales',
+      role: 'مسؤول مبيعات',
+      status: 'نشط',
+      createdAt: '2024-03-10',
+      permissions: ['dashboard', 'sales', 'customers']
+    },
+    {
+      id: 'USR-3',
+      name: 'طارق عبد الله (أمين المخازن)',
+      username: 'inventory',
+      email: 'inventory@eleman.com',
+      password: '123',
+      role: 'أمين مخزن',
+      status: 'نشط',
+      createdAt: '2024-04-15',
+      permissions: ['dashboard', 'inventory', 'reports']
+    },
+    {
+      id: 'USR-4',
+      name: 'خالد مصطفى (المحاسب المالي)',
+      username: 'accountant',
+      email: 'accountant@eleman.com',
+      password: '123',
+      role: 'محاسب مالي',
+      status: 'نشط',
+      createdAt: '2024-05-01',
+      permissions: ['dashboard', 'sales', 'expenses', 'reports', 'suppliers']
+    }
+  ],
+
+  treasury: 145000
+};
+
+// Storage Manager
+class StorageManager {
+  static getDB() {
+    const data = localStorage.getItem('eleman_erp_db');
+    if (!data) {
+      this.saveDB(DEFAULT_DATABASE);
+      return DEFAULT_DATABASE;
+    }
+    const parsed = JSON.parse(data);
+    if (!parsed.productionLines) parsed.productionLines = DEFAULT_DATABASE.productionLines;
+    if (!parsed.notifications) parsed.notifications = DEFAULT_DATABASE.notifications;
+    if (!parsed.attendanceLog) parsed.attendanceLog = parsed.attendanceRecords || DEFAULT_DATABASE.attendanceRecords;
+    parsed.attendanceRecords = parsed.attendanceLog;
+    if (!parsed.deliveryTrucks || parsed.deliveryTrucks.length === 0) parsed.deliveryTrucks = DEFAULT_DATABASE.deliveryTrucks;
+    if (!parsed.employees || parsed.employees.length === 0) parsed.employees = DEFAULT_DATABASE.employees;
+    if (!parsed.users || parsed.users.length === 0) parsed.users = DEFAULT_DATABASE.users;
+
+    // Clean up repName from delivery trucks
+    (parsed.deliveryTrucks || []).forEach(t => {
+      delete t.repName;
+    });
+
+    // Auto-sync all fleet drivers into employees list
+    (parsed.deliveryTrucks || []).forEach(t => {
+      if (t.driverName) {
+        const found = parsed.employees.find(e => e.name === t.driverName || (e.truckPlate && e.truckPlate === t.plateNumber));
+        if (!found) {
+          parsed.employees.push({
+            id: `EMP-${parsed.employees.length + 1}`,
+            name: t.driverName,
+            phone: t.phone || '',
+            jobTitle: `سائق توزيع (${t.plateNumber})`,
+            baseSalary: 7500,
+            hireDate: '2025-01-10',
+            payDay: 1,
+            advances: 0,
+            absences: 0,
+            netSalary: 7500,
+            status: 'نشط',
+            truckPlate: t.plateNumber
+          });
+        } else {
+          found.truckPlate = t.plateNumber;
+          if (t.phone) found.phone = t.phone;
+        }
+      }
+    });
+
+    return parsed;
+  }
+
+  static saveDB(db) {
+    localStorage.setItem('eleman_erp_db', JSON.stringify(db));
+    if (typeof FirebaseSync !== 'undefined' && typeof FirebaseSync.pushToCloud === 'function') {
+      FirebaseSync.pushToCloud();
+    }
+  }
+}
+
+// Global App Utilities
+const App = {
+  db: StorageManager.getDB(),
+
+  // Current Logged-in User Session
+  getCurrentUser() {
+    const userStr = localStorage.getItem('eleman_current_user');
+    if (!userStr) {
+      return null;
+    }
+    try {
+      const u = JSON.parse(userStr);
+      // Sync fresh data from db
+      const fresh = (this.db.users || []).find(x => x.id === u.id || x.username === u.username);
+      return fresh || u;
+    } catch(e) {
+      return null;
+    }
+  },
+
+  setCurrentUser(user) {
+    localStorage.setItem('eleman_current_user', JSON.stringify(user));
+  },
+
+  logout() {
+    localStorage.removeItem('eleman_current_user');
+    this.showToast('تم تسجيل الخروج بنجاح. جاري التوجيه...', 'info');
+    setTimeout(() => {
+      window.location.href = 'login.html';
+    }, 400);
+  },
+
+  hasPermission(permissionKey) {
+    const user = this.getCurrentUser();
+    if (!user || user.status === 'معطل') return false;
+    // Only the Super Admin (USR-1 or admin with General Manager role) has automatic full access
+    if (user.id === 'USR-1' || (user.username === 'admin' && user.role === 'مدير عام')) {
+      return true;
+    }
+    // Any other user ONLY has permissions that are explicitly in their permissions array
+    if (!user.permissions || !Array.isArray(user.permissions)) return false;
+    return user.permissions.includes(permissionKey);
+  },
+
+  checkPageAccess(pageKey) {
+    if (window.location.pathname.endsWith('login.html')) return;
+    const user = this.getCurrentUser();
+    if (!user) {
+      window.location.href = 'login.html';
+      return;
+    }
+    if (user.status === 'معطل') {
+      alert('عفواً، تم تعطيل هذا الحساب من قبل إدارة المصنع. يرجى التواصل مع المدير العام.');
+      this.logout();
+      return;
+    }
+    if (pageKey && !this.hasPermission(pageKey)) {
+      alert('عفواً، ليس لديك صلاحية للوصول إلى هذا القسم.');
+      const pageMap = {
+        'dashboard': 'index.html',
+        'sales': 'sales.html',
+        'inventory': 'inventory.html',
+        'suppliers': 'suppliers.html',
+        'customers': 'customers.html',
+        'hr': 'hr.html',
+        'expenses': 'expenses.html',
+        'reports': 'reports.html',
+        'users': 'users.html',
+        'notifications': 'notifications.html'
+      };
+      const firstAllowed = (user.permissions || []).find(p => p !== pageKey && pageMap[p]);
+      const dest = firstAllowed ? pageMap[firstAllowed] : 'login.html';
+      window.location.href = dest;
+    }
+  },
+
+  save() {
+    StorageManager.saveDB(this.db);
+    this.refreshUI();
+  },
+
+  refreshUI() {
+    this.db = StorageManager.getDB();
+    if (typeof loadDashboardData === 'function') loadDashboardData();
+    if (typeof renderProductionLines === 'function') renderProductionLines();
+    if (typeof loadInvoicesTable === 'function') loadInvoicesTable();
+    if (typeof initSalesForm === 'function') initSalesForm();
+    if (typeof loadInventoryTable === 'function') loadInventoryTable();
+    if (typeof loadCustomersTable === 'function') loadCustomersTable();
+    if (typeof checkUpcomingDuePayments === 'function') checkUpcomingDuePayments();
+    if (typeof loadEmployeesTable === 'function') loadEmployeesTable();
+    if (typeof generateAttendanceReport === 'function') generateAttendanceReport();
+    if (typeof loadExpensesTable === 'function') loadExpensesTable();
+    if (typeof loadSuppliersTable === 'function') loadSuppliersTable();
+    if (typeof generateFinancialAuditReport === 'function') generateFinancialAuditReport();
+    if (typeof loadDeliveryTrucksTable === 'function') loadDeliveryTrucksTable();
+    if (typeof loadNotificationsPage === 'function') loadNotificationsPage();
+
+    const activeNavItem = document.querySelector('.sidebar-nav .nav-item.active span');
+    if (activeNavItem) {
+      const text = activeNavItem.textContent || '';
+      if (text.includes('المبيعات') && typeof renderPageSummaryCards === 'function') renderPageSummaryCards('sales', 'sales-summary-cards');
+      if (text.includes('المخازن') && typeof renderPageSummaryCards === 'function') renderPageSummaryCards('inventory', 'inventory-summary-cards');
+      if (text.includes('العملاء') && typeof renderPageSummaryCards === 'function') renderPageSummaryCards('customers', 'customers-summary-cards');
+      if (text.includes('الموارد') && typeof renderPageSummaryCards === 'function') renderPageSummaryCards('hr', 'hr-summary-cards-container');
+      if (text.includes('المصروفات') && typeof renderPageSummaryCards === 'function') renderPageSummaryCards('expenses', 'expenses-summary-cards');
+      if (text.includes('الموردين') && typeof renderPageSummaryCards === 'function') renderPageSummaryCards('suppliers', 'suppliers-summary-cards');
+    }
+    this.updateNotificationBadge();
+  },
+
+  playBeepTone(freq = 880, type = 'sine', duration = 0.1) {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch (e) {}
+  },
+
+  formatCurrency(amount) {
+    const num = Math.round(parseFloat(amount) || 0);
+    return new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 0 }).format(num) + ' ج.م';
+  },
+
+  formatTimestamp(dateStr = null) {
+    const d = dateStr ? new Date(dateStr) : new Date();
+    return d.toLocaleString('ar-EG', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  },
+
+  getNowISO() {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  },
+
+  getFormattedCurrentDate() {
+    const now = new Date();
+    return now.toLocaleDateString('ar-EG', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  },
+
+  showToast(message, type = 'success') {
+    this.playBeepTone(type === 'success' ? 900 : (type === 'danger' ? 300 : 600));
+
+    let container = document.getElementById('toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toast-container';
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    const icon = type === 'success' ? 'fa-circle-check' : (type === 'danger' ? 'fa-circle-xmark' : 'fa-circle-exclamation');
+    toast.innerHTML = `
+      <i class="fa-solid ${icon} ${type === 'success' ? 'text-success' : (type === 'danger' ? 'text-danger' : 'text-warning')}"></i>
+      <span>${message}</span>
+    `;
+
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-100%)';
+      toast.style.transition = 'all 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, 3500);
+  },
+
+  toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('eleman_theme', newTheme);
+    this.showToast(`تم تغيير النمط إلى (${newTheme === 'dark' ? 'النمط الليلي 🌙' : 'النمط النهاري ☀️'})`, 'success');
+  },
+
+  initTheme() {
+    const savedTheme = localStorage.getItem('eleman_theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  },
+
+  // Activity & Audit Logging Engine
+  logActivity(title, message, type = 'info', actor = null) {
+    const user = actor || this.getCurrentUser() || { name: 'المدير العام', username: 'admin', role: 'مدير عام' };
+    const fullMsg = `[بواسطة: ${user.name} (${user.username}) - ${user.role}] ${message}`;
+    this.addNotification(title, fullMsg, type);
+  },
+
+  // Notification Actions
+  addNotification(title, message, type = 'info') {
+    const newNotif = {
+      id: `NOTIF-${Date.now()}`,
+      title: title,
+      message: message,
+      date: this.getNowISO(),
+      type: type
+    };
+    if (!this.db.notifications) this.db.notifications = [];
+    this.db.notifications.unshift(newNotif);
+    this.save();
+    this.updateNotificationBadge();
+  },
+
+  deleteNotification(notifId) {
+    this.db.notifications = (this.db.notifications || []).filter(n => n.id !== notifId);
+    this.save();
+    this.updateNotificationBadge();
+    if (typeof loadNotificationsPage === 'function') loadNotificationsPage();
+    if (typeof renderNotificationsDropdown === 'function') renderNotificationsDropdown();
+    this.showToast('تم حذف الإشعار بنجاح 🗑️', 'danger');
+  },
+
+  clearAllNotifications() {
+    if (confirm('هل أنت متأكد من مسح وحذف كافة الإشعارات والأنشطة المسجلة نهائياً؟')) {
+      this.db.notifications = [];
+      this.save();
+      this.updateNotificationBadge();
+      if (typeof loadNotificationsPage === 'function') loadNotificationsPage();
+      if (typeof renderNotificationsDropdown === 'function') renderNotificationsDropdown();
+      this.showToast('تم مسح وتصفير كافة الإشعارات بنجاح! ✨', 'info');
+    }
+  },
+
+  printNotification(id) {
+    const notif = (this.db.notifications || []).find(n => n.id === id);
+    if (!notif) return;
+    const logoSrc = (typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png';
+    const printWin = window.open('', '_blank');
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html lang="ar" dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <title>إشعار رقابة رسمي - مصنع الإيمان للمكرونة</title>
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap">
+          <style>
+            body { font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; color: #1e293b; padding: 2.5rem; }
+            .header-box { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #059669; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+            .notif-card { border: 2px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; background: #f8fafc; margin-bottom: 2rem; }
+            .footer-sign { display: flex; justify-content: space-between; margin-top: 3rem; border-top: 1px dashed #cbd5e1; padding-top: 1.5rem; font-size: 0.9rem; }
+          </style>
+        </head>
+        <body>
+          <div class="header-box">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <img src="${logoSrc}" style="height: 60px; width: 60px; object-fit: contain;">
+              <div>
+                <h2 style="color: #059669; margin: 0;">مصنع الإيمان للمكرونة</h2>
+                <p style="color: #64748b; font-size: 0.85rem; margin: 2px 0 0 0;">سجل الرقابة وتدقيق الأنشطة الإدارية</p>
+              </div>
+            </div>
+            <div style="text-align: left;">
+              <strong style="font-size: 1.1rem; color: #1e293b;">إشعار نظام رسمي 🔔</strong>
+              <p style="color: #64748b; font-size: 0.8rem; margin: 2px 0 0 0;">كود الإشعار: ${notif.id}</p>
+            </div>
+          </div>
+
+          <div class="notif-card">
+            <h3 style="color: #0f172a; margin-top: 0; font-size: 1.3rem;">${notif.title}</h3>
+            <p style="font-size: 1.05rem; line-height: 1.8; color: #334155; margin: 1rem 0;">${notif.message}</p>
+            <div style="color: #64748b; font-size: 0.85rem; border-top: 1px solid #e2e8f0; padding-top: 0.75rem; margin-top: 1rem;">
+              <strong>توقيت تسجيل الإجراء:</strong> ${notif.date}
+            </div>
+          </div>
+
+          <div class="footer-sign">
+            <div>
+              <p>ختم مصنع الإيمان للمكرونة: 🌾 ________________</p>
+            </div>
+            <div>
+              <p>اعتماد الإدارة العامة والرقابة: ________________</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+    setTimeout(() => {
+      printWin.print();
+    }, 400);
+  },
+
+  printAllNotifications() {
+    const notifs = this.db.notifications || [];
+    const logoSrc = (typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png';
+    const printWin = window.open('', '_blank');
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html lang="ar" dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <title>سجل الرقابة والأنشطة الشامل - مصنع الإيمان</title>
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap">
+          <style>
+            body { font-family: 'Cairo', sans-serif; direction: rtl; text-align: right; color: #1e293b; padding: 2rem; }
+            .header-box { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #059669; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+            table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem; }
+            th, td { border: 1px solid #cbd5e1; padding: 8px 10px; }
+            th { background: #f1f5f9; font-weight: bold; }
+            .footer-sign { display: flex; justify-content: space-between; margin-top: 2.5rem; border-top: 1px dashed #cbd5e1; padding-top: 1rem; font-size: 0.85rem; }
+          </style>
+        </head>
+        <body>
+          <div class="header-box">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <img src="${logoSrc}" style="height: 60px; width: 60px; object-fit: contain;">
+              <div>
+                <h2 style="color: #059669; margin: 0;">مصنع الإيمان للمكرونة</h2>
+                <p style="color: #64748b; font-size: 0.85rem; margin: 2px 0 0 0;">تقرير سجل الرقابة وتدقيق الأنشطة والإشعارات الشامل</p>
+              </div>
+            </div>
+            <div style="text-align: left;">
+              <strong style="font-size: 1.1rem; color: #1e293b;">كشف الرقابة العامة</strong>
+              <p style="color: #64748b; font-size: 0.8rem; margin: 2px 0 0 0;">إجمالي الأنشطة: ${notifs.length} إشعار</p>
+              <p style="color: #64748b; font-size: 0.8rem; margin: 2px 0 0 0;">تاريخ الاستخراج: ${this.getFormattedCurrentDate()}</p>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th style="width: 150px;">التاريخ والوقت</th>
+                <th style="width: 170px;">نوع الإجراء / العنوان</th>
+                <th>تفاصيل الإجراء والموظف المنفذ</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${notifs.map((n, idx) => `
+                <tr>
+                  <td style="text-align: center; font-weight: bold;">${idx + 1}</td>
+                  <td style="font-size: 0.8rem;">${n.date}</td>
+                  <td><strong>${n.title}</strong></td>
+                  <td>${n.message}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="footer-sign">
+            <div>
+              <p>ختم واعتماد مصنع الإيمان للمكرونة: 🌾 ________________</p>
+            </div>
+            <div>
+              <p>مدير عام الرقابة الإدارية: ________________</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+    setTimeout(() => {
+      printWin.print();
+    }, 400);
+  },
+
+  updateNotificationBadge() {
+    const currentUser = this.getCurrentUser();
+    const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+    
+    const countEl = document.getElementById('header-notif-count');
+    const badgeWrapper = document.getElementById('header-notif-wrapper');
+    const sidebarBadge = document.getElementById('sidebar-notif-badge');
+
+    if (!isSuperAdmin) {
+      if (badgeWrapper) badgeWrapper.style.display = 'none';
+      if (sidebarBadge) sidebarBadge.style.display = 'none';
+      return;
+    }
+
+    if (badgeWrapper) badgeWrapper.style.display = 'block';
+    const count = (this.db.notifications || []).length;
+    if (countEl) {
+      countEl.textContent = count;
+      countEl.style.display = count > 0 ? 'flex' : 'none';
+    }
+    if (sidebarBadge) {
+      sidebarBadge.textContent = count;
+      sidebarBadge.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+  },
+
+  exportBackup() {
+    const jsonStr = JSON.stringify(this.db, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Eleman_Pasta_Factory_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.showToast('تم تصدير النسخة الاحتياطية بنجاح 💾', 'success');
+  },
+
+  exportTableToCSV(tableId, filename = 'report.csv') {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    rows.forEach(row => {
+      const cols = row.querySelectorAll('td, th');
+      let rowData = [];
+      cols.forEach(col => rowData.push('"' + col.innerText.replace(/"/g, '""') + '"'));
+      csv.push(rowData.join(','));
+    });
+
+    const csvContent = '\uFEFF' + csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.showToast(`تم تصدير الجدول إلى ملف Excel (${filename})`, 'success');
+  },
+
+  handleQuickModalSearch(query) {
+    const q = (query || '').trim().toLowerCase();
+    const resultsContainer = document.getElementById('global-search-modal-results');
+    if (!resultsContainer) return;
+
+    if (!q) {
+      resultsContainer.innerHTML = `<div class="p-6 text-center text-muted text-sm">ابدأ الكتابة للبحث السريع في الفواتير والعملاء والمطاحن والأصناف والموظفين وسيارات التوصيل...</div>`;
+      return;
+    }
+
+    const results = [];
+
+    // Search Invoices
+    (this.db.invoices || []).forEach(inv => {
+      if (inv.id.toLowerCase().includes(q) || (inv.customerName && inv.customerName.toLowerCase().includes(q))) {
+        results.push({
+          type: 'فاتورة مبيعات',
+          icon: 'fa-file-invoice-dollar',
+          title: `فاتورة رقم ${inv.id} - ${inv.customerName}`,
+          subtitle: `${this.formatCurrency(inv.grandTotal)} | ${this.formatTimestamp(inv.date)}`,
+          action: () => { closeModal('global-search-modal'); previewInvoice(inv.id); }
+        });
+      }
+    });
+
+    // Search Customers
+    (this.db.customers || []).forEach(c => {
+      if (c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q)) || c.id.toLowerCase().includes(q)) {
+        results.push({
+          type: 'حساب عميل',
+          icon: 'fa-user',
+          title: `العميل: ${c.name}`,
+          subtitle: `هاتف: ${c.phone} | ديون مستحقة: ${this.formatCurrency(c.totalDebt)}`,
+          action: () => { closeModal('global-search-modal'); window.location.href = `customers.html?search=${encodeURIComponent(c.name)}`; }
+        });
+      }
+    });
+
+    // Search Suppliers
+    (this.db.suppliers || []).forEach(s => {
+      if (s.name.toLowerCase().includes(q) || (s.phone && s.phone.includes(q)) || (s.flourType && s.flourType.toLowerCase().includes(q))) {
+        results.push({
+          type: 'مورد / مطحن',
+          icon: 'fa-truck-field',
+          title: `المطحن/المورد: ${s.name}`,
+          subtitle: `نوع الدقيق: ${s.flourType} | مستحقات المطحن: ${this.formatCurrency(s.totalBalance)}`,
+          action: () => { closeModal('global-search-modal'); window.location.href = `suppliers.html?search=${encodeURIComponent(s.name)}`; }
+        });
+      }
+    });
+
+    // Search Products
+    (this.db.products || []).forEach(p => {
+      if (p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)) {
+        results.push({
+          type: 'صنف مكرونة',
+          icon: 'fa-boxes-stacked',
+          title: `صنف: ${p.name}`,
+          subtitle: `سعر الشكارة: ${this.formatCurrency(p.sellPrice)} | المتاح بالمخزن: ${p.stock} شكارة`,
+          action: () => { closeModal('global-search-modal'); window.location.href = `inventory.html?search=${encodeURIComponent(p.name)}`; }
+        });
+      }
+    });
+
+    // Search Employees
+    (this.db.employees || []).forEach(e => {
+      if (e.name.toLowerCase().includes(q) || (e.jobTitle && e.jobTitle.toLowerCase().includes(q))) {
+        results.push({
+          type: 'موظف',
+          icon: 'fa-user-tie',
+          title: `الموظف: ${e.name}`,
+          subtitle: `الوظيفة: ${e.jobTitle} | الراتب: ${this.formatCurrency(e.baseSalary)}`,
+          action: () => { closeModal('global-search-modal'); window.location.href = `hr.html?search=${encodeURIComponent(e.name)}`; }
+        });
+      }
+    });
+
+    // Search Delivery Trucks
+    (this.db.deliveryTrucks || []).forEach(t => {
+      if ((t.driverName && t.driverName.toLowerCase().includes(q)) || (t.plateNumber && t.plateNumber.toLowerCase().includes(q)) || (t.repName && t.repName.toLowerCase().includes(q))) {
+        results.push({
+          type: 'سيارة توصيل',
+          icon: 'fa-truck-fast',
+          title: `سيارة ${t.plateNumber} (سائق: ${t.driverName})`,
+          subtitle: `المندوب الحالي: ${t.repName} | حالة السيارة: ${t.status}`,
+          action: () => { closeModal('global-search-modal'); window.location.href = `reports.html?search=${encodeURIComponent(t.plateNumber)}`; }
+        });
+      }
+    });
+
+    if (results.length === 0) {
+      resultsContainer.innerHTML = `<div class="p-6 text-center text-muted">لا يوجد نتائج مطابقة للبحث "${q}"</div>`;
+      return;
+    }
+
+    resultsContainer.innerHTML = results.map((r, index) => `
+      <div class="quick-search-item" onclick="App._execSearchResult(${index})">
+        <div class="quick-search-icon"><i class="fa-solid ${r.icon}"></i></div>
+        <div style="flex: 1;">
+          <div class="flex justify-between items-center">
+            <strong class="text-sm text-primary">${r.title}</strong>
+            <span class="badge badge-blue text-xs">${r.type}</span>
+          </div>
+          <p class="text-xs text-muted mt-1">${r.subtitle}</p>
+        </div>
+      </div>
+    `).join('');
+
+    window._currentModalSearchResults = results;
+  },
+
+  _execSearchResult(index) {
+    if (window._currentModalSearchResults && window._currentModalSearchResults[index]) {
+      window._currentModalSearchResults[index].action();
+    }
+  },
+
+  handleQuickSearch(query) {
+    const dropdown = document.getElementById('quick-search-dropdown');
+    if (!dropdown) return;
+    const q = (query || '').trim().toLowerCase();
+    if (!q) {
+      dropdown.style.display = 'none';
+      dropdown.innerHTML = '';
+      return;
+    }
+
+    const results = [];
+
+    // Search Invoices
+    (this.db.invoices || []).forEach(inv => {
+      if (inv.id.toLowerCase().includes(q) || (inv.customerName && inv.customerName.toLowerCase().includes(q))) {
+        results.push({
+          type: 'فاتورة مبيعات',
+          icon: 'fa-file-invoice-dollar',
+          title: `${inv.id} - ${inv.customerName}`,
+          subtitle: `${this.formatCurrency(inv.grandTotal)} | ${inv.date}`,
+          action: () => openInvoiceGlobalPreview(inv.id)
+        });
+      }
+    });
+
+    // Search Customers
+    (this.db.customers || []).forEach(c => {
+      if (c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q)) || c.id.toLowerCase().includes(q)) {
+        results.push({
+          type: 'عميل',
+          icon: 'fa-user',
+          title: `${c.name} (${c.phone})`,
+          subtitle: `الديون: ${this.formatCurrency(c.totalDebt)} | ${c.address}`,
+          action: () => window.location.href = `customers.html?search=${encodeURIComponent(c.name)}`
+        });
+      }
+    });
+
+    // Search Suppliers
+    (this.db.suppliers || []).forEach(s => {
+      if (s.name.toLowerCase().includes(q) || (s.phone && s.phone.includes(q)) || (s.flourType && s.flourType.toLowerCase().includes(q))) {
+        results.push({
+          type: 'مطحن / مورد',
+          icon: 'fa-truck-field',
+          title: `${s.name} (${s.flourType})`,
+          subtitle: `السعر: ${s.unitPrice} ج.م | المستحق: ${this.formatCurrency(s.totalBalance)}`,
+          action: () => window.location.href = `suppliers.html?search=${encodeURIComponent(s.name)}`
+        });
+      }
+    });
+
+    // Search Products
+    (this.db.products || []).forEach(p => {
+      if (p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)) {
+        results.push({
+          type: 'صنف مكرونة',
+          icon: 'fa-boxes-stacked',
+          title: `${p.name}`,
+          subtitle: `المتاح: ${p.stock} شكارة | سعر الشكارة: ${p.sellPrice} ج.م`,
+          action: () => window.location.href = `inventory.html?search=${encodeURIComponent(p.name)}`
+        });
+      }
+    });
+
+    // Search Employees
+    (this.db.employees || []).forEach(e => {
+      if (e.name.toLowerCase().includes(q) || (e.jobTitle && e.jobTitle.toLowerCase().includes(q))) {
+        results.push({
+          type: 'موظف',
+          icon: 'fa-user-tie',
+          title: `${e.name} (${e.jobTitle})`,
+          subtitle: `الراتب الأساسي: ${this.formatCurrency(e.baseSalary)}`,
+          action: () => window.location.href = `hr.html?search=${encodeURIComponent(e.name)}`
+        });
+      }
+    });
+
+    // Search Delivery Trucks
+    (this.db.deliveryTrucks || []).forEach(t => {
+      if ((t.driverName && t.driverName.toLowerCase().includes(q)) || (t.plateNumber && t.plateNumber.toLowerCase().includes(q)) || (t.repName && t.repName.toLowerCase().includes(q))) {
+        results.push({
+          type: 'سيارة توصيل',
+          icon: 'fa-truck-fast',
+          title: `سائق: ${t.driverName} (${t.plateNumber})`,
+          subtitle: `المندوب: ${t.repName} | حالة: ${t.status}`,
+          action: () => window.location.href = `reports.html?search=${encodeURIComponent(t.driverName)}`
+        });
+      }
+    });
+
+    if (results.length === 0) {
+      dropdown.innerHTML = `<div class="p-3 text-center text-muted text-xs">لا توجد نتائج مطابقة لـ "${q}"</div>`;
+    } else {
+      window._qsActions = results.map(r => r.action);
+      dropdown.innerHTML = results.slice(0, 7).map((r, idx) => `
+        <div class="quick-search-item" onclick="window._qsActions[${idx}](); document.getElementById('quick-search-dropdown').style.display='none';">
+          <div class="quick-search-icon"><i class="fa-solid ${r.icon}"></i></div>
+          <div class="quick-search-content">
+            <div class="flex justify-between items-center">
+              <strong class="text-sm">${r.title}</strong>
+              <span class="badge badge-blue text-xs">${r.type}</span>
+            </div>
+            <span class="text-xs text-muted block mt-1">${r.subtitle}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+    dropdown.style.display = 'block';
+  }
+};
+
+App.initTheme();
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#global-quick-search-box')) {
+    const dropdown = document.getElementById('quick-search-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+  }
+});
+
+// Global Clickable Invoice Preview Trigger
+function openInvoiceGlobalPreview(invId) {
+  previewInvoice(invId);
+}
+
+function previewInvoice(invId) {
+  const inv = App.db.invoices ? App.db.invoices.find(i => i.id === invId) : null;
+  if (!inv) return;
+
+  const container = document.getElementById('invoice-preview-container');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div id="printable-invoice-content" class="p-6 bg-white border rounded-xl shadow-sm relative" style="font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important; direction: rtl !important; text-align: right !important; letter-spacing: 0px !important; word-spacing: 0px !important; color: #1e293b; background: #ffffff;">
+      
+      <!-- Invoice Header with Real Logo -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <img src="${(typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png'}" alt="شعار مصنع الإيمان" style="height: 64px; width: 64px; object-fit: contain;">
+          <div>
+            <h2 style="color: #059669; font-weight: 700; font-size: 1.45rem; margin: 0 0 3px 0; font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif; letter-spacing: 0;">مصنع الإيمان للمكرونة</h2>
+            <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 2px 0; font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif;">إنتاج وتعبئة أرقى أنواع المكرونة بالشكارة</p>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0; font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif;">جمهورية مصر العربية - خطوط إنتاج المنطقة الصناعية</p>
+          </div>
+        </div>
+        <div style="text-align: left;">
+          <h3 style="font-weight: 700; color: #1e293b; margin: 0 0 4px 0; font-size: 1.25rem; font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif; letter-spacing: 0;">فاتورة بيع شكاير رسمية</h3>
+          <p style="font-size: 0.95rem; font-weight: 700; color: #059669; margin: 0 0 2px 0; font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif;">رقم الفاتورة: ${inv.id}</p>
+          <p style="font-size: 0.8rem; color: #64748b; margin: 0; font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif;">التاريخ والوقت: ${App.formatTimestamp(inv.date)}</p>
+        </div>
+      </div>
+
+      <!-- Customer Info Card -->
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <span style="font-size: 0.8rem; color: #64748b; display: block; margin-bottom: 3px;">بيانات العميل المستلم:</span>
+          <strong style="font-size: 1.15rem; color: #0f172a; font-family: 'Cairo', sans-serif;">${inv.customerName}</strong>
+          ${(() => {
+            const cust = App.db.customers ? App.db.customers.find(c => c.name === inv.customerName) : null;
+            return cust && cust.phone ? `<span style="font-size: 0.85rem; color: #64748b; margin-right: 14px;">| رقم الهاتف: <strong style="color: #059669;">${cust.phone}</strong></span>` : '';
+          })()}
+        </div>
+        <div style="text-align: left;">
+          <span style="font-size: 0.8rem; color: #64748b; display: block; margin-bottom: 3px;">طريقة الدفع والتسديد:</span>
+          <span style="background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 0.9rem;">${inv.paymentType}</span>
+        </div>
+      </div>
+
+      <!-- Items Table -->
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; border: 1px solid #e2e8f0;">
+        <thead style="background: #f1f5f9;">
+          <tr>
+            <th style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: right; font-weight: 800; font-size: 0.95rem;">منتج المكرونة</th>
+            <th style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: 800; font-size: 0.95rem;">وحدة التعبئة</th>
+            <th style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: 800; font-size: 0.95rem;">الكمية المباعة</th>
+            <th style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: right; font-weight: 800; font-size: 0.95rem;">سعر الشكارة</th>
+            <th style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: right; font-weight: 800; font-size: 0.95rem;">الإجمالي الصافي</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${inv.items.map(item => `
+            <tr>
+              <td style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: right; font-weight: 700;">${item.name}</td>
+              <td style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: center;"><span style="background: #f3f4f6; color: #374151; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">${item.unit}</span></td>
+              <td style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: center; font-weight: 700;">${item.qty} شكارة</td>
+              <td style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: right;">${App.formatCurrency(item.price)}</td>
+              <td style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: right; font-weight: 800; color: #059669;">${App.formatCurrency(item.total)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <!-- Totals Breakdown & Official Seal -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; border-top: 2px solid #e2e8f0; padding-top: 14px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <!-- Official Stamp -->
+          <div style="border: 2px solid #059669; padding: 8px 14px; border-radius: 8px; color: #059669; text-align: center; background: rgba(5, 150, 105, 0.04);">
+            <img src="${(typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png'}" alt="شعار" style="height: 28px; display: block; margin: 0 auto 3px auto;">
+            <strong style="font-size: 0.85rem; display: block;">مصنع الإيمان للمكرونة</strong>
+            <span style="font-size: 0.75rem; font-weight: 700;">معتمدة رسمياً 🌾</span>
+          </div>
+          <div style="font-size: 0.8rem; color: #64748b; max-width: 280px; line-height: 1.4;">
+            <p style="font-weight: 700; color: #334155; margin: 0 0 2px 0;">شكراً لتعاملكم مع مصنع الإيمان للمكرونة 🌾</p>
+            <p style="margin: 0;">* يسعدنا خدمتكم دائماً وتوفير أجود أنواع المكرونة بالشكارة.</p>
+          </div>
+        </div>
+
+        <div style="width: 270px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px; color: #475569;">
+            <span>المجموع الفرعي للشكاير:</span>
+            <strong style="color: #1e293b;">${App.formatCurrency(inv.subtotal)}</strong>
+          </div>
+          ${inv.discount > 0 ? `
+          <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px; color: #dc2626;">
+            <span>الخصم المباشر:</span>
+            <strong>-${App.formatCurrency(inv.discount)}</strong>
+          </div>
+          ` : ''}
+          <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.1rem; border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 4px; color: #059669; font-family: 'Cairo', sans-serif;">
+            <span>الإجمالي الواجب سداده:</span>
+            <span>${App.formatCurrency(inv.grandTotal)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b; margin-top: 6px; border-top: 1px dashed #e2e8f0; padding-top: 4px;">
+            <span>المسدد: ${App.formatCurrency(inv.paidAmount)}</span>
+            <span>المتبقي: ${App.formatCurrency(inv.remainingAmount)}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  `;
+
+  const btnPrint = document.getElementById('btn-print-inv');
+  if (btnPrint) btnPrint.onclick = () => window.print();
+
+  const btnPdf = document.getElementById('btn-pdf-inv');
+  if (btnPdf) btnPdf.onclick = () => window.print();
+
+  const btnImg = document.getElementById('btn-img-inv');
+  if (btnImg) btnImg.onclick = () => downloadInvoiceAsImage();
+
+  const btnWa = document.getElementById('btn-wa-inv');
+  if (btnWa) btnWa.onclick = () => sendInvoiceWhatsApp(inv.id);
+
+  openModal('preview-invoice-modal');
+}
+
+async function generateInvoicePdfBlob(invId) {
+  let inv = App.db.invoices ? App.db.invoices.find(i => i.id === invId) : null;
+  if (!inv && typeof currentDraftInvoice !== 'undefined' && currentDraftInvoice && currentDraftInvoice.id === invId) {
+    inv = currentDraftInvoice;
+  }
+  if (!inv && App.db.invoices && App.db.invoices.length > 0) {
+    inv = App.db.invoices[0];
+  }
+  if (!inv) return null;
+
+  if (!document.getElementById('printable-invoice-content')) {
+    previewInvoice(inv.id || invId);
+  }
+
+  const originalContent = document.getElementById('printable-invoice-content');
+  if (!originalContent) return null;
+
+  const modal = document.getElementById('preview-invoice-modal');
+  const wasActive = modal && modal.classList.contains('active');
+  if (modal && !wasActive) {
+    modal.classList.add('active');
+  }
+
+  const opt = {
+    margin: [6, 6, 6, 6],
+    filename: `Invoice-${inv.id}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      letterRendering: false,
+      scrollY: 0,
+      scrollX: 0
+    },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  try {
+    const pdfBlob = await html2pdf().set(opt).from(originalContent).output('blob');
+    if (modal && !wasActive) {
+      modal.classList.remove('active');
+    }
+    return pdfBlob;
+  } catch (e) {
+    console.error('generateInvoicePdfBlob error:', e);
+    if (modal && !wasActive) {
+      modal.classList.remove('active');
+    }
+    return null;
+  }
+}
+
+async function sendInvoiceWhatsApp(invId) {
+  let inv = App.db.invoices ? App.db.invoices.find(i => i.id === invId) : null;
+  if (!inv && typeof currentDraftInvoice !== 'undefined' && currentDraftInvoice && currentDraftInvoice.id === invId) {
+    inv = currentDraftInvoice;
+  }
+  if (!inv && App.db.invoices && App.db.invoices.length > 0) {
+    inv = App.db.invoices[0];
+  }
+  if (!inv) {
+    App.showToast('عفواً، لا يوجد فاتورة محددة للمشاركة', 'warning');
+    return;
+  }
+
+  App.showToast('جاري تحضير ملف الفاتورة PDF للمشاركة... 📄', 'info');
+
+  const pdfBlob = await generateInvoicePdfBlob(inv.id);
+  if (!pdfBlob) {
+    App.showToast('عفواً، تعذر توليد ملف الـ PDF', 'danger');
+    return;
+  }
+
+  const pdfFile = new File([pdfBlob], `Invoice-${inv.id}.pdf`, { type: 'application/pdf' });
+
+  // 1. Web Share API Execution (Attaches the real PDF file directly)
+  if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+    try {
+      await navigator.share({
+        files: [pdfFile],
+        title: `فاتورة ${inv.id}`,
+        text: `مرفق فاتورة بصيغة PDF لـ ${inv.customerName}`
+      });
+      App.showToast('تم فتح نافذة إرسال ملف الـ PDF بنجاح! 💬', 'success');
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+    }
+  }
+
+  // 2. Direct PDF Download
+  const blobUrl = URL.createObjectURL(pdfBlob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = `Invoice-${inv.id}.pdf`;
+  a.click();
+  URL.revokeObjectURL(blobUrl);
+
+  App.showToast('تم تنزيل ملف الفاتورة PDF على جهازك بنجاح! 📄', 'success');
+}
+
+// Multi-Tab Realtime Reactivity Listener
+window.addEventListener('storage', (e) => {
+  if (e.key === 'eleman_erp_db') {
+    App.refreshUI();
+  }
+});
+
+// Download Invoice Container as High-Quality PNG Image
+async function downloadInvoiceAsImage() {
+  const content = document.getElementById('printable-invoice-content');
+  if (!content) return;
+
+  App.showToast('جاري استخراج وتنزيل الفاتورة كصورة عالية الدقة (PNG)... 🖼️', 'info');
+
+  if (document.fonts && document.fonts.ready) {
+    try {
+      await document.fonts.ready;
+    } catch (e) {}
+  }
+
+  try {
+    const canvas = await html2canvas(content, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      letterRendering: false,
+      scrollY: 0,
+      scrollX: 0
+    });
+
+    if (!canvas || canvas.width === 0) {
+      App.showToast('عفواً، تعذر التقاط صورة الفاتورة', 'danger');
+      return;
+    }
+
+    if (canvas.toBlob) {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          downloadViaDataUrl(canvas);
+          return;
+        }
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `Invoice-${Date.now()}.png`;
+        link.href = blobUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        App.showToast('تم تنزيل الفاتورة كصورة PNG بنجاح! 🖼️✨', 'success');
+      }, 'image/png', 1.0);
+    } else {
+      downloadViaDataUrl(canvas);
+    }
+  } catch (err) {
+    console.error('downloadInvoiceAsImage error:', err);
+    App.showToast('تعذر تحويل الفاتورة لصورة', 'danger');
+  }
+}
+
+function downloadViaDataUrl(canvas) {
+  try {
+    const imgData = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `Invoice-${Date.now()}.png`;
+    link.href = imgData;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    App.showToast('تم تنزيل الفاتورة كصورة PNG بنجاح! 🖼️✨', 'success');
+  } catch (e) {
+    console.error('downloadViaDataUrl error:', e);
+    App.showToast('تعذر تنزيل الصورة', 'danger');
+  }
+}
+
+// Modal Helpers
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add('active');
+    document.body.classList.add('modal-open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove('active');
+    if (!document.querySelector('.modal-backdrop.active')) {
+      document.body.classList.remove('modal-open');
+      document.body.style.overflow = '';
+    }
+  }
+}
+
+// Toggle Notifications Dropdown Menu
+function toggleNotificationsDropdown() {
+  const dropdown = document.getElementById('notif-dropdown-menu');
+  if (dropdown) {
+    dropdown.classList.toggle('active');
+    renderNotificationsDropdown();
+  }
+}
+
+function renderNotificationsDropdown() {
+  const body = document.getElementById('notif-dropdown-body');
+  if (!body) return;
+
+  const notifs = App.db.notifications;
+  if (notifs.length === 0) {
+    body.innerHTML = `<div class="p-4 text-center text-muted">لا يوجد إشعارات جديدة</div>`;
+    return;
+  }
+
+  body.innerHTML = notifs.map(n => `
+    <div class="notif-item">
+      <div class="notif-item-icon ${n.type === 'danger' ? 'icon-rose' : (n.type === 'warning' ? 'icon-amber' : 'icon-blue')}">
+        <i class="fa-solid ${n.type === 'danger' ? 'fa-triangle-exclamation' : (n.type === 'warning' ? 'fa-bell' : 'fa-info-circle')}"></i>
+      </div>
+      <div style="flex: 1;">
+        <div class="flex justify-between items-center">
+          <strong class="text-sm">${n.title}</strong>
+          <button class="btn btn-sm text-danger" onclick="event.stopPropagation(); App.deleteNotification('${n.id}')" title="حذف"><i class="fa-solid fa-trash"></i></button>
+        </div>
+        <p class="text-xs text-secondary mt-1">${n.message}</p>
+        <span class="text-xs text-muted mt-1 block">${n.date}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Close Dropdowns on Body Click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.notif-bell-btn') && !e.target.closest('#notif-dropdown-menu')) {
+    const dropdown = document.getElementById('notif-dropdown-menu');
+    if (dropdown) dropdown.classList.remove('active');
+  }
+});
+
+// Render Top Header Summary Banner Cards on Every Page
+function renderPageSummaryCards(page, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  let cardsHTML = '';
+
+  if (page === 'sales') {
+    const invoices = App.db.invoices;
+    const totalSales = invoices.reduce((a, b) => a + b.grandTotal, 0);
+    const totalDisc = invoices.reduce((a, b) => a + b.discount, 0);
+    const totalPaid = invoices.reduce((a, b) => a + b.paidAmount, 0);
+
+    cardsHTML = `
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-emerald"><i class="fa-solid fa-receipt"></i></div>
+        <div><span class="text-xs text-muted">عدد الفواتير الصادرة</span><h4>${invoices.length} فاتورة</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-blue"><i class="fa-solid fa-cart-shopping"></i></div>
+        <div><span class="text-xs text-muted">إجمالي إيراد المبيعات</span><h4 class="text-success">${App.formatCurrency(totalSales)}</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-amber"><i class="fa-solid fa-percent"></i></div>
+        <div><span class="text-xs text-muted">إجمالي الخصومات الممنوحة</span><h4 class="text-warning">${App.formatCurrency(totalDisc)}</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-purple"><i class="fa-solid fa-vault"></i></div>
+        <div><span class="text-xs text-muted">النقدية المحصلة (كاش)</span><h4 class="text-primary-color">${App.formatCurrency(totalPaid)}</h4></div>
+      </div>
+    `;
+  } else if (page === 'inventory') {
+    const products = App.db.products;
+    const totalSacks = products.reduce((a, b) => a + b.stock, 0);
+    const totalVal = products.reduce((a, b) => a + (b.stock * b.costPrice), 0);
+    const lowCount = products.filter(p => p.stock < 150).length;
+
+    cardsHTML = `
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-emerald"><i class="fa-solid fa-cubes-stacked"></i></div>
+        <div><span class="text-xs text-muted">إجمالي الشكاير بالمخزن</span><h4 class="text-primary-color">${totalSacks} شكارة</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-blue"><i class="fa-solid fa-boxes-packing"></i></div>
+        <div><span class="text-xs text-muted">عدد الأصناف المسجلة</span><h4>${products.length} أصناف</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-amber"><i class="fa-solid fa-calculator"></i></div>
+        <div><span class="text-xs text-muted">تقييم المخزون بالتكلفة</span><h4 class="text-success">${App.formatCurrency(totalVal)}</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-rose"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div><span class="text-xs text-muted">أصناف اقتربت من النفاد</span><h4 class="text-danger">${lowCount} صنف</h4></div>
+      </div>
+    `;
+  } else if (page === 'customers') {
+    const customers = App.db.customers;
+    const totalDebts = customers.reduce((a, b) => a + b.totalDebt, 0);
+    const debtorsCount = customers.filter(c => c.totalDebt > 0).length;
+
+    cardsHTML = `
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-emerald"><i class="fa-solid fa-users"></i></div>
+        <div><span class="text-xs text-muted">إجمالي العملاء المسجلين</span><h4>${customers.length} عميل</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-rose"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+        <div><span class="text-xs text-muted">إجمالي مديونيات العملاء</span><h4 class="text-danger">${App.formatCurrency(totalDebts)}</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-amber"><i class="fa-solid fa-clock"></i></div>
+        <div><span class="text-xs text-muted">عملاء عليهم مستحقات</span><h4>${debtorsCount} عميل</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-purple"><i class="fa-solid fa-crown"></i></div>
+        <div><span class="text-xs text-muted">عملاء VIP المميزين</span><h4>${customers.filter(c => c.rating && c.rating.includes('VIP')).length} عميل</h4></div>
+      </div>
+    `;
+  } else if (page === 'hr') {
+    const employees = App.db.employees;
+    const totalSalaries = employees.reduce((a, b) => a + b.baseSalary, 0);
+    const totalAdv = employees.reduce((a, b) => a + b.advances, 0);
+    const totalAbs = employees.reduce((a, b) => a + b.absences, 0);
+
+    cardsHTML = `
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-emerald"><i class="fa-solid fa-user-tie"></i></div>
+        <div><span class="text-xs text-muted">إجمالي الموظفين والعمال</span><h4>${employees.length} موظف</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-blue"><i class="fa-solid fa-money-bill-wave"></i></div>
+        <div><span class="text-xs text-muted">مسير الرواتب الأساسية</span><h4 class="text-primary-color">${App.formatCurrency(totalSalaries)}</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-amber"><i class="fa-solid fa-hand-holding-hand"></i></div>
+        <div><span class="text-xs text-muted">إجمالي السلف المستقطعة</span><h4 class="text-warning">${App.formatCurrency(totalAdv)}</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-rose"><i class="fa-solid fa-user-minus"></i></div>
+        <div><span class="text-xs text-muted">إجمالي أيام الغياب</span><h4 class="text-danger">${totalAbs} أيام</h4></div>
+      </div>
+    `;
+  } else if (page === 'expenses') {
+    const expenses = App.db.expenses;
+    const totalExp = expenses.reduce((a, b) => a + b.amount, 0);
+
+    cardsHTML = `
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-emerald"><i class="fa-solid fa-vault"></i></div>
+        <div><span class="text-xs text-muted">رصيد الخزينة الحالي</span><h4 class="text-success">${App.formatCurrency(App.db.treasury)}</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-rose"><i class="fa-solid fa-wallet"></i></div>
+        <div><span class="text-xs text-muted">إجمالي المصروفات</span><h4 class="text-danger">${App.formatCurrency(totalExp)}</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-blue"><i class="fa-solid fa-file-invoice"></i></div>
+        <div><span class="text-xs text-muted">عدد عمليات الصرف</span><h4>${expenses.length} عملية</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-purple"><i class="fa-solid fa-clock"></i></div>
+        <div><span class="text-xs text-muted">الختم الزمني الآلي</span><h4 class="text-primary-color">نشط 🟢</h4></div>
+      </div>
+    `;
+  } else if (page === 'suppliers') {
+    const suppliers = App.db.suppliers || [];
+    const totalBalance = suppliers.reduce((a, b) => a + (b.totalBalance || 0), 0);
+    cardsHTML = `
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-emerald"><i class="fa-solid fa-truck-field"></i></div>
+        <div><span class="text-xs text-muted">إجمالي المطاحن والموردين</span><h4>${suppliers.length} مطحن</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-blue"><i class="fa-solid fa-wheat-awn"></i></div>
+        <div><span class="text-xs text-muted">أنواع الدقيق الموردة</span><h4>3 درجات دقيق</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-amber"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+        <div><span class="text-xs text-muted">إجمالي مستحقات المطاحن</span><h4 class="text-danger">${App.formatCurrency(totalBalance)}</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-purple"><i class="fa-solid fa-circle-check"></i></div>
+        <div><span class="text-xs text-muted">حالة توريدات الخامات</span><h4 class="text-success">مستقرة 🟢</h4></div>
+      </div>
+    `;
+  } else if (page === 'users') {
+    const users = App.db.users || [];
+    const activeCount = users.filter(u => u.status === 'نشط').length;
+    const disabledCount = users.filter(u => u.status === 'معطل').length;
+    const adminCount = users.filter(u => u.role === 'مدير عام' || u.username === 'admin').length;
+
+    cardsHTML = `
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-emerald"><i class="fa-solid fa-users"></i></div>
+        <div><span class="text-xs text-muted">إجمالي الحسابات المسجلة</span><h4>${users.length} حسابات</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-blue"><i class="fa-solid fa-user-check"></i></div>
+        <div><span class="text-xs text-muted">الحسابات النشطة</span><h4 class="text-success">${activeCount} حساب</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-rose"><i class="fa-solid fa-user-xmark"></i></div>
+        <div><span class="text-xs text-muted">الحسابات المعطلة</span><h4 class="${disabledCount > 0 ? 'text-danger' : 'text-muted'}">${disabledCount} حساب</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-purple"><i class="fa-solid fa-user-shield"></i></div>
+        <div><span class="text-xs text-muted">مدراء النظام (Super Admins)</span><h4 class="text-primary-color">${adminCount}</h4></div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = cardsHTML;
+}
+
+// Mobile Sidebar Drawer Toggle & Overlay Management
+function toggleMobileMenu() {
+  const sidebar = document.querySelector('.sidebar');
+  let overlay = document.querySelector('.mobile-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'mobile-overlay';
+    document.body.appendChild(overlay);
+    overlay.onclick = closeMobileMenu;
+  }
+
+  if (sidebar) {
+    const willOpen = !sidebar.classList.contains('mobile-open');
+    sidebar.classList.toggle('mobile-open', willOpen);
+    overlay.classList.toggle('active', willOpen);
+  }
+}
+
+function closeMobileMenu() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.querySelector('.mobile-overlay');
+  if (sidebar) sidebar.classList.remove('mobile-open');
+  if (overlay) overlay.classList.remove('active');
+}
+
+// Render Navigation Bar & Notifications Trigger Component
+function renderAppLayout(activePage = 'dashboard') {
+  // Page Access Guard
+  if (typeof App !== 'undefined' && typeof App.checkPageAccess === 'function') {
+    App.checkPageAccess(activePage);
+  }
+
+  const currentUser = (typeof App !== 'undefined' && typeof App.getCurrentUser === 'function') ? App.getCurrentUser() : { name: 'المدير العام', role: 'مدير عام', username: 'admin' };
+  const userInitial = (currentUser.name || 'إ').trim().charAt(0);
+
+  const sidebarContainer = document.getElementById('sidebar-container');
+  if (sidebarContainer) {
+    const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+    const showDashboard = !App || App.hasPermission('dashboard');
+    const showSales = !App || App.hasPermission('sales');
+    const showInventory = !App || App.hasPermission('inventory');
+    const showSuppliers = !App || App.hasPermission('suppliers');
+    const showCustomers = !App || App.hasPermission('customers');
+    const showHR = !App || App.hasPermission('hr');
+    const showExpenses = !App || App.hasPermission('expenses');
+    const showReports = !App || App.hasPermission('reports');
+    const showUsers = isSuperAdmin || (App && App.hasPermission('users'));
+    const showNotifs = isSuperAdmin;
+
+    sidebarContainer.innerHTML = `
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="brand-icon" style="background: transparent; overflow: hidden; padding: 2px; box-shadow: none;">
+            <img src="image/logo.png" alt="شعار مصنع الإيمان" style="width: 100%; height: 100%; object-fit: contain;">
+          </div>
+          <div class="brand-info">
+            <h2>مصنع الإيمان</h2>
+            <span>نظام ERP للمكرونة</span>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav">
+          ${showDashboard ? `
+            <a href="index.html" class="nav-item ${activePage === 'dashboard' ? 'active' : ''}">
+              <div class="nav-item-content">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>لوحة التحكم</span>
+              </div>
+            </a>
+          ` : ''}
+
+          ${showSales ? `
+            <a href="sales.html" class="nav-item ${activePage === 'sales' ? 'active' : ''}">
+              <div class="nav-item-content">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+                <span>المبيعات والفواتير</span>
+              </div>
+            </a>
+          ` : ''}
+
+          ${showInventory ? `
+            <a href="inventory.html" class="nav-item ${activePage === 'inventory' ? 'active' : ''}">
+              <div class="nav-item-content">
+                <i class="fa-solid fa-boxes-stacked"></i>
+                <span>المخازن والمنتجات</span>
+              </div>
+            </a>
+          ` : ''}
+
+          ${showSuppliers ? `
+            <a href="suppliers.html" class="nav-item ${activePage === 'suppliers' ? 'active' : ''}">
+              <div class="nav-item-content">
+                <i class="fa-solid fa-truck-field"></i>
+                <span>الموردين (المطاحن)</span>
+              </div>
+            </a>
+          ` : ''}
+
+          ${showCustomers ? `
+            <a href="customers.html" class="nav-item ${activePage === 'customers' ? 'active' : ''}">
+              <div class="nav-item-content">
+                <i class="fa-solid fa-users"></i>
+                <span>حسابات العملاء</span>
+              </div>
+            </a>
+          ` : ''}
+
+          ${showHR ? `
+            <a href="hr.html" class="nav-item ${activePage === 'hr' ? 'active' : ''}">
+              <div class="nav-item-content">
+                <i class="fa-solid fa-user-tie"></i>
+                <span>الموارد البشرية</span>
+              </div>
+            </a>
+          ` : ''}
+
+          ${showExpenses ? `
+            <a href="expenses.html" class="nav-item ${activePage === 'expenses' ? 'active' : ''}">
+              <div class="nav-item-content">
+                <i class="fa-solid fa-wallet"></i>
+                <span>المصروفات والخزنة</span>
+              </div>
+            </a>
+          ` : ''}
+
+          ${showReports ? `
+            <a href="reports.html" class="nav-item ${activePage === 'reports' ? 'active' : ''}">
+              <div class="nav-item-content">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>الجرد والتقارير</span>
+              </div>
+            </a>
+          ` : ''}
+
+          ${showUsers ? `
+            <a href="users.html" class="nav-item ${activePage === 'users' ? 'active' : ''}">
+              <div class="nav-item-content">
+                <i class="fa-solid fa-users-gear"></i>
+                <span>المستخدمين والصلاحيات</span>
+              </div>
+            </a>
+          ` : ''}
+
+          ${showNotifs ? `
+            <a href="notifications.html" class="nav-item ${activePage === 'notifications' ? 'active' : ''}">
+              <div class="nav-item-content">
+                <i class="fa-solid fa-bell"></i>
+                <span>مركز الإشعارات</span>
+              </div>
+              <span class="nav-badge" id="sidebar-notif-badge">${(App.db.notifications || []).length}</span>
+            </a>
+          ` : ''}
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="flex items-center justify-between">
+            <div class="user-profile" title="${currentUser.email || currentUser.username}">
+              <div class="user-avatar" style="background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; font-weight: bold;">${userInitial}</div>
+              <div class="user-details">
+                <h5 style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px;">${currentUser.name}</h5>
+                <span class="text-xs" style="color: #059669; font-weight: bold;">${currentUser.role}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button class="btn btn-secondary btn-sm" onclick="App.toggleTheme()" title="تبديل النمط"><i class="fa-solid fa-moon"></i></button>
+              <button class="btn btn-secondary btn-sm" onclick="App.logout()" title="تسجيل الخروج" style="color: #dc2626;"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    `;
+  }
+
+  // Inject Global Search Modal for Ctrl+K
+  if (!document.getElementById('global-search-modal')) {
+    const modalBackdrop = document.createElement('div');
+    modalBackdrop.className = 'modal-backdrop';
+    modalBackdrop.id = 'global-search-modal';
+    modalBackdrop.innerHTML = `
+      <div class="modal-card" style="max-width: 620px; margin-top: 6vh; align-self: flex-start;">
+        <div class="modal-header p-4">
+          <div class="search-box-global" style="width: 100%; position: relative;">
+            <i class="fa-solid fa-magnifying-glass search-icon" style="position: absolute; right: 16px; top: 14px; color: var(--text-muted);"></i>
+            <input type="text" id="global-search-modal-input" class="form-control" placeholder="بحث سريع في النظام (فواتير، عملاء، مطاحن، أصناف، موظفين...)" oninput="App.handleQuickModalSearch(this.value)" autocomplete="off" style="padding-right: 44px; height: 46px; border-radius: var(--radius-full);">
+          </div>
+          <button class="modal-close mr-2" onclick="closeModal('global-search-modal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body p-3" id="global-search-modal-results" style="max-height: 420px; overflow-y: auto;">
+          <div class="p-4 text-center text-muted text-xs">ابدأ الكتابة للبحث السريع في كافة البيانات (أو اضغط Esc للرجوع)</div>
+        </div>
+        <div class="modal-footer p-3 flex justify-between text-xs text-muted" style="background: var(--bg-main);">
+          <span>ابحث في الفواتير والعملاء والمطاحن والأسطول</span>
+          <span>اضغط <kbd style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #334155; font-family: monospace;">ESC</kbd> للإغلاق</span>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modalBackdrop);
+  }
+
+  // Ensure header-title (right side) has NO bell/search buttons attached
+  const headerTitle = document.querySelector('.top-header .header-title');
+  if (headerTitle) {
+    const titleDupes = headerTitle.querySelectorAll('button, .notif-bell-btn, .quick-search-trigger-btn, .search-box-global');
+    titleDupes.forEach(el => el.remove());
+  }
+
+  // Inject Search Button and Notification Bell Curtain in .header-actions (left side)
+  const topHeaderActions = document.querySelector('.top-header .header-actions');
+  if (topHeaderActions) {
+    // Remove static duplicate search buttons if any exist
+    const duplicateBtns = topHeaderActions.querySelectorAll('.quick-search-trigger-btn, .search-btn-dup');
+    duplicateBtns.forEach(btn => btn.remove());
+
+    const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+    const existingNotifWrapper = document.getElementById('header-notif-wrapper');
+
+    if (!isSuperAdmin && existingNotifWrapper) {
+      existingNotifWrapper.remove();
+    } else if (isSuperAdmin && !existingNotifWrapper) {
+      const notifWrapper = document.createElement('div');
+      notifWrapper.id = 'header-notif-wrapper';
+      notifWrapper.className = 'notif-wrapper';
+      notifWrapper.style.position = 'relative';
+      notifWrapper.innerHTML = `
+        <button class="notif-bell-btn" onclick="toggleNotificationsDropdown()" title="الإشعارات التنبيهية 🔔">
+          <i class="fa-solid fa-bell"></i>
+          <span class="notif-badge-count" id="header-notif-count">${(App.db.notifications || []).length}</span>
+        </button>
+        <div id="notif-dropdown-menu" class="notifications-dropdown">
+          <div class="notif-dropdown-header">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-bell text-primary-color"></i>
+              <strong class="text-sm">مركز الإشعارات والتنبيهات 🔔</strong>
+            </div>
+            <a href="notifications.html" class="text-xs font-bold text-primary">عرض الكل</a>
+          </div>
+          <div class="notif-dropdown-body" id="notif-dropdown-body">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+      `;
+      topHeaderActions.append(notifWrapper);
+    }
+
+    // Inject Firebase Real-time Cloud Status Badge
+    if (!document.getElementById('firebase-sync-badge')) {
+      const syncBadge = document.createElement('span');
+      syncBadge.id = 'firebase-sync-badge';
+      syncBadge.className = 'badge badge-success';
+      syncBadge.style.cursor = 'pointer';
+      syncBadge.onclick = () => { if (typeof FirebaseSync !== 'undefined') FirebaseSync.forceManualSync(); };
+      syncBadge.innerHTML = `<i class="fa-solid fa-cloud-bolt fa-fade"></i> <span>سحابي متصل ⚡</span>`;
+      topHeaderActions.prepend(syncBadge);
+    }
+
+    if (!document.getElementById('header-quick-search-btn')) {
+      const searchBtn = document.createElement('button');
+      searchBtn.id = 'header-quick-search-btn';
+      searchBtn.className = 'btn btn-secondary';
+      searchBtn.onclick = openGlobalSearchModal;
+      searchBtn.innerHTML = `<i class="fa-solid fa-magnifying-glass text-primary-color"></i> <span>بحث سريع</span> <span class="badge badge-blue text-xs ml-1" style="font-family: monospace;">Ctrl+K</span>`;
+      topHeaderActions.prepend(searchBtn);
+    }
+  }
+
+  const footerContainer = document.getElementById('footer-container');
+  if (footerContainer) {
+    footerContainer.innerHTML = `
+      <footer class="app-footer">
+        <p>حقوق التطوير والبرمجة محفوظة © 2026 | تطوير وبرمجة بواسطة شركة <a href="https://speed-up.tech/" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); font-weight: 800; text-decoration: underline; transition: var(--transition-fast);">Speed Up 🚀</a></p>
+      </footer>
+    `;
+  }
+
+  // Inject Mobile Bottom Navigation Dock (Native App Bar)
+  let bottomNav = document.getElementById('app-mobile-bottom-nav');
+  if (!bottomNav) {
+    bottomNav = document.createElement('nav');
+    bottomNav.id = 'app-mobile-bottom-nav';
+    bottomNav.className = 'mobile-bottom-nav';
+    document.body.appendChild(bottomNav);
+  }
+
+  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+  const showDashboard = !App || App.hasPermission('dashboard');
+  const showSales = !App || App.hasPermission('sales');
+  const showInventory = !App || App.hasPermission('inventory');
+  const showCustomers = !App || App.hasPermission('customers');
+
+  const navItems = [];
+  if (showDashboard) navItems.push({ key: 'dashboard', href: 'index.html', icon: 'fa-chart-pie', label: 'الرئيسية' });
+  if (showSales) navItems.push({ key: 'sales', href: 'sales.html', icon: 'fa-file-invoice-dollar', label: 'المبيعات' });
+  if (showInventory) navItems.push({ key: 'inventory', href: 'inventory.html', icon: 'fa-boxes-stacked', label: 'المخازن' });
+  if (showCustomers) navItems.push({ key: 'customers', href: 'customers.html', icon: 'fa-users', label: 'العملاء' });
+
+  // Menu button that opens the full drawer
+  navItems.push({ key: 'menu', href: 'javascript:void(0)', onclick: 'toggleMobileMenu()', icon: 'fa-bars', label: 'القائمة ☰' });
+
+  bottomNav.innerHTML = navItems.map(item => `
+    <a href="${item.href}" ${item.onclick ? `onclick="${item.onclick}"` : ''} class="bottom-nav-item ${activePage === item.key ? 'active' : ''}">
+      <i class="fa-solid ${item.icon}"></i>
+      <span>${item.label}</span>
+    </a>
+  `).join('');
+
+  App.updateNotificationBadge();
+}
+
+// Global Keyboard Shortcut: Ctrl+K or Cmd+K
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    openGlobalSearchModal();
+  }
+});
+
+function openGlobalSearchModal() {
+  const modal = document.getElementById('global-search-modal');
+  if (modal) {
+    openModal('global-search-modal');
+    const input = document.getElementById('global-search-modal-input');
+    if (input) {
+      input.value = '';
+      input.focus();
+      App.handleQuickModalSearch('');
+    }
+  }
+}
+
+// Executive Dashboard Comprehensive Report Print Trigger (Filtered by Today, Month, Year, or All)
+function printDashboardComprehensiveReport(customFilter = null) {
+  const filter = customFilter || window.currentDashboardFilter || 'today';
+  
+  let filterLabel = 'تقرير اليوم ☀️';
+  if (filter === 'month') filterLabel = 'تقرير الشهر الحالي 🗓️';
+  if (filter === 'year') filterLabel = 'تقرير السنة الحالية 📅';
+  if (filter === 'all') filterLabel = 'تقرير كافة الأوقات (التراكمي) 📊';
+
+  const container = document.getElementById('dashboard-report-body');
+  if (!container) return;
+
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const currentMonthStr = todayStr.substring(0, 7);
+  const currentYearStr = todayStr.substring(0, 4);
+
+  const invoices = App.db.invoices || [];
+  const expenses = App.db.expenses || [];
+  const products = App.db.products || [];
+
+  // Filter invoices by selected timeframe
+  const filteredInvoices = invoices.filter(inv => {
+    if (!inv.date) return true;
+    const invDateStr = inv.date.split('T')[0];
+    if (filter === 'today') return invDateStr === todayStr;
+    if (filter === 'month') return invDateStr.startsWith(currentMonthStr);
+    if (filter === 'year') return invDateStr.startsWith(currentYearStr);
+    return true; // 'all'
+  });
+
+  // Filter expenses by selected timeframe
+  const filteredExpenses = expenses.filter(exp => {
+    if (!exp.date) return true;
+    const expDateStr = exp.date.split('T')[0];
+    if (filter === 'today') return expDateStr === todayStr;
+    if (filter === 'month') return expDateStr.startsWith(currentMonthStr);
+    if (filter === 'year') return expDateStr.startsWith(currentYearStr);
+    return true; // 'all'
+  });
+
+  let totalSales = 0;
+  let totalSacks = 0;
+  let totalCOGS = 0;
+
+  filteredInvoices.forEach(inv => {
+    totalSales += inv.grandTotal;
+    (inv.items || []).forEach(item => {
+      totalSacks += item.qty;
+      const prd = products.find(p => p.id === item.id);
+      const cost = prd ? prd.costPrice : (item.price * 0.8);
+      totalCOGS += (cost * item.qty);
+    });
+  });
+
+  const totalExp = filteredExpenses.reduce((a, b) => a + (b.amount || 0), 0);
+  const netProfit = totalSales - totalCOGS - totalExp;
+
+  container.innerHTML = `
+    <div id="printable-dashboard-report" class="p-6 bg-white rounded-xl border">
+      <!-- Modal Filter Selector (No-Print Controls) -->
+      <div class="flex justify-between items-center border-b pb-4 mb-4 flex-wrap gap-3 no-print">
+        <span class="text-sm font-bold text-slate-700">تغيير نطاق الفترة الزمنية للتقرير:</span>
+        <div class="flex gap-2 flex-wrap">
+          <button class="btn ${filter === 'today' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="printDashboardComprehensiveReport('today')">اليوم ☀️</button>
+          <button class="btn ${filter === 'month' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="printDashboardComprehensiveReport('month')">الشهر الحالي 🗓️</button>
+          <button class="btn ${filter === 'year' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="printDashboardComprehensiveReport('year')">السنة الحالية 📅</button>
+          <button class="btn ${filter === 'all' ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="printDashboardComprehensiveReport('all')">كافة الأوقات 📊</button>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center border-b pb-4 mb-4">
+        <div class="flex items-center gap-3">
+          <img src="image/logo.png" alt="شعار مصنع الإيمان" style="height: 52px; width: 52px; object-fit: contain;">
+          <div>
+            <h2 class="text-primary-color font-bold" style="font-size: 1.5rem; margin: 0;">مصنع الإيمان للمكرونة</h2>
+            <p class="text-xs text-muted" style="margin: 2px 0;">التقرير التنفيذي الشامل للتحليل المالي والمخزون</p>
+          </div>
+        </div>
+        <div class="text-left">
+          <strong class="text-primary-color font-bold" style="font-size: 1.1rem; block">${filterLabel}</strong>
+          <p class="text-xs text-muted mt-1">تاريخ التقرير: ${App.getFormattedCurrentDate()}</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="card bg-light p-3 border">
+          <span class="text-xs text-muted font-bold block">إيرادات المبيعات المباشرة</span>
+          <h3 class="text-success font-bold mt-1">${App.formatCurrency(totalSales)}</h3>
+        </div>
+        <div class="card bg-light p-3 border">
+          <span class="text-xs text-muted font-bold block">إجمالي الشكاير المباعة</span>
+          <h3 class="text-primary-color font-bold mt-1">${totalSacks} شكارة</h3>
+        </div>
+        <div class="card bg-light p-3 border">
+          <span class="text-xs text-muted font-bold block">المصروفات التشغيلية</span>
+          <h3 class="text-danger font-bold mt-1">${App.formatCurrency(totalExp)}</h3>
+        </div>
+        <div class="card bg-light p-3 border" style="background: var(--primary-light);">
+          <span class="text-xs text-muted font-bold block">صافي الربح التنفيذي</span>
+          <h3 class="text-primary-color font-bold mt-1">${App.formatCurrency(netProfit)}</h3>
+        </div>
+      </div>
+
+      <h4 class="font-bold mb-3">سجل وجرد أصناف المكرونة بالشكارة بسعر التكلفة والبيع</h4>
+      <table class="table mb-4" style="width: 100%; border: 1px solid #e2e8f0;">
+        <thead style="background: #f8fafc;">
+          <tr>
+            <th style="padding: 8px;">كود الصنف</th>
+            <th style="padding: 8px;">اسم المنتج</th>
+            <th style="padding: 8px;">الكمية المتاحة بالشكارة</th>
+            <th style="padding: 8px;">سعر التكلفة</th>
+            <th style="padding: 8px;">سعر البيع</th>
+            <th style="padding: 8px;">إجمالي التقييم المخزني</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${products.map(p => `
+            <tr>
+              <td style="padding: 8px;"><strong>${p.id}</strong></td>
+              <td style="padding: 8px;"><strong>${p.name}</strong></td>
+              <td style="padding: 8px;">${p.stock} شكارة</td>
+              <td style="padding: 8px;">${App.formatCurrency(p.costPrice)}</td>
+              <td style="padding: 8px;">${App.formatCurrency(p.sellPrice)}</td>
+              <td style="padding: 8px;"><strong class="text-success">${App.formatCurrency(p.stock * p.costPrice)}</strong></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="flex justify-between items-center border-t pt-4 text-xs text-muted">
+        <p>* تقرير تنفيذي شامل معتمد صادر رسمياً من نظام مصنع الإيمان للمكرونة (ERP System).</p>
+        <p>توقيع المدير المسؤول: ______________________</p>
+      </div>
+    </div>
+  `;
+
+  openModal('dashboard-report-modal');
+}

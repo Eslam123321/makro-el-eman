@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مصنع الإيمان للمكرونة | الموارد البشرية وكشف حساب الموظفين والحضور والغياب</title>
+  
+  <link rel="icon" type="image/png" href="image/logo.png">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+      <header class="top-header">
+        <div class="flex items-center gap-3">
+          <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fa-solid fa-bars"></i></button>
+          <div class="header-title">
+            <h1>الموارد البشرية وكشف الحساب والحضور والغياب (HR & Attendance)</h1>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة كشف الموظفين 𝓅</button>
+        </div>
+      </header>
+
+      <div class="content-body">
+        
+        <!-- Top Page Summary Banner Cards Container -->
+        <div class="page-summary-cards" id="hr-summary-cards-container"></div>
+
+        <!-- Embedded Form Card: Add New Employee -->
+        <div class="card mb-6" id="add-employee-section">
+          <div class="flex items-center gap-3 mb-4 pb-3 border-b">
+            <div class="brand-icon" style="width: 40px; height: 40px; font-size: 1.1rem;">
+              <i class="fa-solid fa-user-tie"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg">إضافة موظف جديد بالمصنع</h3>
+              <p class="text-xs text-muted">تسجيل بيانات الموظف والراتب الأساسي والمسمى الوظيفي</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>اسم الموظف ثلاثي <span class="text-danger">*</span></label>
+              <input type="text" id="emp-name" class="form-control" placeholder="ادخل اسم الموظف">
+            </div>
+            <div class="form-group">
+              <label>رقم / هاتف الموظف (الهاتف أو الكود)</label>
+              <input type="text" id="emp-phone" class="form-control" placeholder="مثال: 01012345678 أو كود 101">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>المسمى الوظيفي / القسم</label>
+              <input type="text" id="emp-job" class="form-control" placeholder="مشرف خط إنتاج - فني تعبئة - سائق">
+            </div>
+            <div class="form-group">
+              <label>الراتب الشهري الأساسي (جنيه) <span class="text-danger">*</span></label>
+              <input type="number" id="emp-salary" class="form-control" placeholder="6000" min="1">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>تاريخ التعيين بالمصنع</label>
+              <input type="date" id="emp-hire-date" class="form-control">
+            </div>
+            <div class="form-group">
+              <label>يوم استحقاق القبض الشهري (رقم اليوم)</label>
+              <input type="number" id="emp-pay-day" class="form-control" min="1" max="31" placeholder="ادخل رقم اليوم (مثال: 1 أو 5 أو 30)">
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-2 border-t">
+            <button class="btn btn-primary" onclick="saveNewEmployee()"><i class="fa-solid fa-check ml-1"></i> حفظ الموظف بالسجل 👔</button>
+          </div>
+        </div>
+
+        <!-- SECTION 1: Master Employees & Payroll Table -->
+        <div class="card mb-6" id="employees-ledger-section">
+          <div class="flex justify-between items-center mb-4 flex-wrap gap-3 border-b pb-4">
+            <div>
+              <h3 class="flex items-center gap-2 font-bold text-xl">
+                <i class="fa-solid fa-users text-primary-color"></i>
+                سجل موظفي وعمال خطوط إنتاج المصنع (الرواتب والسلفيات وصافي المستحقات)
+              </h3>
+              <p class="text-xs text-muted mt-1">جدول بيانات الموظفين الأساسية، السلفيات المعلقة، خصومات أيام الغياب، وصافي الرواتب وكشوف الحساب المعتمدة.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="search-box" style="min-width: 240px;">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" class="form-control" placeholder="بحث باسم الموظف أو الوظيفة أو الهاتف..." onkeyup="filterEmployeesTable(this.value)">
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة كشف الرواتب 𝓅</button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="table" id="employees-table">
+              <thead>
+                <tr>
+                  <th>كود / رقم الموظف</th>
+                  <th>اسم الموظف والوظيفة</th>
+                  <th>تاريخ التعيين</th>
+                  <th>يوم استحقاق القبض</th>
+                  <th>الراتب الأساسي</th>
+                  <th>إجمالي السلف</th>
+                  <th>أيام الغياب والخصم</th>
+                  <th>صافي الراتب المستحق</th>
+                  <th>الإجراءات وكشف الحساب</th>
+                </tr>
+              </thead>
+              <tbody id="employees-list-tbody">
+                <!-- Injected via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECTION 2: Daily Attendance, Clock-In/Out & Absence Table -->
+        <div class="card mb-6" id="daily-attendance-section">
+          <div class="flex justify-between items-center mb-4 flex-wrap gap-3 border-b pb-4">
+            <div>
+              <h3 class="flex items-center gap-2 font-bold text-xl">
+                <i class="fa-solid fa-clipboard-user text-primary-color"></i>
+                سجل الحضور والانصراف والغياب اليومي (تثبيت الحضور والانصراف والخصم التلقائي)
+              </h3>
+              <p class="text-xs text-muted mt-1">تسجيل مباشر للحضور والانصراف دون تعارض، مع إمكانية تسجيل الغياب وخصم يوم من الراتب تلقائياً مع زر تعديل فوري عند الخطأ.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="badge badge-blue text-xs font-bold" id="daily-att-date-badge"></span>
+              <button class="btn btn-secondary btn-sm" onclick="openRecordAbsenceModal()"><i class="fa-solid fa-calendar-minus"></i> تسجيل غياب بتاريخ سابق 📅</button>
+            </div>
+          </div>
+
+          <!-- Quick Filter Tabs for Attendance -->
+          <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+            <div class="flex gap-2 flex-wrap" id="att-filter-tabs">
+              <button class="btn btn-sm btn-primary att-tab active" data-filter="all" onclick="setAttendanceFilter('all', this)">
+                <i class="fa-solid fa-users"></i> الكل (<span id="att-count-all">0</span>)
+              </button>
+              <button class="btn btn-sm btn-secondary att-tab" data-filter="present" onclick="setAttendanceFilter('present', this)">
+                <i class="fa-solid fa-circle-check text-success"></i> حاضرون اليوم 🟢 (<span id="att-count-present">0</span>)
+              </button>
+              <button class="btn btn-sm btn-secondary att-tab" data-filter="absent" onclick="setAttendanceFilter('absent', this)">
+                <i class="fa-solid fa-circle-xmark text-danger"></i> غائبون اليوم 🔴 (<span id="att-count-absent">0</span>)
+              </button>
+              <button class="btn btn-sm btn-secondary att-tab" data-filter="unrecorded" onclick="setAttendanceFilter('unrecorded', this)">
+                <i class="fa-solid fa-clock text-muted"></i> لم يسجل اليوم ⚪ (<span id="att-count-unrecorded">0</span>)
+              </button>
+            </div>
+
+            <div class="search-box" style="min-width: 240px;">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="att-search-input" class="form-control" placeholder="بحث بسجل الحضور..." onkeyup="filterAttendanceTable(this.value)">
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="table" id="daily-attendance-table">
+              <thead>
+                <tr>
+                  <th>الموظف والوظيفة</th>
+                  <th>رقم الهاتف</th>
+                  <th>الحالة اليومية</th>
+                  <th>وقت الحضور</th>
+                  <th>وقت الانصراف</th>
+                  <th style="min-width: 260px;">تثبيت الحضور والغياب (تحكم مباشر)</th>
+                  <th>الخصم والتعديل</th>
+                </tr>
+              </thead>
+              <tbody id="daily-attendance-tbody">
+                <!-- Injected via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="footer-container"></div>
+    </main>
+  </div>
+
+  <!-- Modal Card 2: Add Advance Loan Modal -->
+  <div class="modal-backdrop" id="add-advance-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-hand-holding-hand"></i>
+          <h3>تسجيل وتوفير سلفة للموظف</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('add-advance-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="adv-emp-id">
+        <p class="text-sm font-semibold mb-4 text-primary-color" id="adv-emp-title"></p>
+        
+        <div class="form-group">
+          <label>مبلغ السلفة المطلوب (جنيه)</label>
+          <input type="number" id="adv-amount" class="form-control" placeholder="ادخل مبلغ السلفة" min="1">
+        </div>
+
+        <p class="text-xs text-muted mt-2">* يتم خصم مبلغ السلفة تلقائياً من الراتب ومباشرة من السيولة النقدية بالخزنة.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('add-advance-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="processEmployeeAdvance()"><i class="fa-solid fa-check"></i> تأكيد صرف السلفة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Card 3: Date-Specific Record Absence/Attendance Modal -->
+  <div class="modal-backdrop" id="record-absence-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-calendar-minus"></i>
+          <h3>تسجيل غياب / حضور موظف بتاريخ دقيق</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('record-absence-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group mb-4">
+          <label>اختر الموظف</label>
+          <select id="rec-att-emp-select" class="form-control"></select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="form-group">
+            <label>التاريخ الدقيق (اليوم - الشهر - السنة)</label>
+            <input type="date" id="rec-att-date" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>نوع التسجيل</label>
+            <select id="rec-att-type" class="form-control">
+              <option value="غياب">غياب (خصم يوم كامل)</option>
+              <option value="حضور">حضور وتواجد</option>
+              <option value="إجازة">إجازة بعذر رسمية</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>السبب / ملاحظات التسجيل</label>
+          <input type="text" id="rec-att-notes" class="form-control" placeholder="مثال: غياب بدون إذن مسبق">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('record-absence-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveDateSpecificAbsence()"><i class="fa-solid fa-check"></i> حفظ وتسجيل بالحساب</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Card 4: Employee Statement of Account & Ledger -->
+  <div class="modal-backdrop" id="emp-statement-modal">
+    <div class="modal-card modal-card-lg printable-modal">
+      <div class="modal-header no-print">
+        <div class="modal-title">
+          <i class="fa-solid fa-file-invoice-dollar"></i>
+          <h3>كشف حساب وتصفية مستحقات الموظف</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('emp-statement-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" id="emp-statement-modal-body">
+        <!-- Injected via JS -->
+      </div>
+
+      <div class="modal-footer no-print">
+        <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة كشف الحساب 𝓅</button>
+        <button class="btn btn-primary" onclick="closeModal('emp-statement-modal')">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Card 5: Printable Attendance & Absence Report Certificate Modal -->
+  <div class="modal-backdrop" id="printable-attendance-modal">
+    <div class="modal-card modal-card-lg printable-modal">
+      <div class="modal-header no-print">
+        <div class="modal-title">
+          <i class="fa-solid fa-print"></i>
+          <h3>معاينة تقرير الحضور والغياب للطباعة</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('printable-attendance-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" id="printable-attendance-report-body">
+        <!-- Rendered dynamically via JS -->
+      </div>
+
+      <div class="modal-footer no-print">
+        <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة التقرير الآن 𝓅</button>
+        <button class="btn btn-primary" onclick="closeModal('printable-attendance-modal')">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Card 6: Financial Deduction Modal -->
+  <div class="modal-backdrop" id="deduction-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-file-invoice-dollar text-warning"></i>
+          <h3>تطبيق خصم مالي على الموظف</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('deduction-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="ded-emp-id">
+        <p class="text-sm font-semibold mb-4 text-primary-color" id="ded-emp-title"></p>
+        
+        <div class="form-group mb-4">
+          <label>قيمة الخصم المالي (جنيه)</label>
+          <input type="number" id="ded-amount" class="form-control" placeholder="ادخل قيمة الخصم" min="1">
+        </div>
+
+        <div class="form-group">
+          <label>سبب وتفاصيل الخصم المالي</label>
+          <input type="text" id="ded-reason" class="form-control" placeholder="مثال: جزاء تأخير - إتلاف خامة - خصم إداري">
+        </div>
+
+        <p class="text-xs text-muted mt-3">* يتم خصم المبلغ فوراً من صافي الراتب المستحق للموظف وتوثيقه بسجل الحسابات.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('deduction-modal')">إلغاء</button>
+        <button class="btn btn-warning" style="background: #f59e0b; color: #ffffff; border: none; font-weight: bold;" onclick="processFinancialDeduction()"><i class="fa-solid fa-check"></i> تأكيد الخصم المالي</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Card 7: Employee Report Timeframe Modal -->
+  <div class="modal-backdrop" id="emp-report-range-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-calendar-days text-primary-color"></i>
+          <h3>إصدار وطباعة تقرير الموظف المالي والحضور</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('emp-report-range-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="report-modal-emp-id">
+        <div class="p-3 bg-slate-50 border rounded-lg mb-4">
+          <strong class="text-primary-color block text-base" id="report-modal-emp-name"></strong>
+          <span class="text-xs text-muted" id="report-modal-emp-job"></span>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="font-bold text-sm mb-2 block">حدد نوع ونطاق التقرير المطلوب:</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="p-3 border rounded-lg flex items-center gap-2 cursor-pointer bg-white" style="border-color: var(--border-color);">
+              <input type="radio" name="report-range-type" value="today" checked onchange="toggleReportRangeInputs('today')">
+              <span class="text-xs font-bold">تقرير يومي (تاريخ معين) ☀️</span>
+            </label>
+            <label class="p-3 border rounded-lg flex items-center gap-2 cursor-pointer bg-white" style="border-color: var(--border-color);">
+              <input type="radio" name="report-range-type" value="month" onchange="toggleReportRangeInputs('month')">
+              <span class="text-xs font-bold">تقرير شهري 🗓️</span>
+            </label>
+            <label class="p-3 border rounded-lg flex items-center gap-2 cursor-pointer bg-white" style="border-color: var(--border-color);">
+              <input type="radio" name="report-range-type" value="year" onchange="toggleReportRangeInputs('year')">
+              <span class="text-xs font-bold">تقرير سنوي 📅</span>
+            </label>
+            <label class="p-3 border rounded-lg flex items-center gap-2 cursor-pointer bg-white" style="border-color: var(--border-color);">
+              <input type="radio" name="report-range-type" value="custom" onchange="toggleReportRangeInputs('custom')">
+              <span class="text-xs font-bold">فترة مخصصة (من - إلى) 📆</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Date Inputs Container -->
+        <div id="report-date-inputs-container" class="grid grid-cols-2 gap-4 mb-4">
+          <div class="form-group mb-0" id="single-date-group">
+            <label class="text-xs font-bold mb-1 block" id="single-date-label">تحديد التاريخ</label>
+            <input type="date" id="report-single-date" class="form-control">
+          </div>
+          <div class="form-group mb-0" id="start-date-group" style="display: none;">
+            <label class="text-xs font-bold mb-1 block">من تاريخ</label>
+            <input type="date" id="report-start-date" class="form-control">
+          </div>
+          <div class="form-group mb-0" id="end-date-group" style="display: none;">
+            <label class="text-xs font-bold mb-1 block">إلى تاريخ</label>
+            <input type="date" id="report-end-date" class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('emp-report-range-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="confirmAndPrintEmployeeReport()"><i class="fa-solid fa-check"></i> تم ↵</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Cloud SDK & Sync Engine -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-sync.js"></script>
+  <script src="js/logo.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/hr.js"></script>
+</body>
+</html>
