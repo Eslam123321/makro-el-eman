@@ -112,10 +112,25 @@ function saveNewExpense() {
 }
 
 function deleteExpense(expId) {
-  if (confirm('هل أنت تأكد من إلغاء هذا المصروف؟')) {
-    App.db.expenses = App.db.expenses.filter(e => e.id !== expId);
+  const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
+  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+  if (!isSuperAdmin) {
+    App.showToast('عفواً، صلاحية حذف المصروفات مقتصرة على حساب المدير العام فقط!', 'danger');
+    return;
+  }
+
+  const exp = (App.db.expenses || []).find(e => e.id === expId);
+  if (!exp) return;
+
+  if (confirm(`هل أنت متأكد من حذف بند المصروف (${exp.title}) نهائياً من قاعدة البيانات والسحابة؟`)) {
+    const expTitle = exp.title;
+    App.db.expenses = (App.db.expenses || []).filter(e => e.id !== expId);
+    if (typeof App.logActivity === 'function') {
+      App.logActivity('حذف مصروف 🗑️', `تم حذف المصروف (${expTitle}) نهائياً من السيستم`, 'danger');
+    }
     App.save();
     loadExpensesTable();
-    App.showToast('تم حذف بند المصروفات', 'danger');
+    if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('expenses', 'expenses-summary-cards');
+    App.showToast(`تم حذف بند المصروف (${expTitle}) نهائياً من النظام والسحابة 🗑️`, 'danger');
   }
 }

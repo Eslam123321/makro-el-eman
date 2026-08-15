@@ -314,14 +314,25 @@ function updateSupplier() {
 }
 
 function deleteSupplier(supId) {
+  const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
+  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+  if (!isSuperAdmin) {
+    App.showToast('عفواً، صلاحية حذف الموردين والمطاحن مقتصرة على حساب المدير العام فقط!', 'danger');
+    return;
+  }
+
   const sup = (App.db.suppliers || []).find(s => s.id === supId);
   if (!sup) return;
 
-  if (confirm(`هل أنت تأكد من حذف المطحن (${sup.name}) نهائياً من السجل؟`)) {
+  if (confirm(`هل أنت متأكد من حذف المطحن (${sup.name}) نهائياً من قاعدة البيانات والسحابة؟`)) {
+    const supName = sup.name;
     App.db.suppliers = (App.db.suppliers || []).filter(s => s.id !== supId);
+    if (typeof App.logActivity === 'function') {
+      App.logActivity('حذف مطحن/مورد 🗑️', `تم حذف المطحن (${supName}) نهائياً من السيستم`, 'danger');
+    }
     App.save();
     loadSuppliersTable();
     renderPageSummaryCards('suppliers', 'suppliers-summary-cards');
-    App.showToast(`تم حذف المطحن (${sup.name}) من السجل`, 'danger');
+    App.showToast(`تم حذف المطحن (${supName}) نهائياً من النظام والسحابة 🗑️`, 'danger');
   }
 }

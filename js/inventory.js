@@ -188,11 +188,26 @@ function updateProduct() {
 }
 
 function deleteProduct(prodId) {
-  if (confirm('هل أنت تأكد من رغبتك في حذف هذا الصنف من المخزن؟')) {
-    App.db.products = App.db.products.filter(p => p.id !== prodId);
+  const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
+  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+  if (!isSuperAdmin) {
+    App.showToast('عفواً، صلاحية حذف الأصناف من المخزن مقتصرة على حساب المدير العام فقط!', 'danger');
+    return;
+  }
+
+  const prod = (App.db.products || []).find(p => p.id === prodId);
+  if (!prod) return;
+
+  if (confirm(`هل أنت متأكد من رغبتك في حذف الصنف (${prod.name}) نهائياً من المخزن وقاعدة البيانات؟`)) {
+    const prodName = prod.name;
+    App.db.products = (App.db.products || []).filter(p => p.id !== prodId);
+    if (typeof App.logActivity === 'function') {
+      App.logActivity('حذف صنف من المخزن 🗑️', `تم حذف الصنف (${prodName}) نهائياً من المخازن`, 'danger');
+    }
     App.save();
     loadInventoryTable();
-    App.showToast('تم حذف الصنف من قائمة المخزن', 'danger');
+    if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('inventory', 'inventory-summary-cards');
+    App.showToast(`تم حذف الصنف (${prodName}) نهائياً من النظام والسحابة 🗑️`, 'danger');
   }
 }
 

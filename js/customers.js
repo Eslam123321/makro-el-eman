@@ -106,14 +106,45 @@ function loadCustomersTable(customersData = null) {
         </td>
         <td>${c.dueDate ? `<span class="badge badge-warning">${c.dueDate}</span>` : '<span class="text-muted text-xs">لا يوجد مستحقات</span>'}</td>
         <td>
-          <div class="flex gap-2">
+          <div class="flex gap-1 flex-wrap">
             <button class="btn btn-primary btn-sm" onclick="openReceivePaymentModal('${c.id}')"><i class="fa-solid fa-hand-holding-dollar"></i> تحصيل دفعة</button>
             <button class="btn btn-secondary btn-sm" onclick="openStatementModal('${c.id}')"><i class="fa-solid fa-file-lines"></i> كشف حساب</button>
+            ${(typeof App !== 'undefined' && App.getCurrentUser() && (App.getCurrentUser().id === 'USR-1' || App.getCurrentUser().role === 'مدير عام')) ? `
+              <button class="btn btn-danger btn-sm" onclick="deleteCustomer('${c.id}')" title="حذف العميل نهائياً"><i class="fa-solid fa-trash"></i> حذف</button>
+            ` : ''}
           </div>
         </td>
       </tr>
     `;
   }).join('');
+}
+
+// Delete Customer (Super Admin Only)
+function deleteCustomer(customerId) {
+  const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
+  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+  if (!isSuperAdmin) {
+    App.showToast('عفواً، صلاحية حذف العملاء مقتصرة على حساب المدير العام فقط!', 'danger');
+    return;
+  }
+
+  const cust = (App.db.customers || []).find(c => c.id === customerId);
+  if (!cust) return;
+
+  if (confirm(`تحذير: هل أنت متأكد من رغبتك في حذف العميل (${cust.name})؟ سيتم مسح بياناته نهائياً من قاعدة البيانات والسحابة.`)) {
+    const custName = cust.name;
+    App.db.customers = (App.db.customers || []).filter(c => c.id !== customerId);
+
+    if (typeof App.logActivity === 'function') {
+      App.logActivity('حذف عميل من النظام 🗑️', `تم حذف العميل (${custName}) نهائياً من السيستم`, 'danger');
+    }
+
+    App.save();
+    loadCustomersTable();
+    checkUpcomingDuePayments();
+    if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('customers', 'customers-summary-cards');
+    App.showToast(`تم حذف العميل (${custName}) نهائياً من النظام والسحابة 🗑️`, 'danger');
+  }
 }
 
 function saveNewCustomer() {

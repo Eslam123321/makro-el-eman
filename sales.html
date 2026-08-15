@@ -99,18 +99,14 @@
             </table>
           </div>
 
-          <!-- Summary & Zero Tax Notice -->
-          <div class="grid grid-cols-4 gap-4 p-4 rounded-xl mb-4" style="background: var(--primary-light); border: 1px solid var(--primary-border);">
+          <!-- Summary Bar (Without Tax) -->
+          <div class="grid grid-cols-3 gap-4 p-4 rounded-xl mb-4" style="background: var(--primary-light); border: 1px solid var(--primary-border);">
             <div>
               <span class="text-xs text-muted">المجموع الفرعي للشكاير:</span>
               <h3 class="text-slate-800 mt-1" id="inv-subtotal-val">0 ج.م</h3>
             </div>
             <div>
-              <span class="text-xs text-muted">الضرائب (Taxes):</span>
-              <h3 class="text-muted mt-1" id="inv-tax-val">0 ج.م (ملغاة)</h3>
-            </div>
-            <div>
-              <span class="text-xs text-muted">المبلغ النقدي المسدد:</span>
+              <span class="text-xs text-muted">المبلغ النقدي المسدد (كاش):</span>
               <input type="number" id="inv-paid" class="form-control mt-1" style="height: 38px;" placeholder="المبلغ الكاش" oninput="calculateTotals()">
             </div>
             <div>
