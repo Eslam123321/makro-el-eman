@@ -57,6 +57,7 @@ class StorageManager {
       if (!Array.isArray(parsed.invoices)) parsed.invoices = [];
       if (!Array.isArray(parsed.employees)) parsed.employees = [];
       if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
+      parsed.expenses = parsed.expenses.filter(e => !e.id.startsWith('EXP-FLOUR-'));
       if (!Array.isArray(parsed.suppliers)) parsed.suppliers = [];
       if (!Array.isArray(parsed.notifications)) parsed.notifications = [];
       if (!Array.isArray(parsed.attendanceLog)) parsed.attendanceLog = [];

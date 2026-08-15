@@ -147,23 +147,33 @@ function processFlourSupplyBatch() {
   sup.totalBalance = (sup.totalBalance || 0) + totalCost;
   sup.unitPrice = unitPrice; // Update last unit price
 
-  // Log as operating expense record
-  if (!App.db.expenses) App.db.expenses = [];
-  App.db.expenses.unshift({
-    id: `EXP-FLOUR-${Date.now()}`,
-    title: `توريد دقيق خام (${qtyTons} طن) - ${sup.name}`,
-    category: 'خامات ومواد',
-    amount: totalCost,
+  // Track batches in supplier's dedicated ledger (NOT mixed into general operating expenses)
+  if (!sup.batches) sup.batches = [];
+  sup.batches.unshift({
+    id: `BATCH-${Date.now().toString().slice(-4)}`,
+    qtyTons: qtyTons,
+    unitPrice: unitPrice,
+    totalCost: totalCost,
+    refNum: refNum || 'بدون إذن',
     date: App.getNowISO(),
-    notes: `إذن استلام ${refNum} - بسعر طن: ${App.formatCurrency(unitPrice)}`
+    flourType: flourType || sup.flourType
   });
+
+  // Clean any old EXP-FLOUR from general expenses
+  if (App.db.expenses) {
+    App.db.expenses = App.db.expenses.filter(e => !e.id.startsWith('EXP-FLOUR-'));
+  }
+
+  if (typeof App.logActivity === 'function') {
+    App.logActivity('استلام شحنة دقيق 🌾', `تم تسجيل توريد (${qtyTons} طن) دقيق من المطحن (${sup.name}) بقيمة (${App.formatCurrency(totalCost)})`, 'info');
+  }
 
   App.save();
   loadSuppliersTable();
   renderPageSummaryCards('suppliers', 'suppliers-summary-cards');
   closeModal('supply-batch-modal');
 
-  App.showToast(`تم إيداع شحنة (${qtyTons} طن) دقيق وإضافة ${App.formatCurrency(totalCost)} لحساب المطحن`, 'success');
+  App.showToast(`تم إيداع شحنة (${qtyTons} طن) دقيق وإضافة ${App.formatCurrency(totalCost)} لحساب المطحن بنجاح 🌾`, 'success');
 }
 
 function openPaySupplierModal(supId) {
@@ -193,12 +203,25 @@ function processSupplierPayment() {
   sup.totalBalance = Math.max(0, (sup.totalBalance || 0) - amount);
   App.db.treasury = Math.max(0, App.db.treasury - amount);
 
+  // Track payments in supplier's dedicated ledger
+  if (!sup.payments) sup.payments = [];
+  sup.payments.unshift({
+    id: `PAY-${Date.now().toString().slice(-4)}`,
+    amount: amount,
+    date: App.getNowISO(),
+    notes: notes || 'سداد دفعة نقدية'
+  });
+
+  if (typeof App.logActivity === 'function') {
+    App.logActivity('سداد دفعة لمطحن 💰', `تم سداد (${App.formatCurrency(amount)}) للمطحن (${sup.name})`, 'warning');
+  }
+
   App.save();
   loadSuppliersTable();
   renderPageSummaryCards('suppliers', 'suppliers-summary-cards');
   closeModal('pay-supplier-modal');
 
-  App.showToast(`تم سداد ${App.formatCurrency(amount)} للمطحن (${sup.name}) والخصم من الخزنة`, 'success');
+  App.showToast(`تم سداد ${App.formatCurrency(amount)} للمطحن (${sup.name}) والخصم من الخزنة بنجاح 💰`, 'success');
 }
 
 function openSupplierStatementModal(supId) {
@@ -206,7 +229,8 @@ function openSupplierStatementModal(supId) {
   if (!sup) return;
 
   const container = document.getElementById('supplier-statement-body');
-  const relatedExpenses = (App.db.expenses || []).filter(e => e.title && e.title.includes(sup.name));
+  const batches = sup.batches || [];
+  const payments = sup.payments || [];
 
   container.innerHTML = `
     <div id="printable-supplier-statement" class="p-6 bg-white rounded-xl border">
@@ -221,7 +245,7 @@ function openSupplierStatementModal(supId) {
         <div class="text-left">
           <strong>المطحن: ${sup.name}</strong>
           <p class="text-xs text-muted">نوع الدقيق: ${sup.flourType}</p>
-          <p class="text-xs text-muted">الهاتف: ${sup.phone} | ${sup.address}</p>
+          <p class="text-xs text-muted">الهاتف: ${sup.phone} | ${sup.address || ''}</p>
         </div>
       </div>
 
@@ -240,25 +264,51 @@ function openSupplierStatementModal(supId) {
         </div>
       </div>
 
-      <h4 class="font-bold mb-3">سجل توريدات الخامات والشحنات الواردة</h4>
-      <table class="table mb-4">
+      <h4 class="font-bold mb-3"><i class="fa-solid fa-truck-ramp-box text-primary-color ml-1"></i> سجل شحنات وتوريدات الدقيق الواردة</h4>
+      <table class="table mb-6">
         <thead>
           <tr>
-            <th>كود الحركة</th>
-            <th>البيان والتفاصيل</th>
-            <th>التاريخ والوقت</th>
+            <th>كود الشحنة</th>
+            <th>الكمية (بالطن)</th>
+            <th>سعر الطن</th>
             <th>القيمة الإجمالية</th>
+            <th>رقم الإذن / الملاحظات</th>
+            <th>التاريخ والوقت</th>
           </tr>
         </thead>
         <tbody>
-          ${relatedExpenses.length > 0 ? relatedExpenses.map(e => `
+          ${batches.length > 0 ? batches.map(b => `
             <tr>
-              <td><strong>${e.id}</strong></td>
-              <td>${e.title} <div class="text-xs text-muted">${e.notes || ''}</div></td>
-              <td>${App.formatTimestamp(e.date)}</td>
-              <td><strong class="text-danger">${App.formatCurrency(e.amount)}</strong></td>
+              <td><strong>${b.id}</strong></td>
+              <td><span class="badge badge-purple">${b.qtyTons} طن</span></td>
+              <td>${App.formatCurrency(b.unitPrice)}</td>
+              <td><strong class="text-danger">${App.formatCurrency(b.totalCost)}</strong></td>
+              <td>${b.refNum || '-'}</td>
+              <td>${App.formatTimestamp(b.date)}</td>
             </tr>
-          `).join('') : '<tr><td colspan="4" class="text-center text-muted">لا يوجد توريدات مسجلة مؤخراً لهذ المطحن</td></tr>'}
+          `).join('') : '<tr><td colspan="6" class="text-center text-muted">لا يوجد شحنات مسجلة لهذا المطحن</td></tr>'}
+        </tbody>
+      </table>
+
+      <h4 class="font-bold mb-3"><i class="fa-solid fa-money-bill-wave text-success ml-1"></i> سجل الدفعات المسددة للمطحن</h4>
+      <table class="table mb-4">
+        <thead>
+          <tr>
+            <th>كود السداد</th>
+            <th>المبلغ المسدد</th>
+            <th>الملاحظات والبيان</th>
+            <th>التاريخ والوقت</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${payments.length > 0 ? payments.map(p => `
+            <tr>
+              <td><strong>${p.id}</strong></td>
+              <td><strong class="text-success">${App.formatCurrency(p.amount)}</strong></td>
+              <td>${p.notes || 'سداد نقدي'}</td>
+              <td>${App.formatTimestamp(p.date)}</td>
+            </tr>
+          `).join('') : '<tr><td colspan="4" class="text-center text-muted">لا يوجد دفعات مسددة مسجلة بعد</td></tr>'}
         </tbody>
       </table>
     </div>
