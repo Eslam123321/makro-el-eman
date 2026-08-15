@@ -522,6 +522,27 @@ a:hover { color: var(--primary-hover); }
   flex-shrink: 0;
 }
 
+.clickable-dash-card {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.clickable-dash-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  border-color: var(--primary-color) !important;
+}
+
+.clickable-sub-item {
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.clickable-sub-item:hover {
+  background-color: rgba(5, 150, 105, 0.08);
+  transform: scale(1.02);
+}
+
 /* Out of Stock Card Disabled Styling */
 .out-of-stock-card {
   opacity: 0.65;

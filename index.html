@@ -68,7 +68,7 @@
         <div class="grid grid-cols-3 gap-6 mb-6">
           
           <!-- Sales Card Breakdown -->
-          <div class="card p-5">
+          <div class="card p-5 clickable-dash-card" onclick="window.location.href='sales.html'" title="اضغط للانتقال إلى إدارة المبيعات والفواتير 📄">
             <div class="flex justify-between items-center mb-3">
               <span class="text-sm text-muted font-bold">مبيعات اليوم (اليومي)</span>
               <div class="summary-card-icon icon-emerald" style="width: 36px; height: 36px; font-size: 1rem;"><i class="fa-solid fa-calendar-day"></i></div>
@@ -81,7 +81,7 @@
           </div>
 
           <!-- Net Profit Breakdown -->
-          <div class="card p-5">
+          <div class="card p-5 clickable-dash-card" onclick="window.location.href='reports.html'" title="اضغط للانتقال إلى تقارير الأرباح والتدقيق المالي 📊">
             <div class="flex justify-between items-center mb-3">
               <span class="text-sm text-muted font-bold" id="profit-today-title">أرباح اليوم الصافية</span>
               <div class="summary-card-icon icon-blue" id="profit-icon-box" style="width: 36px; height: 36px; font-size: 1rem;"><i class="fa-solid fa-calculator"></i></div>
@@ -100,17 +100,17 @@
               <div class="summary-card-icon icon-amber" style="width: 36px; height: 36px; font-size: 1rem;"><i class="fa-solid fa-vault"></i></div>
             </div>
             <div class="grid grid-cols-2 gap-2 mt-1">
-              <div>
-                <span class="text-xs text-muted">الخزينة (كاش):</span>
+              <div class="clickable-sub-item" onclick="window.location.href='expenses.html'" title="اضغط للانتقال إلى الخزنة والمصروفات">
+                <span class="text-xs text-muted">الخزينة (كاش) ↗:</span>
                 <h4 class="text-primary-color font-bold" id="cash-liquidity">0 ج.م</h4>
               </div>
-              <div class="text-left border-r pr-2">
-                <span class="text-xs text-muted">ديون للعملاء (لنا):</span>
+              <div class="text-left border-r pr-2 clickable-sub-item" onclick="window.location.href='customers.html'" title="اضغط للانتقال إلى حسابات العملاء">
+                <span class="text-xs text-muted">ديون للعملاء (لنا) ↗:</span>
                 <h4 class="text-warning font-bold" id="total-debts">0 ج.م</h4>
               </div>
             </div>
             <div class="text-xs text-muted mt-2 border-t pt-2 flex justify-between items-center">
-              <span>مستحقات المطاحن (علينا): <strong id="supplier-dues-val" class="text-danger font-bold">0 ج.م</strong></span>
+              <span class="clickable-sub-item" onclick="window.location.href='suppliers.html'" title="اضغط للانتقال إلى الموردين والمطاحن">مستحقات المطاحن (علينا) ↗: <strong id="supplier-dues-val" class="text-danger font-bold">0 ج.م</strong></span>
               <span>الصافي: <strong id="net-financial-balance" class="text-success font-bold">0 ج.م</strong></span>
             </div>
           </div>
