@@ -31,12 +31,14 @@ function generateFinancialAuditReport(period = 'monthly') {
   let totalCOGS = 0;
 
   invoices.forEach(inv => {
-    totalSales += inv.grandTotal;
+    if (inv.status === 'مرتجعة بالكامل') return;
+    totalSales += (inv.grandTotal || 0);
     (inv.items || []).forEach(item => {
-      totalSacksSold += item.qty;
-      const prd = products.find(p => p.id === item.id);
+      const activeQty = Math.max(0, (item.qty || 0) - (item.returnedQty || 0));
+      totalSacksSold += activeQty;
+      const prd = products.find(p => p.id === item.id || p.name === item.name);
       const cost = prd ? prd.costPrice : (item.price * 0.8);
-      totalCOGS += (cost * item.qty);
+      totalCOGS += (cost * activeQty);
     });
   });
 
@@ -700,12 +702,14 @@ function renderFinancialAuditReportContent() {
   let totalCOGS = 0;
 
   invoices.forEach(inv => {
+    if (inv.status === 'مرتجعة بالكامل') return;
     totalSales += (inv.grandTotal || 0);
     (inv.items || []).forEach(item => {
-      totalSacksSold += (item.qty || 0);
-      const prd = products.find(p => p.id === item.id);
+      const activeQty = Math.max(0, (item.qty || 0) - (item.returnedQty || 0));
+      totalSacksSold += activeQty;
+      const prd = products.find(p => p.id === item.id || p.name === item.name);
       const cost = prd ? prd.costPrice : (item.price * 0.8);
-      totalCOGS += (cost * item.qty);
+      totalCOGS += (cost * activeQty);
     });
   });
 
