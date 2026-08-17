@@ -1283,10 +1283,11 @@ function renderPageSummaryCards(page, containerId) {
   let cardsHTML = '';
 
   if (page === 'sales') {
-    const invoices = App.db.invoices;
-    const totalSales = invoices.reduce((a, b) => a + b.grandTotal, 0);
-    const totalDisc = invoices.reduce((a, b) => a + b.discount, 0);
-    const totalPaid = invoices.reduce((a, b) => a + b.paidAmount, 0);
+    const invoices = App.db.invoices || [];
+    const validInvoices = invoices.filter(i => i.status !== 'مرتجعة بالكامل');
+    const totalSales = validInvoices.reduce((a, b) => a + (b.grandTotal || 0), 0);
+    const totalDisc = validInvoices.reduce((a, b) => a + (b.discount || 0), 0);
+    const totalPaid = invoices.reduce((a, b) => a + (b.paidAmount || 0), 0);
 
     cardsHTML = `
       <div class="summary-card-item">
@@ -1295,7 +1296,7 @@ function renderPageSummaryCards(page, containerId) {
       </div>
       <div class="summary-card-item">
         <div class="summary-card-icon icon-blue"><i class="fa-solid fa-cart-shopping"></i></div>
-        <div><span class="text-xs text-muted">إجمالي إيراد المبيعات</span><h4 class="text-success">${App.formatCurrency(totalSales)}</h4></div>
+        <div><span class="text-xs text-muted">صافي إيراد المبيعات</span><h4 class="text-success">${App.formatCurrency(totalSales)}</h4></div>
       </div>
       <div class="summary-card-item">
         <div class="summary-card-icon icon-amber"><i class="fa-solid fa-percent"></i></div>

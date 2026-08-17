@@ -335,19 +335,22 @@ function loadInvoicesTable(invoicesData = null) {
   const tbody = document.getElementById('invoices-list-tbody');
   if (!tbody) return;
 
-  const invoices = invoicesData || App.db.invoices;
+  const invoices = invoicesData || App.db.invoices || [];
   if (invoices.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted p-6">لا يوجد فواتير صادرة مطبقة عليها نتائج البحث</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted p-6">لا يوجد فواتير صادرة مسجلة بالنظام</td></tr>`;
     return;
   }
 
   syncInvoicesAccounting();
 
+  const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
+  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+
   const sortedInvoices = [...invoices].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
   tbody.innerHTML = sortedInvoices.map(inv => `
     <tr>
-      <td><strong>${inv.id}</strong></td>
+      <td><strong class="clickable-invoice" onclick="previewInvoice('${inv.id}')" title="اضغط لمعاينة الفاتورة">${inv.id} ↗</strong></td>
       <td>${inv.customerName}</td>
       <td>${App.formatTimestamp(inv.date)}</td>
       <td><span class="badge ${inv.paymentType === 'كاش' ? 'badge-success' : 'badge-warning'}">${inv.paymentType}</span></td>
