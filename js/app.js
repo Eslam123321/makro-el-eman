@@ -72,7 +72,15 @@ class StorageManager {
       if (!Array.isArray(parsed.attendanceLog)) parsed.attendanceLog = [];
       if (!Array.isArray(parsed.deliveryTrucks)) parsed.deliveryTrucks = [];
       if (!Array.isArray(parsed.users)) parsed.users = [];
-      if (typeof parsed.treasury !== 'number') parsed.treasury = 0;
+      
+      // Auto-reconcile live Treasury cash liquidity (Active Net Cash Invoices - Operating Expenses)
+      const totalCashInvoices = (parsed.invoices || []).reduce((sum, inv) => {
+        if (inv.status === 'مرتجعة بالكامل') return sum;
+        return sum + (inv.paidAmount || 0);
+      }, 0);
+      const totalOperationalExpenses = (parsed.expenses || []).reduce((sum, exp) => sum + (exp.amount || 0), 0);
+      parsed.treasury = Math.max(0, totalCashInvoices - totalOperationalExpenses);
+      
       return parsed;
     } catch(e) {
       this.saveDB(DEFAULT_DATABASE);
