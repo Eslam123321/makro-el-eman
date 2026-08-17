@@ -9,11 +9,6 @@ const DEFAULT_DATABASE = {
   customers: [],
   invoices: [],
   employees: [],
-  productionLines: [
-    { id: 'LINE-1', name: 'خط إنتاج الاسباجيتي', status: 'نشط', dailyCapacity: 1200, todayOutput: 0 },
-    { id: 'LINE-2', name: 'خط إنتاج القلم والشعرية', status: 'نشط', dailyCapacity: 2000, todayOutput: 0 },
-    { id: 'LINE-3', name: 'خط التعبئة والتغليف الآلي', status: 'نشط', dailyCapacity: 3500, todayOutput: 0 }
-  ],
   expenses: [],
   notifications: [],
   suppliers: [],
@@ -21,19 +16,7 @@ const DEFAULT_DATABASE = {
   attendanceLog: [],
   deliveryTrucks: [],
   treasury: 0,
-  users: [
-    {
-      id: 'USR-1',
-      name: 'المدير العام للمصنع',
-      username: 'admin',
-      email: 'admin@speed-up.tech',
-      password: 'admin',
-      role: 'مدير عام',
-      status: 'نشط',
-      createdAt: '2026-01-01',
-      permissions: ['dashboard', 'sales', 'inventory', 'suppliers', 'customers', 'hr', 'expenses', 'reports', 'users', 'notifications']
-    }
-  ]
+  users: []
 };
 
 // Storage Manager
@@ -88,7 +71,7 @@ class StorageManager {
       if (!Array.isArray(parsed.notifications)) parsed.notifications = [];
       if (!Array.isArray(parsed.attendanceLog)) parsed.attendanceLog = [];
       if (!Array.isArray(parsed.deliveryTrucks)) parsed.deliveryTrucks = [];
-      if (!Array.isArray(parsed.users) || parsed.users.length === 0) parsed.users = DEFAULT_DATABASE.users;
+      if (!Array.isArray(parsed.users)) parsed.users = [];
       if (typeof parsed.treasury !== 'number') parsed.treasury = 0;
       return parsed;
     } catch(e) {
@@ -131,10 +114,7 @@ const App = {
 
   logout() {
     localStorage.removeItem('eleman_current_user');
-    this.showToast('تم تسجيل الخروج بنجاح. جاري التوجيه...', 'info');
-    setTimeout(() => {
-      window.location.href = 'login.html';
-    }, 400);
+    window.location.href = 'login.html';
   },
 
   hasPermission(permissionKey) {
@@ -189,7 +169,6 @@ const App = {
   refreshUI() {
     this.db = StorageManager.getDB();
     if (typeof loadDashboardData === 'function') loadDashboardData();
-    if (typeof renderProductionLines === 'function') renderProductionLines();
     if (typeof loadInvoicesTable === 'function') loadInvoicesTable();
     if (typeof initSalesForm === 'function') initSalesForm();
     if (typeof loadInventoryTable === 'function') loadInventoryTable();

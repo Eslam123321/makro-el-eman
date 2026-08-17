@@ -964,10 +964,21 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
   if (!container) return;
 
   container.innerHTML = `
-    <div id="printable-invoice-content" style="font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important; direction: rtl !important; text-align: right !important; letter-spacing: 0px !important; word-spacing: 0px !important; color: #1e293b; background: #ffffff; padding: 14px; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; width: 100%;">
+    <div id="printable-invoice-content" style="font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important; direction: rtl !important; text-align: right !important; letter-spacing: 0px !important; word-spacing: 0px !important; color: #1e293b; background: #ffffff; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; width: 100%; position: relative; overflow: hidden;">
       
+      <!-- Luxury Realistic Watermark Seal in Background -->
+      <div style="position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%) rotate(-20deg); pointer-events: none; opacity: 0.055; z-index: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 340px; height: 340px; border: 7px double #059669; border-radius: 50%; user-select: none;">
+        <div style="border: 2px dashed #059669; border-radius: 50%; width: 300px; height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;">
+          <span style="font-size: 1.15rem; font-weight: 900; color: #059669; letter-spacing: 1.5px;">مصنع الإيمان للمكرونة</span>
+          <span style="font-size: 2.2rem; margin: 4px 0;">🌾</span>
+          <span style="font-size: 0.95rem; font-weight: 800; color: #059669;">★ معتمد رسمياً ★</span>
+          <span style="font-size: 0.75rem; font-weight: 700; color: #059669; margin-top: 4px;">ELEMAN PASTA FACTORY</span>
+          <span style="font-size: 0.7rem; color: #059669; margin-top: 2px;">إدارة المبيعات والرقابة والجودة</span>
+        </div>
+      </div>
+
       <!-- Invoice Header with Real Logo -->
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 12px; position: relative; z-index: 1;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <img src="${(typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png'}" alt="شعار مصنع الإيمان" style="height: 52px; width: 52px; object-fit: contain; flex-shrink: 0;">
           <div>
@@ -984,7 +995,7 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
       </div>
 
       <!-- Customer Info Card -->
-      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; position: relative; z-index: 1;">
         <div style="flex: 1; min-width: 180px;">
           <span style="font-size: 0.75rem; color: #64748b; display: block; margin-bottom: 2px;">بيانات العميل المستلم:</span>
           <strong style="font-size: 1.05rem; color: #0f172a; font-family: 'Cairo', sans-serif;">${inv.customerName}</strong>
@@ -1000,7 +1011,7 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
       </div>
 
       <!-- Items Table (Responsive Horizontal Scroll on Small Phones) -->
-      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 8px; position: relative; z-index: 1;">
         <table style="width: 100%; min-width: 480px; border-collapse: collapse; font-size: 0.85rem;">
           <thead style="background: #f1f5f9;">
             <tr>
@@ -1034,13 +1045,14 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
       </div>
 
       <!-- Totals Breakdown & Official Seal -->
-      <div style="display: flex; justify-content: space-between; align-items: stretch; flex-wrap: wrap; gap: 10px; border-top: 2px solid #e2e8f0; padding-top: 10px;">
-        <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 220px;">
-          <!-- Official Stamp -->
-          <div style="border: 2px solid #059669; padding: 6px 10px; border-radius: 8px; color: #059669; text-align: center; background: rgba(5, 150, 105, 0.04); flex-shrink: 0;">
-            <img src="${(typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png'}" alt="شعار" style="height: 24px; display: block; margin: 0 auto 2px auto;">
-            <strong style="font-size: 0.75rem; display: block;">مصنع الإيمان للمكرونة</strong>
-            <span style="font-size: 0.68rem; font-weight: 700;">${isDraft ? 'معاينة مسودة' : 'معتمدة رسمياً 🌾'}</span>
+      <div style="display: flex; justify-content: space-between; align-items: stretch; flex-wrap: wrap; gap: 10px; border-top: 2px solid #e2e8f0; padding-top: 10px; position: relative; z-index: 1;">
+        <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 220px;">
+          <!-- Realistic Official Rubber Stamp Seal -->
+          <div style="border: 2px dashed #059669; padding: 6px 8px; border-radius: 50%; width: 96px; height: 96px; color: #059669; text-align: center; background: rgba(5, 150, 105, 0.04); flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: rotate(-8deg); box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2); user-select: none;">
+            <span style="font-size: 0.62rem; font-weight: 900; line-height: 1;">مصنع الإيمان</span>
+            <span style="font-size: 1.15rem; line-height: 1.1; margin: 1px 0;">🌾</span>
+            <span style="font-size: 0.58rem; font-weight: 800; background: #059669; color: #ffffff; padding: 1px 6px; border-radius: 8px; margin: 1px 0;">${isDraft ? 'مسودة' : 'معتمد وموثق'}</span>
+            <span style="font-size: 0.5rem; font-weight: 700; color: #047857;">إدارة المبيعات 𝓅</span>
           </div>
           <div style="font-size: 0.75rem; color: #64748b; line-height: 1.3;">
             <p style="font-weight: 700; color: #334155; margin: 0 0 2px 0;">شكراً لتعاملكم مع مصنع الإيمان للمكرونة 🌾</p>

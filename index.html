@@ -185,53 +185,6 @@
     </main>
   </div>
 
-  <!-- Modal Card 1: Register Daily Production Shift Output -->
-  <div class="modal-backdrop" id="new-shift-modal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">
-          <i class="fa-solid fa-industry"></i>
-          <h3>تسجيل انتاج وردية مصنع جديدة</h3>
-        </div>
-        <button class="modal-close" onclick="closeModal('new-shift-modal')"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-
-      <div class="modal-body">
-        <div class="form-group mb-4">
-          <label>اختر خط الإنتاج</label>
-          <select id="shift-line-select" class="form-control">
-            <option value="LINE-1">خط إنتاج الاسباجيتي</option>
-            <option value="LINE-2">خط إنتاج القلم والشعرية</option>
-            <option value="LINE-3">خط التعبئة والتغليف الآلي</option>
-          </select>
-        </div>
-
-        <div class="form-group mb-4">
-          <label>صنف المكرونة المصنعة</label>
-          <select id="shift-prod-select" class="form-control"></select>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div class="form-group">
-            <label>عدد الشكاير المنتجة بالوردية</label>
-            <input type="number" id="shift-qty" class="form-control" placeholder="مثال: 500" min="1">
-          </div>
-          <div class="form-group">
-            <label>تكلفة تصنيع الشكارة (جنيه)</label>
-            <input type="number" id="shift-cost" class="form-control" placeholder="مثال: 180" min="1">
-          </div>
-        </div>
-
-        <p class="text-xs text-muted mt-2">* يتم إضافة الشكاير المصنعة أوتوماتيكياً لرصيد المخزن وتحديث متوسط التكلفة التلقائي.</p>
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('new-shift-modal')">إلغاء</button>
-        <button class="btn btn-primary" onclick="saveProductionShift()"><i class="fa-solid fa-check"></i> تسجيل وإيداع بالمخزن 🏭</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Modal Card 2: Global Invoice Preview -->
   <div class="modal-backdrop" id="preview-invoice-modal">
     <div class="modal-card modal-card-lg printable-modal">

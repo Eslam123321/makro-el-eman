@@ -10,8 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAppLayout('dashboard');
   loadDashboardData();
   renderDateHeader();
-  renderProductionLines();
-  initShiftLogModalSelect();
 });
 
 function renderDateHeader() {
@@ -202,78 +200,6 @@ function loadRecentInvoicesTable(invList) {
     </tr>
   `).join('');
 }
-
-// Factory Lines Status
-function renderProductionLines() {
-  const container = document.getElementById('factory-lines-container');
-  if (!container) return;
-
-  const lines = App.db.productionLines || [];
-  container.innerHTML = lines.map(line => `
-    <div class="production-line-card">
-      <div class="flex items-center gap-3">
-        <span class="pulse-dot" title="خط إنتاج نشط بالوردية الحالية"></span>
-        <div>
-          <strong>${line.name}</strong>
-          <div class="text-xs text-muted">الطاقة القصوى: ${line.dailyCapacity} شكارة/يوم</div>
-        </div>
-      </div>
-      <div class="text-left">
-        <strong class="text-primary-color" style="font-size: 1.1rem;">${line.todayOutput} شكارة</strong>
-        <div class="text-xs text-muted">تم إنتاجها اليوم</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function initShiftLogModalSelect() {
-  const select = document.getElementById('shift-prod-select');
-  if (select) {
-    select.innerHTML = '<option value="">-- اختر صنف المكرونة --</option>' +
-      App.db.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-  }
-}
-
-function saveProductionShift() {
-  const lineId = document.getElementById('shift-line-select').value;
-  const prodId = document.getElementById('shift-prod-select').value;
-  const qty = parseInt(document.getElementById('shift-qty').value) || 0;
-  const unitCost = parseFloat(document.getElementById('shift-cost').value) || 0;
-
-  if (!prodId || qty <= 0 || unitCost <= 0) {
-    App.showToast('رجاء ادخل صنف المكرونة والكمية المصنعة وتكلفة تصنيع الشكارة', 'warning');
-    return;
-  }
-
-  const prod = App.db.products.find(p => p.id === prodId);
-  const line = App.db.productionLines.find(l => l.id === lineId);
-
-  if (prod) {
-    const oldTotalCost = prod.stock * prod.costPrice;
-    const newBatchTotalCost = qty * unitCost;
-    const updatedStock = prod.stock + qty;
-    const updatedCost = Math.round((oldTotalCost + newBatchTotalCost) / updatedStock);
-
-    prod.stock = updatedStock;
-    prod.costPrice = updatedCost;
-  }
-
-  if (line) line.todayOutput += qty;
-
-  App.save();
-  loadDashboardData();
-  renderProductionLines();
-  closeModal('new-shift-modal');
-
-  document.getElementById('shift-qty').value = '';
-  document.getElementById('shift-cost').value = '';
-
-  App.showToast(`تم تسجيل وردية الإنتاج بنجاح وإضافة (${qty} شكارة) للمخزن 🏭`, 'success');
-}
-
-
-
-
 
 function renderDashboardBarChart(sales, expenses, profit) {
   const ctx = document.getElementById('financeChart');
