@@ -1,0 +1,7 @@
+# GitHub Pages Configuration
+include:
+  - .nojekyll
+  - manifest.json
+  - css
+  - js
+  - image
