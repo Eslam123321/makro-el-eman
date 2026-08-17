@@ -6,19 +6,7 @@
 
 const DEFAULT_DATABASE = {
   products: [],
-  customers: [
-    {
-      id: 'CUST-001',
-      name: 'عميل نقدي',
-      phone: '01000000000',
-      address: 'مبيعات نقدية فورية داخل المصنع',
-      totalDebt: 0,
-      creditLimit: 100000,
-      rating: 'نقدي فوري',
-      dueDate: '',
-      notes: 'حساب مخصص للعملاء النقديين ومبيعات الكاش المباشرة'
-    }
-  ],
+  customers: [],
   invoices: [],
   employees: [],
   productionLines: [
@@ -48,21 +36,6 @@ const DEFAULT_DATABASE = {
   ]
 };
 
-const DB_VERSION = '2026_08_15_v6_cash_cust';
-if (localStorage.getItem('eleman_db_version') !== DB_VERSION) {
-  const currentDB = localStorage.getItem('eleman_erp_db');
-  if (currentDB) {
-    try {
-      const parsed = JSON.parse(currentDB);
-      if (Array.isArray(parsed.customers) && !parsed.customers.some(c => c.name === 'عميل نقدي')) {
-        parsed.customers.unshift(DEFAULT_DATABASE.customers[0]);
-        localStorage.setItem('eleman_erp_db', JSON.stringify(parsed));
-      }
-    } catch(e) {}
-  }
-  localStorage.setItem('eleman_db_version', DB_VERSION);
-}
-
 // Storage Manager
 class StorageManager {
   static getDB() {
@@ -75,9 +48,6 @@ class StorageManager {
       const parsed = JSON.parse(data);
       if (!Array.isArray(parsed.products)) parsed.products = [];
       if (!Array.isArray(parsed.customers)) parsed.customers = [];
-      if (!parsed.customers.some(c => c.name === 'عميل نقدي')) {
-        parsed.customers.unshift(DEFAULT_DATABASE.customers[0]);
-      }
       if (!Array.isArray(parsed.invoices)) parsed.invoices = [];
       // Auto-reconcile returned invoices to reflect active net sales, sacks, and collected cash
       parsed.invoices.forEach(inv => {
