@@ -374,15 +374,24 @@ function deleteSupplier(supId) {
   const sup = (App.db.suppliers || []).find(s => s.id === supId);
   if (!sup) return;
 
-  if (confirm(`هل أنت متأكد من حذف المطحن (${sup.name}) نهائياً من قاعدة البيانات والسحابة؟`)) {
-    const supName = sup.name;
-    App.db.suppliers = (App.db.suppliers || []).filter(s => s.id !== supId);
-    if (typeof App.logActivity === 'function') {
-      App.logActivity('حذف مطحن/مورد 🗑️', `تم حذف المطحن (${supName}) نهائياً من السيستم`, 'danger');
+  App.showConfirmModal({
+    title: 'حذف مطحن / مورد',
+    message: `هل أنت متأكد من حذف المطحن (${sup.name}) نهائياً من قاعدة البيانات والسحابة؟`,
+    icon: 'fa-solid fa-truck-ramp-box',
+    iconBg: '#fee2e2',
+    iconColor: '#dc2626',
+    confirmText: 'نعم، حذف المطحن 🗑️',
+    confirmBtnClass: 'btn-danger',
+    onConfirm: () => {
+      const supName = sup.name;
+      App.db.suppliers = (App.db.suppliers || []).filter(s => s.id !== supId);
+      if (typeof App.logActivity === 'function') {
+        App.logActivity('حذف مطحن/مورد 🗑️', `تم حذف المطحن (${supName}) نهائياً من السيستم`, 'danger');
+      }
+      App.save();
+      loadSuppliersTable();
+      renderPageSummaryCards('suppliers', 'suppliers-summary-cards');
+      App.showToast(`تم حذف المطحن (${supName}) نهائياً من النظام والسحابة 🗑️`, 'danger');
     }
-    App.save();
-    loadSuppliersTable();
-    renderPageSummaryCards('suppliers', 'suppliers-summary-cards');
-    App.showToast(`تم حذف المطحن (${supName}) نهائياً من النظام والسحابة 🗑️`, 'danger');
-  }
+  });
 }

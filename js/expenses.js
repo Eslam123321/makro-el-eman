@@ -122,15 +122,24 @@ function deleteExpense(expId) {
   const exp = (App.db.expenses || []).find(e => e.id === expId);
   if (!exp) return;
 
-  if (confirm(`هل أنت متأكد من حذف بند المصروف (${exp.title}) نهائياً من قاعدة البيانات والسحابة؟`)) {
-    const expTitle = exp.title;
-    App.db.expenses = (App.db.expenses || []).filter(e => e.id !== expId);
-    if (typeof App.logActivity === 'function') {
-      App.logActivity('حذف مصروف 🗑️', `تم حذف المصروف (${expTitle}) نهائياً من السيستم`, 'danger');
+  App.showConfirmModal({
+    title: 'حذف بند المصروف',
+    message: `هل أنت متأكد من حذف بند المصروف (${exp.title}) بقيمة (${App.formatCurrency(exp.amount)}) نهائياً من قاعدة البيانات والسحابة؟`,
+    icon: 'fa-solid fa-trash-can',
+    iconBg: '#fee2e2',
+    iconColor: '#dc2626',
+    confirmText: 'نعم، حذف المصروف 🗑️',
+    confirmBtnClass: 'btn-danger',
+    onConfirm: () => {
+      const expTitle = exp.title;
+      App.db.expenses = (App.db.expenses || []).filter(e => e.id !== expId);
+      if (typeof App.logActivity === 'function') {
+        App.logActivity('حذف مصروف 🗑️', `تم حذف المصروف (${expTitle}) نهائياً من السيستم`, 'danger');
+      }
+      App.save();
+      loadExpensesTable();
+      if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('expenses', 'expenses-summary-cards');
+      App.showToast(`تم حذف بند المصروف (${expTitle}) نهائياً من النظام والسحابة 🗑️`, 'danger');
     }
-    App.save();
-    loadExpensesTable();
-    if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('expenses', 'expenses-summary-cards');
-    App.showToast(`تم حذف بند المصروف (${expTitle}) نهائياً من النظام والسحابة 🗑️`, 'danger');
-  }
+  });
 }

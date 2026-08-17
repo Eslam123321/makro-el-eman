@@ -132,20 +132,29 @@ function deleteCustomer(customerId) {
   const cust = (App.db.customers || []).find(c => c.id === customerId);
   if (!cust) return;
 
-  if (confirm(`تحذير: هل أنت متأكد من رغبتك في حذف العميل (${cust.name})؟ سيتم مسح بياناته نهائياً من قاعدة البيانات والسحابة.`)) {
-    const custName = cust.name;
-    App.db.customers = (App.db.customers || []).filter(c => c.id !== customerId);
+  App.showConfirmModal({
+    title: 'حذف العميل نهائياً',
+    message: `تحذير: هل أنت متأكد من رغبتك في حذف العميل (${cust.name})؟ سيتم مسح بياناته نهائياً من قاعدة البيانات والسحابة.`,
+    icon: 'fa-solid fa-user-xmark',
+    iconBg: '#fee2e2',
+    iconColor: '#dc2626',
+    confirmText: 'نعم، حذف العميل 🗑️',
+    confirmBtnClass: 'btn-danger',
+    onConfirm: () => {
+      const custName = cust.name;
+      App.db.customers = (App.db.customers || []).filter(c => c.id !== customerId);
 
-    if (typeof App.logActivity === 'function') {
-      App.logActivity('حذف عميل من النظام 🗑️', `تم حذف العميل (${custName}) نهائياً من السيستم`, 'danger');
+      if (typeof App.logActivity === 'function') {
+        App.logActivity('حذف عميل من النظام 🗑️', `تم حذف العميل (${custName}) نهائياً من السيستم`, 'danger');
+      }
+
+      App.save();
+      loadCustomersTable();
+      checkUpcomingDuePayments();
+      if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('customers', 'customers-summary-cards');
+      App.showToast(`تم حذف العميل (${custName}) نهائياً من النظام والسحابة 🗑️`, 'danger');
     }
-
-    App.save();
-    loadCustomersTable();
-    checkUpcomingDuePayments();
-    if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('customers', 'customers-summary-cards');
-    App.showToast(`تم حذف العميل (${custName}) نهائياً من النظام والسحابة 🗑️`, 'danger');
-  }
+  });
 }
 
 function saveNewCustomer() {

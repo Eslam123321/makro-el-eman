@@ -161,23 +161,30 @@ function deleteEmployee(empId) {
   const emp = (App.db.employees || []).find(e => e.id === empId);
   if (!emp) return;
 
-  if (confirm(`تحذير: هل أنت متأكد من رغبتك في حذف الموظف (${emp.name}) - (${emp.jobTitle})؟ سيتم مسح بياناته وسجل حضوره نهائياً من قاعدة البيانات والسحابة.`)) {
-    const empName = emp.name;
-    // Remove from employees list
-    App.db.employees = (App.db.employees || []).filter(e => e.id !== empId);
-    // Remove attendance logs for this employee
-    App.db.attendanceLog = (App.db.attendanceLog || []).filter(a => a.empId !== empId);
+  App.showConfirmModal({
+    title: 'حذف الموظف نهائياً',
+    message: `تحذير: هل أنت متأكد من رغبتك في حذف الموظف (${emp.name}) - (${emp.jobTitle})؟ سيتم مسح بياناته وسجل حضوره نهائياً من قاعدة البيانات والسحابة.`,
+    icon: 'fa-solid fa-user-slash',
+    iconBg: '#fee2e2',
+    iconColor: '#dc2626',
+    confirmText: 'نعم، حذف الموظف 🗑️',
+    confirmBtnClass: 'btn-danger',
+    onConfirm: () => {
+      const empName = emp.name;
+      App.db.employees = (App.db.employees || []).filter(e => e.id !== empId);
+      App.db.attendanceLog = (App.db.attendanceLog || []).filter(a => a.empId !== empId);
 
-    if (typeof App.logActivity === 'function') {
-      App.logActivity('حذف موظف من النظام 🗑️', `تم حذف الموظف (${empName}) وسجل حضوره نهائياً من السيستم`, 'danger');
+      if (typeof App.logActivity === 'function') {
+        App.logActivity('حذف موظف من النظام 🗑️', `تم حذف الموظف (${empName}) وسجل حضوره نهائياً من السيستم`, 'danger');
+      }
+
+      App.save();
+      loadEmployeesTable();
+      loadDailyAttendanceTable();
+      if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('hr', 'hr-summary-cards-container');
+      App.showToast(`تم حذف الموظف (${empName}) نهائياً من النظام والسحابة 🗑️`, 'danger');
     }
-
-    App.save();
-    loadEmployeesTable();
-    loadDailyAttendanceTable();
-    if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('hr', 'hr-summary-cards-container');
-    App.showToast(`تم حذف الموظف (${empName}) نهائياً من النظام والسحابة 🗑️`, 'danger');
-  }
+  });
 }
 
 // Filter Section 2 (Attendance Table)
@@ -510,25 +517,34 @@ function disburseSalary(empId) {
     return;
   }
 
-  if (confirm(`هل أنت متأكد من تسوية وصرف صافي راتب الموظف (${emp.name}) بقيمة (${App.formatCurrency(net)})؟ سيتم تصفير السلف وأيام الغياب وبدء دورة شهرية جديدة.`)) {
-    if (!App.db.expenses) App.db.expenses = [];
-    App.db.expenses.unshift({
-      id: `EXP-${String(App.db.expenses.length + 101)}`,
-      title: `صرف راتب شهري - ${emp.name}`,
-      category: 'رواتب وأجور',
-      amount: net,
-      date: new Date().toISOString(),
-      notes: `صرف صافي الراتب بعد خصم (${App.formatCurrency(emp.advances || 0)}) سلف و (${App.formatCurrency(absenceDeduction)}) غياب`
-    });
+  App.showConfirmModal({
+    title: 'صرف وتسوية الراتب الشهري',
+    message: `هل أنت متأكد من تسوية وصرف صافي راتب الموظف (${emp.name}) بقيمة (${App.formatCurrency(net)})؟ سيتم تسجيله بالمصروفات وتصفير السلف وأيام الغياب وبدء دورة شهرية جديدة.`,
+    icon: 'fa-solid fa-money-bill-transfer',
+    iconBg: '#dcfce7',
+    iconColor: '#059669',
+    confirmText: 'تأكيد الصرف والتسوية 💵',
+    confirmBtnClass: 'btn-success',
+    onConfirm: () => {
+      if (!App.db.expenses) App.db.expenses = [];
+      App.db.expenses.unshift({
+        id: `EXP-${String(App.db.expenses.length + 101)}`,
+        title: `صرف راتب شهري - ${emp.name}`,
+        category: 'رواتب وأجور',
+        amount: net,
+        date: new Date().toISOString(),
+        notes: `صرف صافي الراتب بعد خصم (${App.formatCurrency(emp.advances || 0)}) سلف و (${App.formatCurrency(absenceDeduction)}) غياب`
+      });
 
-    emp.advances = 0;
-    emp.absences = 0;
+      emp.advances = 0;
+      emp.absences = 0;
 
-    App.save();
-    loadEmployeesTable();
-    renderPageSummaryCards('hr', 'hr-summary-cards-container');
-    App.showToast(`تم صرف وتسوية راتب الموظف (${emp.name}) بقيمة (${App.formatCurrency(net)}) بنجاح! 💵✨`, 'success');
-  }
+      App.save();
+      loadEmployeesTable();
+      renderPageSummaryCards('hr', 'hr-summary-cards-container');
+      App.showToast(`تم صرف وتسوية راتب الموظف (${emp.name}) بقيمة (${App.formatCurrency(net)}) بنجاح! 💵✨`, 'success');
+    }
+  });
 }
 
 // Add New Employee Form

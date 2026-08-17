@@ -409,7 +409,7 @@ function openInvoiceReturnModal(invId) {
       </div>
     </div>
 
-    <h4 class="font-bold mb-2"><i class="fa-solid fa-boxes-stacked text-primary-color ml-1"></i> حدد عدد الشكاير المراد إرجاعها لكل صنف (حتى لو شكارة واحدة):</h4>
+    <h4 class="font-bold mb-2"><i class="fa-solid fa-boxes-stacked text-primary-color ml-1"></i> حدد عدد الشكاير المراد إرجاعها (استخدم أزرار + و - أو اكتب العدد):</h4>
     
     <div class="table-container mb-4">
       <table class="table">
@@ -420,7 +420,7 @@ function openInvoiceReturnModal(invId) {
             <th>الكمية الأصلية</th>
             <th>المرتجع سابقاً</th>
             <th>الصافي المباع</th>
-            <th style="width: 150px;">الكمية للإرجاع (شكارة)</th>
+            <th style="width: 170px; text-align: center;">الكمية للإرجاع (شكارة)</th>
             <th>قيمة المرتجع</th>
           </tr>
         </thead>
@@ -436,16 +436,20 @@ function openInvoiceReturnModal(invId) {
                 <td><strong class="text-primary-color">${activeQty} شكارة</strong></td>
                 <td>
                   ${activeQty > 0 ? `
-                    <input type="number" 
-                           id="return-qty-input-${index}" 
-                           class="form-control" 
-                           min="0" 
-                           max="${activeQty}" 
-                           value="0" 
-                           data-price="${item.price}"
-                           data-item-index="${index}"
-                           oninput="calculateReturnSummaryTotal()" 
-                           style="font-weight: bold; text-align: center;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="stepReturnQty(${index}, -1)" style="padding: 2px 10px; font-weight: 900; font-size: 1.15rem; height: 36px; border-radius: 8px;">-</button>
+                      <input type="number" 
+                             id="return-qty-input-${index}" 
+                             class="form-control" 
+                             min="0" 
+                             max="${activeQty}" 
+                             value="0" 
+                             data-price="${item.price}"
+                             data-item-index="${index}"
+                             oninput="calculateReturnSummaryTotal()" 
+                             style="font-weight: 800; text-align: center; width: 68px; font-size: 1.05rem; height: 36px; border-radius: 8px;">
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="stepReturnQty(${index}, 1)" style="padding: 2px 10px; font-weight: 900; font-size: 1.15rem; height: 36px; border-radius: 8px;">+</button>
+                    </div>
                   ` : '<span class="badge badge-secondary">تم إرجاعه بالكامل</span>'}
                 </td>
                 <td><strong id="return-row-val-${index}" class="text-danger">0 ج.م</strong></td>
@@ -456,11 +460,11 @@ function openInvoiceReturnModal(invId) {
       </table>
     </div>
 
-    <div class="card p-4 border" style="background: #fffbeb; border-color: #fde68a;">
+    <div class="card p-4 border mb-3" style="background: #fffbeb; border-color: #fde68a;">
       <div class="flex justify-between items-center flex-wrap gap-3">
         <div>
           <span class="text-xs text-muted block font-bold">ملخص الشحنة المرتجعة للمخزن:</span>
-          <h4>إجمالي المرتجع الآن: <span id="return-total-sacks-count" class="text-primary-color font-bold">0</span> شكارة</h4>
+          <h4>إجمالي المرتجع الآن: <span id="return-total-sacks-count" class="text-primary-color font-bold" style="font-size: 1.2rem;">0</span> شكارة</h4>
         </div>
         <div class="text-left">
           <span class="text-xs text-muted block font-bold">إجمالي المبلغ المستحق رده / تسويته:</span>
@@ -468,9 +472,26 @@ function openInvoiceReturnModal(invId) {
         </div>
       </div>
     </div>
+
+    <div class="text-center pt-2">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('return-invoice-modal'); openEditInvoiceModal('${inv.id}');" style="color: #2563eb; font-weight: 700;">
+        <i class="fa-solid fa-pen-to-square ml-1"></i> أو الانتقال لتعديل كافة بيانات وأصناف الفاتورة بالكامل 📝
+      </button>
+    </div>
   `;
 
   openModal('return-invoice-modal');
+}
+
+function stepReturnQty(index, delta) {
+  const input = document.getElementById(`return-qty-input-${index}`);
+  if (!input) return;
+  let val = (parseInt(input.value) || 0) + delta;
+  const max = parseInt(input.max) || 0;
+  if (val < 0) val = 0;
+  if (val > max) val = max;
+  input.value = val;
+  calculateReturnSummaryTotal();
 }
 
 function calculateReturnSummaryTotal() {
@@ -841,16 +862,25 @@ function deleteInvoice(invId) {
   const inv = (App.db.invoices || []).find(i => i.id === invId);
   if (!inv) return;
 
-  if (confirm(`تحذير: هل أنت متأكد من الحذف النهائي للفاتورة (${inv.id})؟ سيتم مسحها نهائياً من قاعدة البيانات والسحابة.`)) {
-    App.db.invoices = (App.db.invoices || []).filter(i => i.id !== invId);
-    if (typeof App.logActivity === 'function') {
-      App.logActivity('حذف فاتورة مبيعات 🗑️', `تم حذف الفاتورة (${inv.id}) نهائياً من السيستم`, 'danger');
+  App.showConfirmModal({
+    title: 'حذف الفاتورة نهائياً',
+    message: `تحذير: هل أنت متأكد من الحذف النهائي للفاتورة رقم (${inv.id}) للعميل (${inv.customerName})؟ سيتم مسحها نهائياً من قاعدة البيانات والسحابة.`,
+    icon: 'fa-solid fa-trash-can',
+    iconBg: '#fee2e2',
+    iconColor: '#dc2626',
+    confirmText: 'نعم، حذف الفاتورة نهائياً 🗑️',
+    confirmBtnClass: 'btn-danger',
+    onConfirm: () => {
+      App.db.invoices = (App.db.invoices || []).filter(i => i.id !== invId);
+      if (typeof App.logActivity === 'function') {
+        App.logActivity('حذف فاتورة مبيعات 🗑️', `تم حذف الفاتورة (${inv.id}) نهائياً من السيستم`, 'danger');
+      }
+      App.save();
+      loadInvoicesTable();
+      renderPageSummaryCards('sales', 'sales-summary-cards');
+      App.showToast(`تم حذف الفاتورة (${inv.id}) نهائياً من النظام والسحابة 🗑️`, 'danger');
     }
-    App.save();
-    loadInvoicesTable();
-    renderPageSummaryCards('sales', 'sales-summary-cards');
-    App.showToast(`تم حذف الفاتورة (${inv.id}) نهائياً من النظام والسحابة 🗑️`, 'danger');
-  }
+  });
 }
 
 // Quick Invoice Preview Card Modal
@@ -998,13 +1028,22 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
       `;
     } else {
       confirmContainer.innerHTML = `
-        <span class="badge badge-emerald font-bold" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: #d1fae5; color: #047857; border: 1px solid #a7f3d0;">
-          <i class="fa-solid fa-circle-check ml-1"></i> فاتورة مؤكدة ومسجلة بالسجل
-        </span>
+        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="closeModal('preview-invoice-modal'); openInvoiceReturnModal('${inv.id}');" style="color: #d97706; font-weight: 700; border-radius: 8px;">
+            <i class="fa-solid fa-rotate-left"></i> مرتجع شكاير
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="closeModal('preview-invoice-modal'); openEditInvoiceModal('${inv.id}');" style="color: #2563eb; font-weight: 700; border-radius: 8px;">
+            <i class="fa-solid fa-pen-to-square"></i> تعديل الفاتورة
+          </button>
+          <span class="badge badge-emerald font-bold" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; border-radius: 8px;">
+            <i class="fa-solid fa-circle-check ml-1"></i> معتمدة بالسجل
+          </span>
+        </div>
       `;
     }
   }
 }
+
 
 
 

@@ -338,15 +338,91 @@ const App = {
     this.showToast('تم حذف الإشعار بنجاح 🗑️', 'danger');
   },
 
-  clearAllNotifications() {
-    if (confirm('هل أنت متأكد من مسح وحذف كافة الإشعارات والأنشطة المسجلة نهائياً؟')) {
-      this.db.notifications = [];
-      this.save();
-      this.updateNotificationBadge();
-      if (typeof loadNotificationsPage === 'function') loadNotificationsPage();
-      if (typeof renderNotificationsDropdown === 'function') renderNotificationsDropdown();
-      this.showToast('تم مسح وتصفير كافة الإشعارات بنجاح! ✨', 'info');
+  // Professional Glassmorphic Confirmation Modal Engine (Replaces native browser alert/confirm)
+  showConfirmModal({
+    title = 'تأكيد الإجراء',
+    message = 'هل أنت متأكد من تنفيذ هذا الإجراء؟',
+    icon = 'fa-solid fa-triangle-exclamation',
+    iconBg = '#fee2e2',
+    iconColor = '#dc2626',
+    confirmText = 'تأكيد الإجراء',
+    confirmBtnClass = 'btn-danger',
+    cancelText = 'إلغاء الأمر ✕',
+    onConfirm = null,
+    onCancel = null
+  }) {
+    let modal = document.getElementById('global-confirm-dialog-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'global-confirm-dialog-modal';
+      modal.className = 'modal-backdrop';
+      modal.style.zIndex = '999999';
+      document.body.appendChild(modal);
     }
+
+    modal.innerHTML = `
+      <div class="modal-card" style="max-width: 440px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); text-align: center; padding: 26px 22px; margin: 0 auto; background: var(--bg-card); border: 2px solid var(--border-color); animation: pwaSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: ${iconBg}; color: ${iconColor}; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 14px auto; box-shadow: 0 8px 16px -4px rgba(220, 38, 38, 0.2);">
+          <i class="${icon}"></i>
+        </div>
+        <h3 style="margin: 0 0 8px 0; font-size: 1.25rem; font-weight: 800; color: var(--text-primary); font-family: 'Cairo', sans-serif;">${title}</h3>
+        <p style="margin: 0 0 22px 0; font-size: 0.92rem; color: var(--text-muted); line-height: 1.6; font-family: 'Cairo', sans-serif;">${message}</p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button type="button" id="global-confirm-cancel-btn" class="btn btn-secondary" style="flex: 1; padding: 10px 14px; font-weight: 700; border-radius: 10px; font-family: 'Cairo', sans-serif;">${cancelText}</button>
+          <button type="button" id="global-confirm-accept-btn" class="btn ${confirmBtnClass}" style="flex: 1; padding: 10px 14px; font-weight: 800; border-radius: 10px; font-family: 'Cairo', sans-serif;">${confirmText}</button>
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('active');
+
+    const cancelBtn = document.getElementById('global-confirm-cancel-btn');
+    const acceptBtn = document.getElementById('global-confirm-accept-btn');
+
+    const cleanup = () => {
+      modal.classList.remove('active');
+    };
+
+    if (cancelBtn) {
+      cancelBtn.onclick = () => {
+        cleanup();
+        if (typeof onCancel === 'function') onCancel();
+      };
+    }
+
+    if (acceptBtn) {
+      acceptBtn.onclick = () => {
+        cleanup();
+        if (typeof onConfirm === 'function') onConfirm();
+      };
+    }
+
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        cleanup();
+        if (typeof onCancel === 'function') onCancel();
+      }
+    };
+  },
+
+  clearAllNotifications() {
+    this.showConfirmModal({
+      title: 'مسح سجل الإشعارات',
+      message: 'هل أنت متأكد من رغبتك في مسح وتصفير كافة الإشعارات والأنشطة المسجلة نهائياً؟',
+      icon: 'fa-solid fa-bell-slash',
+      iconBg: '#fef3c7',
+      iconColor: '#d97706',
+      confirmText: 'نعم، تصفير السجل 🧹',
+      confirmBtnClass: 'btn-warning',
+      onConfirm: () => {
+        this.db.notifications = [];
+        this.save();
+        this.updateNotificationBadge();
+        if (typeof loadNotificationsPage === 'function') loadNotificationsPage();
+        if (typeof renderNotificationsDropdown === 'function') renderNotificationsDropdown();
+        this.showToast('تم مسح وتصفير كافة الإشعارات بنجاح! ✨', 'info');
+      }
+    });
   },
 
   printNotification(id) {

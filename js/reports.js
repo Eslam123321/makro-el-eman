@@ -330,17 +330,26 @@ function deleteTruck(trkId) {
   const trk = (App.db.deliveryTrucks || []).find(t => t.id === trkId);
   if (!trk) return;
 
-  if (confirm(`هل أنت متأكد تماماً من رغبتك في حذف سيارة التوصيل (${trk.plateNumber}) والسائق (${trk.driverName}) من الأسطول؟`)) {
-    App.db.deliveryTrucks = (App.db.deliveryTrucks || []).filter(t => t.id !== trkId);
+  App.showConfirmModal({
+    title: 'حذف سيارة من الأسطول',
+    message: `هل أنت متأكد تماماً من رغبتك في حذف سيارة التوصيل (${trk.plateNumber}) والسائق (${trk.driverName}) من أسطول التوزيع؟`,
+    icon: 'fa-solid fa-truck-moving',
+    iconBg: '#fee2e2',
+    iconColor: '#dc2626',
+    confirmText: 'نعم، حذف السيارة 🗑️',
+    confirmBtnClass: 'btn-danger',
+    onConfirm: () => {
+      App.db.deliveryTrucks = (App.db.deliveryTrucks || []).filter(t => t.id !== trkId);
 
-    if (typeof App.logActivity === 'function') {
-      App.logActivity('حذف سيارة من الأسطول 🗑️', `تم حذف السيارة (${trk.plateNumber}) والسائق (${trk.driverName}) من أسطول التوصيل`, 'danger');
+      if (typeof App.logActivity === 'function') {
+        App.logActivity('حذف سيارة من الأسطول 🗑️', `تم حذف السيارة (${trk.plateNumber}) والسائق (${trk.driverName}) من أسطول التوصيل`, 'danger');
+      }
+
+      App.save();
+      loadDeliveryTrucksTable();
+      App.showToast('تم حذف السيارة من أسطول التوصيل بنجاح 🗑️', 'danger');
     }
-
-    App.save();
-    loadDeliveryTrucksTable();
-    App.showToast('تم حذف السيارة من أسطول التوصيل بنجاح', 'danger');
-  }
+  });
 }
 
 // Driver & Vehicle Statement of Account Modal (كشف حساب السائق والسيارة المعتمد مثل الموظفين)

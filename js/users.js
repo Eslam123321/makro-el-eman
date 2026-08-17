@@ -328,18 +328,27 @@ function deleteUserAccount(userId) {
     return;
   }
 
-  if (confirm(`هل أنت متأكد تماماً من رغبتك في حذف حساب المستخدم (${user.name}) واسم الدخول (${user.username})؟ لن يتمكن من تسجيل الدخول بعد الآن.`)) {
-    const deletedName = user.name;
-    const deletedUser = user.username;
-    App.db.users = (App.db.users || []).filter(u => u.id !== userId);
+  App.showConfirmModal({
+    title: 'حذف حساب مستخدم',
+    message: `هل أنت متأكد تماماً من رغبتك في حذف حساب المستخدم (${user.name}) واسم الدخول (${user.username})؟ لن يتمكن من تسجيل الدخول إلى النظام بعد الآن.`,
+    icon: 'fa-solid fa-user-xmark',
+    iconBg: '#fee2e2',
+    iconColor: '#dc2626',
+    confirmText: 'نعم، حذف الحساب 🗑️',
+    confirmBtnClass: 'btn-danger',
+    onConfirm: () => {
+      const deletedName = user.name;
+      const deletedUser = user.username;
+      App.db.users = (App.db.users || []).filter(u => u.id !== userId);
 
-    if (typeof App.logActivity === 'function') {
-      App.logActivity('حذف حساب مستخدم 🗑️', `تم حذف حساب الموظف (${deletedName}) اسم الدخول (${deletedUser}) نهائياً من السيستم`, 'danger');
+      if (typeof App.logActivity === 'function') {
+        App.logActivity('حذف حساب مستخدم 🗑️', `تم حذف حساب الموظف (${deletedName}) اسم الدخول (${deletedUser}) نهائياً من السيستم`, 'danger');
+      }
+
+      App.save();
+      loadUsersTable();
+      renderPageSummaryCards('users', 'users-summary-cards');
+      App.showToast(`تم حذف حساب المستخدم (${deletedName}) من النظام نهائياً 🗑️`, 'danger');
     }
-
-    App.save();
-    loadUsersTable();
-    renderPageSummaryCards('users', 'users-summary-cards');
-    App.showToast(`تم حذف حساب المستخدم (${deletedName}) من النظام نهائياً 🗑️`, 'danger');
-  }
+  });
 }
