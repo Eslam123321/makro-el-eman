@@ -8,9 +8,11 @@ let currentInvoiceItems = [];
 let currentDraftInvoice = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-  renderAppLayout('sales');
-  loadInvoicesTable();
-  initSalesForm();
+  if (document.getElementById('invoices-list-tbody')) {
+    renderAppLayout('sales');
+    loadInvoicesTable();
+    initSalesForm();
+  }
 
   // Handle URL Search/Preview query
   const urlParams = new URLSearchParams(window.location.search);
@@ -74,34 +76,37 @@ function initSalesForm() {
       `;
     }).join('');
   }
+
+  // Set default payment type
+  const payType = document.getElementById('inv-paytype');
+  if (payType) payType.value = 'كاش';
 }
 
-// Quick Add Product Card click
-function quickAddProductToInvoice(productId) {
-  const product = App.db.products.find(p => p.id === productId);
-  if (!product) return;
+function quickAddProductToInvoice(prodId) {
+  const prod = App.db.products.find(p => p.id === prodId);
+  if (!prod) return;
 
-  if (product.stock <= 0) {
-    App.showToast(`عفواً، رصيد الصنف (${product.name}) غير متاح حالياً بالمخزن (ممنوع البيع)`, 'danger');
+  if (prod.stock <= 0) {
+    App.showToast(`عفواً، صنف (${prod.name}) نفدت كميته بالكامل بالمخزن ولا يمكن بيعه!`, 'danger');
     return;
   }
 
-  const existingIdx = currentInvoiceItems.findIndex(i => i.id === productId);
-  if (existingIdx > -1) {
-    if (currentInvoiceItems[existingIdx].qty + 1 > product.stock) {
-      App.showToast(`تجاوزت الكمية المتاحة بالشكارة في المخزن (${product.stock})`, 'warning');
+  const existingItem = currentInvoiceItems.find(i => i.id === prod.id);
+  if (existingItem) {
+    if (existingItem.qty + 1 > prod.stock) {
+      App.showToast(`تنبيه: لا يمكن إضافة أكثر من الرصيد المتوفر بالمخزن (${prod.stock} شكارة)`, 'warning');
       return;
     }
-    currentInvoiceItems[existingIdx].qty += 1;
-    currentInvoiceItems[existingIdx].total = currentInvoiceItems[existingIdx].qty * currentInvoiceItems[existingIdx].price;
+    existingItem.qty += 1;
+    existingItem.total = existingItem.qty * existingItem.price;
   } else {
     currentInvoiceItems.push({
-      id: product.id,
-      name: product.name,
-      unit: 'شكارة',
+      id: prod.id,
+      name: prod.name,
+      unit: prod.unit,
+      price: prod.sellPrice,
       qty: 1,
-      price: product.sellPrice,
-      total: product.sellPrice
+      total: prod.sellPrice
     });
   }
 
@@ -344,7 +349,7 @@ function loadInvoicesTable(invoicesData = null) {
   syncInvoicesAccounting();
 
   const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
-  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+  const isSuperAdmin = !currentUser || currentUser.id === 'USR-1' || (currentUser.username === 'admin') || currentUser.role === 'مدير عام';
 
   const sortedInvoices = [...invoices].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 

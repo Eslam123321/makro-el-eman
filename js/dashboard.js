@@ -165,7 +165,7 @@ function loadDashboardData() {
   loadRecentInvoicesTable(filteredInvoices);
 }
 
-// Render Recent Invoices sorted descending with Status badges
+// Render Recent Invoices sorted descending with Status badges and full actions
 function loadRecentInvoicesTable(invList) {
   const tbody = document.getElementById('recent-invoices-tbody');
   if (!tbody) return;
@@ -175,18 +175,29 @@ function loadRecentInvoicesTable(invList) {
     return;
   }
 
+  const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
+  const isSuperAdmin = !currentUser || currentUser.id === 'USR-1' || (currentUser.username === 'admin') || currentUser.role === 'مدير عام';
+
   const sorted = [...invList].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 10);
 
   tbody.innerHTML = sorted.map(inv => `
     <tr>
-      <td><strong class="clickable-invoice" onclick="previewInvoice('${inv.id}')">${inv.id} ↗</strong></td>
-      <td>${inv.customerName}</td>
+      <td><strong class="clickable-invoice" onclick="previewInvoice('${inv.id}')" title="اضغط لمعاينة الفاتورة">${inv.id} ↗</strong></td>
+      <td><strong>${inv.customerName}</strong></td>
       <td>${App.formatTimestamp(inv.date)}</td>
       <td><span class="badge ${inv.paymentType === 'كاش' ? 'badge-success' : 'badge-warning'}">${inv.paymentType}</span></td>
       <td><strong class="text-success">${App.formatCurrency(inv.grandTotal)}</strong></td>
       <td><span class="badge ${inv.status === 'مؤكدة' ? 'badge-success' : (inv.status === 'مرتجعة بالكامل' ? 'badge-danger' : 'badge-warning')}">${inv.status}</span></td>
       <td>
-        <button class="btn btn-secondary btn-sm" onclick="previewInvoice('${inv.id}')" title="معاينة الفاتورة"><i class="fa-solid fa-eye text-primary-color"></i> معاينة</button>
+        <div class="flex gap-1 flex-wrap">
+          <button class="btn btn-secondary btn-sm" onclick="previewInvoice('${inv.id}')" title="معاينة"><i class="fa-solid fa-eye text-primary-color"></i> معاينة</button>
+          <button class="btn btn-whatsapp btn-sm" onclick="sendInvoiceWhatsApp('${inv.id}')" title="إرسال عبر الواتساب"><i class="fa-brands fa-whatsapp"></i> واتساب</button>
+          ${isSuperAdmin ? `
+            ${inv.status !== 'مرتجعة بالكامل' ? `<button class="btn btn-secondary btn-sm" onclick="openInvoiceReturnModal('${inv.id}')" title="إرجاع أصناف أو شكاير محددة من الفاتورة" style="color: #d97706;"><i class="fa-solid fa-rotate-left"></i> مرتجع</button>` : ''}
+            <button class="btn btn-secondary btn-sm" onclick="openEditInvoiceModal('${inv.id}')" title="تعديل بيانات وأصناف الفاتورة"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${inv.id}')" title="حذف الفاتورة نهائياً"><i class="fa-solid fa-trash"></i> حذف</button>
+          ` : ''}
+        </div>
       </td>
     </tr>
   `).join('');

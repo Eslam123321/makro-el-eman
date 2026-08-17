@@ -253,6 +253,7 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       renderPageSummaryCards('sales', 'sales-summary-cards');
+      if (typeof loadInvoicesTable === 'function') loadInvoicesTable();
     });
   </script>
 </body>

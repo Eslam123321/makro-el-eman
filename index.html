@@ -278,12 +278,57 @@
     </div>
   </div>
 
+  <!-- Modal Card 4: Itemized Partial / Full Return Modal -->
+  <div class="modal-backdrop" id="return-invoice-modal">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-rotate-left text-warning"></i>
+          <h3>إرجاع ومرتجع شكاير من الفاتورة (جزئي / كلي)</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('return-invoice-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" id="return-invoice-body">
+        <!-- Dynamic Return Form -->
+      </div>
+
+      <div class="modal-footer flex justify-between items-center">
+        <button class="btn btn-secondary" onclick="closeModal('return-invoice-modal')">إلغاء</button>
+        <button class="btn btn-warning" onclick="confirmProcessItemizedReturn()"><i class="fa-solid fa-check ml-1"></i> تأكيد إرجاع الشكاير للمخزن وتسوية الحساب ↩️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Card 5: Edit Registered Invoice Modal -->
+  <div class="modal-backdrop" id="edit-invoice-modal">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-file-pen text-primary-color"></i>
+          <h3>تعديل فاتورة مبيعات مسجلة</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('edit-invoice-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" id="edit-invoice-body">
+        <!-- Dynamic Edit Form -->
+      </div>
+
+      <div class="modal-footer flex justify-between items-center">
+        <button class="btn btn-secondary" onclick="closeModal('edit-invoice-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveEditedInvoice()"><i class="fa-solid fa-save ml-1"></i> حفظ وتحديث الفاتورة 💾</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Firebase Cloud SDK & Sync Engine -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="js/firebase-sync.js"></script>
   <script src="js/logo.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/sales.js"></script>
   <script src="js/dashboard.js"></script>
 </body>
 </html>
