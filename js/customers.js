@@ -77,8 +77,8 @@ function loadCustomersTable(customersData = null) {
   }
 
   tbody.innerHTML = customers.map(c => {
-    const limit = c.creditLimit || 50000;
-    const usedPercent = Math.min(100, Math.round((c.totalDebt / limit) * 100));
+    const limit = typeof c.creditLimit === 'number' ? c.creditLimit : (parseFloat(c.creditLimit) || 0);
+    const usedPercent = limit > 0 ? Math.min(100, Math.round((c.totalDebt / limit) * 100)) : (c.totalDebt > 0 ? 100 : 0);
 
     return `
       <tr>
@@ -98,7 +98,7 @@ function loadCustomersTable(customersData = null) {
             <strong class="${c.totalDebt > 0 ? 'text-danger' : 'text-success'}">
               ${App.formatCurrency(c.totalDebt)}
             </strong>
-            <div class="text-xs text-muted">الحد: ${App.formatCurrency(limit)} (${usedPercent}%)</div>
+            <div class="text-xs text-muted">الحد: ${App.formatCurrency(limit)} ${limit > 0 ? `(${usedPercent}%)` : '(نقدي فقط)'}</div>
             <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
               <div style="width: ${usedPercent}%; height: 100%; background: ${usedPercent > 80 ? '#e11d48' : '#059669'};"></div>
             </div>
@@ -109,6 +109,7 @@ function loadCustomersTable(customersData = null) {
           <div class="flex gap-1 flex-wrap">
             <button class="btn btn-primary btn-sm" onclick="openReceivePaymentModal('${c.id}')"><i class="fa-solid fa-hand-holding-dollar"></i> تحصيل دفعة</button>
             <button class="btn btn-secondary btn-sm" onclick="openStatementModal('${c.id}')"><i class="fa-solid fa-file-lines"></i> كشف حساب</button>
+            <button class="btn btn-secondary btn-sm" onclick="openEditCustomerModal('${c.id}')" title="تعديل بيانات العميل"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
             ${(typeof App !== 'undefined' && App.getCurrentUser() && (App.getCurrentUser().id === 'USR-1' || App.getCurrentUser().role === 'مدير عام')) ? `
               <button class="btn btn-danger btn-sm" onclick="deleteCustomer('${c.id}')" title="حذف العميل نهائياً"><i class="fa-solid fa-trash"></i> حذف</button>
             ` : ''}
@@ -157,7 +158,11 @@ function saveNewCustomer() {
   const name = nameEl ? nameEl.value.trim() : '';
   const phone = phoneEl ? phoneEl.value.trim() : '';
   const address = addressEl ? addressEl.value.trim() : '';
-  const limit = parseFloat(limitEl ? limitEl.value : 0) || 50000;
+  
+  // Exact credit limit parsing (preserves 0 if entered by user)
+  const limitRaw = limitEl ? limitEl.value.trim() : '';
+  const limit = limitRaw === '' ? 0 : Math.max(0, parseFloat(limitRaw) || 0);
+  
   const rating = document.getElementById('cust-rating') ? document.getElementById('cust-rating').value : 'عميل عادي';
   const dueDate = dueDateEl ? dueDateEl.value : '';
 
@@ -187,9 +192,56 @@ function saveNewCustomer() {
   if (nameEl) nameEl.value = '';
   if (phoneEl) phoneEl.value = '';
   if (addressEl) addressEl.value = '';
+  if (limitEl) limitEl.value = '0';
   if (dueDateEl) dueDateEl.value = '';
 
-  App.showToast(`تم تسجيل العميل الجديد (${newCust.name})`, 'success');
+  App.showToast(`تم تسجيل العميل الجديد (${newCust.name}) بحد ائتماني (${App.formatCurrency(limit)}) بنجاح 👤`, 'success');
+}
+
+function openEditCustomerModal(custId) {
+  const cust = (App.db.customers || []).find(c => c.id === custId);
+  if (!cust) return;
+
+  document.getElementById('edit-cust-id').value = cust.id;
+  document.getElementById('edit-cust-name').value = cust.name || '';
+  document.getElementById('edit-cust-phone').value = cust.phone || '';
+  document.getElementById('edit-cust-address').value = cust.address || '';
+  document.getElementById('edit-cust-limit').value = typeof cust.creditLimit === 'number' ? cust.creditLimit : (parseFloat(cust.creditLimit) || 0);
+  document.getElementById('edit-cust-rating').value = cust.rating || 'عميل عادي';
+  document.getElementById('edit-cust-duedate').value = cust.dueDate || '';
+
+  openModal('edit-customer-modal');
+}
+
+function saveEditedCustomer() {
+  const custId = document.getElementById('edit-cust-id').value;
+  const cust = (App.db.customers || []).find(c => c.id === custId);
+  if (!cust) return;
+
+  const name = document.getElementById('edit-cust-name').value.trim();
+  const phone = document.getElementById('edit-cust-phone').value.trim();
+  const address = document.getElementById('edit-cust-address').value.trim();
+  const limitRaw = document.getElementById('edit-cust-limit').value.trim();
+  const limit = limitRaw === '' ? 0 : Math.max(0, parseFloat(limitRaw) || 0);
+  const rating = document.getElementById('edit-cust-rating').value;
+  const dueDate = document.getElementById('edit-cust-duedate').value;
+
+  if (!name || !phone) {
+    App.showToast('رجاء ادخل اسم العميل ورقم الهاتف', 'warning');
+    return;
+  }
+
+  cust.name = name;
+  cust.phone = phone;
+  cust.address = address || 'غير محدد';
+  cust.creditLimit = limit;
+  cust.rating = rating;
+  cust.dueDate = dueDate || '';
+
+  App.save();
+  loadCustomersTable();
+  closeModal('edit-customer-modal');
+  App.showToast(`تم حفظ وتحديث بيانات العميل (${cust.name}) بنجاح 💾`, 'success');
 }
 
 function openReceivePaymentModal(custId) {

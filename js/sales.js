@@ -357,7 +357,8 @@ function loadInvoicesTable(invoicesData = null) {
           <button class="btn btn-secondary btn-sm" onclick="previewInvoice('${inv.id}')" title="معاينة"><i class="fa-solid fa-eye text-primary-color"></i> معاينة</button>
           <button class="btn btn-whatsapp btn-sm" onclick="sendInvoiceWhatsApp('${inv.id}')" title="إرسال عبر الواتساب"><i class="fa-brands fa-whatsapp"></i> واتساب</button>
           ${isSuperAdmin ? `
-            ${inv.status !== 'مرتجعة بالكامل' ? `<button class="btn btn-secondary btn-sm" onclick="returnInvoice('${inv.id}')" title="إرجاع الفاتورة ورد الشكاير للمخزن" style="color: #d97706;"><i class="fa-solid fa-rotate-left"></i> مرتجع</button>` : ''}
+            ${inv.status !== 'مرتجعة بالكامل' ? `<button class="btn btn-secondary btn-sm" onclick="openInvoiceReturnModal('${inv.id}')" title="إرجاع أصناف أو شكاير محددة من الفاتورة" style="color: #d97706;"><i class="fa-solid fa-rotate-left"></i> مرتجع</button>` : ''}
+            <button class="btn btn-secondary btn-sm" onclick="openEditInvoiceModal('${inv.id}')" title="تعديل بيانات وأصناف الفاتورة"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
             <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${inv.id}')" title="حذف الفاتورة نهائياً"><i class="fa-solid fa-trash"></i> حذف</button>
           ` : ''}
         </div>
@@ -366,8 +367,12 @@ function loadInvoicesTable(invoicesData = null) {
   `).join('');
 }
 
-// Return / Refund Invoice (Restores stock to inventory and adjusts finances - Super Admin Only)
-function returnInvoice(invId) {
+// --------------------------------------------------------------------------
+// Itemized Partial / Full Return Engine (مرتجع جزئي أو كلي بالشكارة)
+// --------------------------------------------------------------------------
+let activeReturnInvoiceId = null;
+
+function openInvoiceReturnModal(invId) {
   const currentUser = App.getCurrentUser();
   const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
   if (!isSuperAdmin) {
@@ -375,47 +380,453 @@ function returnInvoice(invId) {
     return;
   }
 
-  const invIndex = (App.db.invoices || []).findIndex(i => i.id === invId);
-  if (invIndex === -1) return;
-  const inv = App.db.invoices[invIndex];
+  const inv = (App.db.invoices || []).find(i => i.id === invId);
+  if (!inv) return;
 
   if (inv.status === 'مرتجعة بالكامل') {
-    App.showToast('هذه الفاتورة تم إرجاعها بالفعل مسبقاً!', 'warning');
+    App.showToast('هذه الفاتورة تم إرجاع كافة بنودها بالكامل مسبقاً!', 'warning');
     return;
   }
 
-  if (confirm(`هل أنت متأكد من إرجاع الفاتورة (${inv.id}) للعميل (${inv.customerName})؟ سيتم إعادة عدد الشكاير المباعة (${inv.items.reduce((s, i) => s + (i.qty || 0), 0)} شكارة) إلى رصيد المخزن فوراً.`)) {
-    // 1. Restore stock in products inventory
-    (inv.items || []).forEach(item => {
+  activeReturnInvoiceId = invId;
+  const container = document.getElementById('return-invoice-body');
+  if (!container) return;
+
+  const totalSacks = (inv.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+  const alreadyReturnedSacks = (inv.items || []).reduce((s, i) => s + (i.returnedQty || 0), 0);
+
+  container.innerHTML = `
+    <div class="card bg-light p-4 mb-4 border">
+      <div class="flex justify-between items-center flex-wrap gap-2">
+        <div>
+          <strong class="text-primary-color" style="font-size: 1.1rem;">فاتورة رقم: ${inv.id}</strong>
+          <p class="text-xs text-muted mt-1">العميل: <strong>${inv.customerName}</strong> | التاريخ: ${App.formatTimestamp(inv.date)}</p>
+        </div>
+        <div class="text-left">
+          <span class="text-xs text-muted block">الإجمالي الأصلي: <strong class="text-success">${App.formatCurrency(inv.grandTotal)}</strong></span>
+          <span class="text-xs text-muted block">المسدد كاش: <strong>${App.formatCurrency(inv.paidAmount)}</strong> | المتبقي آجل: <strong class="text-danger">${App.formatCurrency(inv.remainingAmount)}</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="font-bold mb-2"><i class="fa-solid fa-boxes-stacked text-primary-color ml-1"></i> حدد عدد الشكاير المراد إرجاعها لكل صنف (حتى لو شكارة واحدة):</h4>
+    
+    <div class="table-container mb-4">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>اسم صنف المكرونة</th>
+            <th>سعر الشكارة</th>
+            <th>الكمية الأصلية</th>
+            <th>المرتجع سابقاً</th>
+            <th>الصافي المباع</th>
+            <th style="width: 150px;">الكمية للإرجاع (شكارة)</th>
+            <th>قيمة المرتجع</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(inv.items || []).map((item, index) => {
+            const activeQty = (item.qty || 0) - (item.returnedQty || 0);
+            return `
+              <tr>
+                <td><strong>${item.name}</strong></td>
+                <td>${App.formatCurrency(item.price)}</td>
+                <td>${item.qty} شكارة</td>
+                <td><span class="badge badge-rose">${item.returnedQty || 0} شكارة</span></td>
+                <td><strong class="text-primary-color">${activeQty} شكارة</strong></td>
+                <td>
+                  ${activeQty > 0 ? `
+                    <input type="number" 
+                           id="return-qty-input-${index}" 
+                           class="form-control" 
+                           min="0" 
+                           max="${activeQty}" 
+                           value="0" 
+                           data-price="${item.price}"
+                           data-item-index="${index}"
+                           oninput="calculateReturnSummaryTotal()" 
+                           style="font-weight: bold; text-align: center;">
+                  ` : '<span class="badge badge-secondary">تم إرجاعه بالكامل</span>'}
+                </td>
+                <td><strong id="return-row-val-${index}" class="text-danger">0 ج.م</strong></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card p-4 border" style="background: #fffbeb; border-color: #fde68a;">
+      <div class="flex justify-between items-center flex-wrap gap-3">
+        <div>
+          <span class="text-xs text-muted block font-bold">ملخص الشحنة المرتجعة للمخزن:</span>
+          <h4>إجمالي المرتجع الآن: <span id="return-total-sacks-count" class="text-primary-color font-bold">0</span> شكارة</h4>
+        </div>
+        <div class="text-left">
+          <span class="text-xs text-muted block font-bold">إجمالي المبلغ المستحق رده / تسويته:</span>
+          <h2 id="return-total-refund-val" class="text-danger font-bold">0 ج.م</h2>
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal('return-invoice-modal');
+}
+
+function calculateReturnSummaryTotal() {
+  const inv = (App.db.invoices || []).find(i => i.id === activeReturnInvoiceId);
+  if (!inv) return;
+
+  let totalRefund = 0;
+  let totalSacks = 0;
+
+  (inv.items || []).forEach((item, index) => {
+    const input = document.getElementById(`return-qty-input-${index}`);
+    if (input) {
+      let qty = parseInt(input.value) || 0;
+      const activeQty = (item.qty || 0) - (item.returnedQty || 0);
+      if (qty < 0) qty = 0;
+      if (qty > activeQty) {
+        qty = activeQty;
+        input.value = qty;
+      }
+      const rowVal = qty * (item.price || 0);
+      totalRefund += rowVal;
+      totalSacks += qty;
+
+      const rowValEl = document.getElementById(`return-row-val-${index}`);
+      if (rowValEl) rowValEl.textContent = App.formatCurrency(rowVal);
+    }
+  });
+
+  const countEl = document.getElementById('return-total-sacks-count');
+  const refundEl = document.getElementById('return-total-refund-val');
+
+  if (countEl) countEl.textContent = totalSacks;
+  if (refundEl) refundEl.textContent = App.formatCurrency(totalRefund);
+}
+
+function confirmProcessItemizedReturn() {
+  const inv = (App.db.invoices || []).find(i => i.id === activeReturnInvoiceId);
+  if (!inv) return;
+
+  let totalReturnSacks = 0;
+  let totalRefundAmount = 0;
+  const returnDetails = [];
+
+  (inv.items || []).forEach((item, index) => {
+    const input = document.getElementById(`return-qty-input-${index}`);
+    if (input) {
+      const returnQty = parseInt(input.value) || 0;
+      if (returnQty > 0) {
+        totalReturnSacks += returnQty;
+        const refundVal = returnQty * item.price;
+        totalRefundAmount += refundVal;
+
+        // 1. Restore stock in inventory
+        const prod = (App.db.products || []).find(p => p.id === item.id || p.name === item.name);
+        if (prod) {
+          prod.stock = (prod.stock || 0) + returnQty;
+        }
+
+        // 2. Mark returned qty on item
+        item.returnedQty = (item.returnedQty || 0) + returnQty;
+        returnDetails.push({ name: item.name, qty: returnQty, unitPrice: item.price, totalRefund: refundVal });
+      }
+    }
+  });
+
+  if (totalReturnSacks <= 0) {
+    App.showToast('رجاء حدد كمية الشكاير المراد إرجاعها (شكارة واحدة على الأقل)', 'warning');
+    return;
+  }
+
+  // 3. Financial Reconciliation:
+  // If invoice had debt remaining -> deduct from customer debt first
+  let remainingRefund = totalRefundAmount;
+  const cust = (App.db.customers || []).find(c => c.name === inv.customerName || c.id === inv.customerId);
+
+  if (inv.remainingAmount > 0 && cust) {
+    const debtDeduction = Math.min(inv.remainingAmount, remainingRefund);
+    cust.totalDebt = Math.max(0, (cust.totalDebt || 0) - debtDeduction);
+    inv.remainingAmount = Math.max(0, inv.remainingAmount - debtDeduction);
+    remainingRefund -= debtDeduction;
+  }
+
+  // If cash was paid and there's remaining refund -> refund from Treasury
+  if (remainingRefund > 0) {
+    App.db.treasury = Math.max(0, (App.db.treasury || 0) - remainingRefund);
+    inv.paidAmount = Math.max(0, (inv.paidAmount || 0) - remainingRefund);
+  }
+
+  // 4. Update Invoice Status
+  const totalOriginalSacks = (inv.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+  const totalAccumulatedReturned = (inv.items || []).reduce((s, i) => s + (i.returnedQty || 0), 0);
+
+  if (totalAccumulatedReturned >= totalOriginalSacks) {
+    inv.status = 'مرتجعة بالكامل';
+  } else {
+    inv.status = `مرتجع جزئي (${totalAccumulatedReturned} شكارة)`;
+  }
+
+  // Track return history log on invoice
+  if (!inv.returnLogs) inv.returnLogs = [];
+  inv.returnLogs.unshift({
+    timestamp: App.getNowISO(),
+    returnedSacks: totalReturnSacks,
+    refundAmount: totalRefundAmount,
+    details: returnDetails
+  });
+
+  if (typeof App.logActivity === 'function') {
+    App.logActivity('مرتجع بضاعة من فاتورة ↩️', `تم إرجاع (${totalReturnSacks} شكارة) من الفاتورة (${inv.id}) للعميل (${inv.customerName}) بقيمة (${App.formatCurrency(totalRefundAmount)})`, 'warning');
+  }
+
+  App.save();
+  closeModal('return-invoice-modal');
+  loadInvoicesTable();
+  renderPageSummaryCards('sales', 'sales-summary-cards');
+  App.showToast(`تم إرجاع (${totalReturnSacks} شكارة) بنجاح وإعادتها للمخزن وتحديث الحسابات ↩️📦`, 'success');
+}
+
+// --------------------------------------------------------------------------
+// Edit Invoice Engine (تعديل كامل للفاتورة وإعادة ضبط المخزون والمالية)
+// --------------------------------------------------------------------------
+let activeEditInvoiceId = null;
+
+function openEditInvoiceModal(invId) {
+  const currentUser = App.getCurrentUser();
+  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+  if (!isSuperAdmin) {
+    App.showToast('عفواً، خاصية تعديل الفواتير مقتصرة على حساب المدير العام فقط!', 'danger');
+    return;
+  }
+
+  const inv = (App.db.invoices || []).find(i => i.id === invId);
+  if (!inv) return;
+
+  activeEditInvoiceId = invId;
+  const container = document.getElementById('edit-invoice-body');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div class="form-group">
+        <label>رقم الفاتورة</label>
+        <input type="text" class="form-control" value="${inv.id}" readonly disabled style="background: #f8fafc; font-weight: bold;">
+      </div>
+      <div class="form-group">
+        <label>العميل المستلم</label>
+        <select id="edit-inv-customer" class="form-control">
+          ${(App.db.customers || []).map(c => `
+            <option value="${c.name}" ${c.name === inv.customerName ? 'selected' : ''}>${c.name} (${c.phone})</option>
+          `).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4 mb-4">
+      <div class="form-group">
+        <label>طريقة الدفع والتسديد</label>
+        <select id="edit-inv-paytype" class="form-control" onchange="onEditPayTypeChange()">
+          <option value="كاش" ${inv.paymentType === 'كاش' ? 'selected' : ''}>دفع كاش (نقدي كامل)</option>
+          <option value="آجل" ${inv.paymentType === 'آجل' ? 'selected' : ''}>آجل (مديونية على العميل)</option>
+          <option value="دفع جزئي" ${inv.paymentType === 'دفع جزئي' ? 'selected' : ''}>دفع جزئي (عربون والباقي آجل)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>المبلغ المسدد كاش (جنيه)</label>
+        <input type="number" id="edit-inv-paid" class="form-control" value="${inv.paidAmount || 0}" min="0" oninput="recalcEditInvoiceTotals()">
+      </div>
+      <div class="form-group">
+        <label>الخصم المباشر (جنيه)</label>
+        <input type="number" id="edit-inv-discount" class="form-control" value="${inv.discount || 0}" min="0" oninput="recalcEditInvoiceTotals()">
+      </div>
+    </div>
+
+    <h4 class="font-bold mb-2"><i class="fa-solid fa-bag-shopping text-primary-color ml-1"></i> أصناف وكميات الشكاير بالفاتورة:</h4>
+    <div class="table-container mb-4">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>اسم صنف المكرونة</th>
+            <th>سعر بيع الشكارة</th>
+            <th style="width: 140px;">عدد الشكاير</th>
+            <th>الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(inv.items || []).map((item, index) => `
+            <tr>
+              <td><strong>${item.name}</strong></td>
+              <td>${App.formatCurrency(item.price)}</td>
+              <td>
+                <input type="number" 
+                       id="edit-item-qty-${index}" 
+                       class="form-control" 
+                       value="${item.qty}" 
+                       min="1" 
+                       data-price="${item.price}"
+                       oninput="recalcEditInvoiceTotals()" 
+                       style="font-weight: bold; text-align: center;">
+              </td>
+              <td><strong id="edit-item-total-${index}" class="text-success">${App.formatCurrency(item.qty * item.price)}</strong></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card p-4 border" style="background: var(--primary-light);">
+      <div class="flex justify-between items-center flex-wrap gap-2">
+        <div>
+          <span class="text-xs text-muted block">الإجمالي الصافي النهائي بعد التعديل:</span>
+          <h2 id="edit-inv-grand-total" class="text-primary-color font-bold">${App.formatCurrency(inv.grandTotal)}</h2>
+        </div>
+        <div class="text-left">
+          <span class="text-xs text-muted block">المتبقي مديونية على العميل:</span>
+          <h3 id="edit-inv-remaining" class="text-danger font-bold">${App.formatCurrency(inv.remainingAmount)}</h3>
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal('edit-invoice-modal');
+}
+
+function onEditPayTypeChange() {
+  const type = document.getElementById('edit-inv-paytype').value;
+  const paidInput = document.getElementById('edit-inv-paid');
+  const inv = (App.db.invoices || []).find(i => i.id === activeEditInvoiceId);
+  if (!inv) return;
+
+  if (type === 'كاش') {
+    recalcEditInvoiceTotals(true);
+  } else if (type === 'آجل') {
+    if (paidInput) paidInput.value = 0;
+    recalcEditInvoiceTotals();
+  } else {
+    recalcEditInvoiceTotals();
+  }
+}
+
+function recalcEditInvoiceTotals(setPaidFull = false) {
+  const inv = (App.db.invoices || []).find(i => i.id === activeEditInvoiceId);
+  if (!inv) return;
+
+  let subtotal = 0;
+  (inv.items || []).forEach((item, index) => {
+    const input = document.getElementById(`edit-item-qty-${index}`);
+    if (input) {
+      const qty = Math.max(1, parseInt(input.value) || 1);
+      const total = qty * (item.price || 0);
+      subtotal += total;
+      const totalEl = document.getElementById(`edit-item-total-${index}`);
+      if (totalEl) totalEl.textContent = App.formatCurrency(total);
+    }
+  });
+
+  const discInput = document.getElementById('edit-inv-discount');
+  const discount = Math.max(0, parseFloat(discInput ? discInput.value : 0) || 0);
+  const grandTotal = Math.max(0, subtotal - discount);
+
+  const paidInput = document.getElementById('edit-inv-paid');
+  if (setPaidFull && paidInput) {
+    paidInput.value = grandTotal;
+  }
+
+  const paidAmount = Math.min(grandTotal, Math.max(0, parseFloat(paidInput ? paidInput.value : 0) || 0));
+  const remainingAmount = Math.max(0, grandTotal - paidAmount);
+
+  const grandEl = document.getElementById('edit-inv-grand-total');
+  const remEl = document.getElementById('edit-inv-remaining');
+
+  if (grandEl) grandEl.textContent = App.formatCurrency(grandTotal);
+  if (remEl) remEl.textContent = App.formatCurrency(remainingAmount);
+}
+
+function saveEditedInvoice() {
+  const inv = (App.db.invoices || []).find(i => i.id === activeEditInvoiceId);
+  if (!inv) return;
+
+  const newCustName = document.getElementById('edit-inv-customer').value;
+  const newPayType = document.getElementById('edit-inv-paytype').value;
+  const newDiscount = Math.max(0, parseFloat(document.getElementById('edit-inv-discount').value) || 0);
+  
+  // 1. Re-balance inventory stock differences
+  let newSubtotal = 0;
+  (inv.items || []).forEach((item, index) => {
+    const input = document.getElementById(`edit-item-qty-${index}`);
+    if (input) {
+      const newQty = Math.max(1, parseInt(input.value) || 1);
+      const oldQty = item.qty || 0;
+      const diff = newQty - oldQty; // if diff > 0, deduct stock. If diff < 0, restore stock.
+
       const prod = (App.db.products || []).find(p => p.id === item.id || p.name === item.name);
       if (prod) {
-        prod.stock = (prod.stock || 0) + (item.qty || 0);
+        prod.stock = Math.max(0, (prod.stock || 0) - diff);
       }
-    });
 
-    // 2. Adjust customer debt if remaining balance existed
-    if (inv.remainingAmount > 0) {
-      const cust = (App.db.customers || []).find(c => c.name === inv.customerName || c.id === inv.customerId);
-      if (cust) {
-        cust.totalDebt = Math.max(0, (cust.totalDebt || 0) - inv.remainingAmount);
-      }
+      item.qty = newQty;
+      item.total = newQty * (item.price || 0);
+      newSubtotal += item.total;
     }
+  });
 
-    // 3. Adjust treasury if paid cash was received
-    if (inv.paidAmount > 0) {
-      App.db.treasury = Math.max(0, (App.db.treasury || 0) - inv.paidAmount);
+  const newGrandTotal = Math.max(0, newSubtotal - newDiscount);
+  const paidInput = document.getElementById('edit-inv-paid');
+  let newPaid = Math.min(newGrandTotal, Math.max(0, parseFloat(paidInput.value) || 0));
+  if (newPayType === 'كاش') newPaid = newGrandTotal;
+  if (newPayType === 'آجل') newPaid = 0;
+  const newRemaining = Math.max(0, newGrandTotal - newPaid);
+
+  // 2. Adjust Finances (Treasury & Customer Debts)
+  const oldPaid = inv.paidAmount || 0;
+  const oldRemaining = inv.remainingAmount || 0;
+  const oldCustName = inv.customerName;
+
+  // Treasury adjustment
+  const treasuryDiff = newPaid - oldPaid;
+  App.db.treasury = Math.max(0, (App.db.treasury || 0) + treasuryDiff);
+
+  // Customer debt adjustment
+  if (oldCustName === newCustName) {
+    const cust = (App.db.customers || []).find(c => c.name === newCustName);
+    if (cust) {
+      const debtDiff = newRemaining - oldRemaining;
+      cust.totalDebt = Math.max(0, (cust.totalDebt || 0) + debtDiff);
     }
+  } else {
+    // Customer changed
+    const oldCust = (App.db.customers || []).find(c => c.name === oldCustName);
+    if (oldCust) oldCust.totalDebt = Math.max(0, (oldCust.totalDebt || 0) - oldRemaining);
 
-    inv.status = 'مرتجعة بالكامل';
-    if (typeof App.logActivity === 'function') {
-      App.logActivity('إرجاع فاتورة مبيعات ↩️', `تم عمل إرجاع ومرتجع للفاتورة (${inv.id}) بقيمة (${App.formatCurrency(inv.grandTotal)}) وإعادة الشكاير للمخزن`, 'warning');
+    const newCust = (App.db.customers || []).find(c => c.name === newCustName);
+    if (newCust) {
+      newCust.totalDebt = (newCust.totalDebt || 0) + newRemaining;
+      inv.customerId = newCust.id;
     }
-
-    App.save();
-    loadInvoicesTable();
-    renderPageSummaryCards('sales', 'sales-summary-cards');
-    App.showToast(`تم إرجاع الفاتورة (${inv.id}) وإعادة كافة الشكاير إلى رصيد المخزن بنجاح ↩️📦`, 'success');
   }
+
+  // 3. Save new invoice properties
+  inv.customerName = newCustName;
+  inv.paymentType = newPayType;
+  inv.discount = newDiscount;
+  inv.subtotal = newSubtotal;
+  inv.grandTotal = newGrandTotal;
+  inv.paidAmount = newPaid;
+  inv.remainingAmount = newRemaining;
+  inv.totalSacks = (inv.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+
+  if (typeof App.logActivity === 'function') {
+    App.logActivity('تعديل فاتورة مبيعات 📝', `تم تعديل بيانات الفاتورة (${inv.id}) للعميل (${newCustName}) بإجمالي جديد (${App.formatCurrency(newGrandTotal)})`, 'info');
+  }
+
+  App.save();
+  closeModal('edit-invoice-modal');
+  loadInvoicesTable();
+  renderPageSummaryCards('sales', 'sales-summary-cards');
+  App.showToast(`تم حفظ وتحديث الفاتورة (${inv.id}) وإعادة ضبط المخزون والحسابات بنجاح 💾✨`, 'success');
 }
 
 // Delete Invoice Completely (Super Admin Only)
@@ -511,7 +922,10 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
               <tr>
                 <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 700;">${item.name}</td>
                 <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: center;"><span style="background: #f3f4f6; color: #374151; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; font-weight: 600;">${item.unit}</span></td>
-                <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: 700;">${item.qty} شكارة</td>
+                <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: 700;">
+                  ${item.qty} شكارة
+                  ${(item.returnedQty && item.returnedQty > 0) ? `<div style="font-size: 0.72rem; color: #dc2626; font-weight: 700;">(مرتجع: ${item.returnedQty} شكارة)</div>` : ''}
+                </td>
                 <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">${App.formatCurrency(item.price)}</td>
                 <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; font-weight: 800; color: #059669;">${App.formatCurrency(item.total)}</td>
               </tr>

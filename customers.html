@@ -78,7 +78,7 @@
             </div>
             <div class="form-group">
               <label>الحد الائتماني الأقصى (جنيه)</label>
-              <input type="number" id="cust-limit" class="form-control" value="50000" min="1000">
+              <input type="number" id="cust-limit" class="form-control" value="0" min="0" placeholder="0">
             </div>
           </div>
 
@@ -205,6 +205,60 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal Card 5: Edit Customer Modal -->
+  <div class="modal-backdrop" id="edit-customer-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-user-pen"></i>
+          <h3>تعديل بيانات وحساب العميل</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('edit-customer-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-cust-id">
+        <div class="form-group mb-3">
+          <label>اسم العميل / الشركة</label>
+          <input type="text" id="edit-cust-name" class="form-control">
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label>رقم الهاتف</label>
+            <input type="text" id="edit-cust-phone" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>تصنيف العميل</label>
+            <select id="edit-cust-rating" class="form-control">
+              <option value="VIP الذهبي">VIP الذهبي (مميز جداً)</option>
+              <option value="عميل فضي">عميل فضي (سداد منتظم)</option>
+              <option value="عميل عادي">عميل عادي</option>
+              <option value="نقدي فوري">نقدي فوري</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="form-group">
+            <label>العنوان</label>
+            <input type="text" id="edit-cust-address" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>الحد الائتماني الأقصى (جنيه)</label>
+            <input type="number" id="edit-cust-limit" class="form-control" min="0" placeholder="0">
+          </div>
+        </div>
+        <div class="form-group mb-3">
+          <label>تاريخ استحقاق الدفعات</label>
+          <input type="date" id="edit-cust-duedate" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('edit-customer-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveEditedCustomer()"><i class="fa-solid fa-check ml-1"></i> حفظ التعديلات 💾</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Firebase Cloud SDK & Sync Engine -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
