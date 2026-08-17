@@ -842,112 +842,159 @@ function openInvoiceGlobalPreview(invId) {
   previewInvoice(invId);
 }
 
-function previewInvoice(invId) {
-  const inv = App.db.invoices ? App.db.invoices.find(i => i.id === invId) : null;
-  if (!inv) return;
-
+function renderInvoicePreviewContent(inv, isDraft = false) {
   const container = document.getElementById('invoice-preview-container');
   if (!container) return;
 
+  const logoSrc = (typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png';
+  const cust = App.db.customers ? App.db.customers.find(c => c.name === inv.customerName || c.id === inv.customerId) : null;
+
   container.innerHTML = `
-    <div id="printable-invoice-content" class="p-6 bg-white border rounded-xl shadow-sm relative" style="font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important; direction: rtl !important; text-align: right !important; letter-spacing: 0px !important; word-spacing: 0px !important; color: #1e293b; background: #ffffff;">
+    <div id="printable-invoice-content" style="font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important; direction: rtl !important; text-align: right !important; letter-spacing: 0px !important; word-spacing: 0px !important; color: #1e293b; background: #ffffff; padding: 18px; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; width: 100%; position: relative; overflow: hidden;">
       
+      <!-- Luxury Realistic Watermark Seal in Background -->
+      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-20deg); pointer-events: none; opacity: 0.065; z-index: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 340px; height: 340px; border: 8px double #059669; border-radius: 50%; user-select: none;">
+        <div style="border: 2px dashed #059669; border-radius: 50%; width: 300px; height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;">
+          <span style="font-size: 1.2rem; font-weight: 900; color: #059669; letter-spacing: 1.5px;">مصنع الإيمان للمكرونة</span>
+          <span style="font-size: 2.5rem; margin: 4px 0;">🌾</span>
+          <span style="font-size: 1rem; font-weight: 800; color: #059669;">★ معتمد رسمياً وموثق ★</span>
+          <span style="font-size: 0.8rem; font-weight: 700; color: #059669; margin-top: 4px;">ELEMAN PASTA FACTORY</span>
+          <span style="font-size: 0.72rem; color: #059669; margin-top: 2px;">إدارة المبيعات والرقابة والجودة</span>
+        </div>
+      </div>
+
       <!-- Invoice Header with Real Logo -->
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 16px;">
-        <div style="display: flex; align-items: center; gap: 14px;">
-          <img src="${(typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png'}" alt="شعار مصنع الإيمان" style="height: 64px; width: 64px; object-fit: contain;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 12px; position: relative; z-index: 1;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <img src="${logoSrc}" alt="شعار مصنع الإيمان" style="height: 54px; width: 54px; object-fit: contain; flex-shrink: 0;">
           <div>
-            <h2 style="color: #059669; font-weight: 700; font-size: 1.45rem; margin: 0 0 3px 0; font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif; letter-spacing: 0;">مصنع الإيمان للمكرونة</h2>
-            <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 2px 0; font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif;">إنتاج وتعبئة أرقى أنواع المكرونة بالشكارة</p>
-            <p style="font-size: 0.8rem; color: #94a3b8; margin: 0; font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif;">جمهورية مصر العربية - خطوط إنتاج المنطقة الصناعية</p>
+            <h2 style="color: #059669; font-weight: 800; font-size: 1.3rem; margin: 0 0 2px 0; letter-spacing: 0;">مصنع الإيمان للمكرونة</h2>
+            <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 2px 0;">إنتاج وتعبئة أرقى أنواع المكرونة بالشكارة</p>
+            <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">جمهورية مصر العربية - خطوط إنتاج المنطقة الصناعية</p>
           </div>
         </div>
-        <div style="text-align: left;">
-          <h3 style="font-weight: 700; color: #1e293b; margin: 0 0 4px 0; font-size: 1.25rem; font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif; letter-spacing: 0;">فاتورة بيع شكاير رسمية</h3>
-          <p style="font-size: 0.95rem; font-weight: 700; color: #059669; margin: 0 0 2px 0; font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif;">رقم الفاتورة: ${inv.id}</p>
-          <p style="font-size: 0.8rem; color: #64748b; margin: 0; font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif;">التاريخ والوقت: ${App.formatTimestamp(inv.date)}</p>
+        <div style="text-align: left; flex: 1; min-width: 160px;">
+          <h3 style="font-weight: 800; color: #1e293b; margin: 0 0 2px 0; font-size: 1.15rem; letter-spacing: 0;">فاتورة بيع شكاير رسمية</h3>
+          <p style="font-size: 0.9rem; font-weight: 800; color: #059669; margin: 0 0 2px 0;">رقم الفاتورة: ${inv.id}</p>
+          <p style="font-size: 0.75rem; color: #64748b; margin: 0;">التاريخ: ${App.formatTimestamp(inv.date)}</p>
         </div>
       </div>
 
       <!-- Customer Info Card -->
-      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <span style="font-size: 0.8rem; color: #64748b; display: block; margin-bottom: 3px;">بيانات العميل المستلم:</span>
-          <strong style="font-size: 1.15rem; color: #0f172a; font-family: 'Cairo', sans-serif;">${inv.customerName}</strong>
-          ${(() => {
-            const cust = App.db.customers ? App.db.customers.find(c => c.name === inv.customerName) : null;
-            return cust && cust.phone ? `<span style="font-size: 0.85rem; color: #64748b; margin-right: 14px;">| رقم الهاتف: <strong style="color: #059669;">${cust.phone}</strong></span>` : '';
-          })()}
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; position: relative; z-index: 1;">
+        <div style="flex: 1; min-width: 180px;">
+          <span style="font-size: 0.75rem; color: #64748b; display: block; margin-bottom: 2px;">بيانات العميل المستلم:</span>
+          <strong style="font-size: 1.05rem; color: #0f172a; font-family: 'Cairo', sans-serif;">${inv.customerName}</strong>
+          ${cust && cust.phone ? `<span style="font-size: 0.8rem; color: #64748b; margin-right: 8px;">| هاتف: <strong style="color: #059669;">${cust.phone}</strong></span>` : ''}
         </div>
         <div style="text-align: left;">
-          <span style="font-size: 0.8rem; color: #64748b; display: block; margin-bottom: 3px;">طريقة الدفع والتسديد:</span>
-          <span style="background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 0.9rem;">${inv.paymentType}</span>
+          <span style="font-size: 0.75rem; color: #64748b; display: block; margin-bottom: 2px;">طريقة السداد:</span>
+          <span style="background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 6px; font-weight: 800; font-size: 0.85rem;">${inv.paymentType}</span>
         </div>
       </div>
 
       <!-- Items Table -->
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; border: 1px solid #e2e8f0;">
-        <thead style="background: #f1f5f9;">
-          <tr>
-            <th style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: right; font-weight: 800; font-size: 0.95rem;">منتج المكرونة</th>
-            <th style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: 800; font-size: 0.95rem;">وحدة التعبئة</th>
-            <th style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: 800; font-size: 0.95rem;">الكمية المباعة</th>
-            <th style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: right; font-weight: 800; font-size: 0.95rem;">سعر الشكارة</th>
-            <th style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: right; font-weight: 800; font-size: 0.95rem;">الإجمالي الصافي</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${inv.items.map(item => `
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; margin-bottom: 12px; border: 1px solid #e2e8f0; border-radius: 8px; position: relative; z-index: 1;">
+        <table style="width: 100%; min-width: 480px; border-collapse: collapse; font-size: 0.85rem;">
+          <thead style="background: #f1f5f9;">
             <tr>
-              <td style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: right; font-weight: 700;">${item.name}</td>
-              <td style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: center;"><span style="background: #f3f4f6; color: #374151; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600;">${item.unit}</span></td>
-              <td style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: center; font-weight: 700;">${item.qty} شكارة</td>
-              <td style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: right;">${App.formatCurrency(item.price)}</td>
-              <td style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: right; font-weight: 800; color: #059669;">${App.formatCurrency(item.total)}</td>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #cbd5e1; text-align: right; font-weight: 800;">منتج المكرونة</th>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #cbd5e1; text-align: center; font-weight: 800;">وحدة التعبئة</th>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #cbd5e1; text-align: center; font-weight: 800;">الكمية المباعة</th>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #cbd5e1; text-align: right; font-weight: 800;">سعر الشكارة</th>
+              <th style="padding: 8px 10px; border-bottom: 1px solid #cbd5e1; text-align: left; font-weight: 800;">الإجمالي الصافي</th>
             </tr>
-          `).join('')}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            ${(inv.items || []).map(item => {
+              const returned = item.returnedQty || 0;
+              const activeQty = Math.max(0, (item.qty || 0) - returned);
+              const rowTotal = activeQty * (item.price || 0);
+              return `
+                <tr>
+                  <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 700;">${item.name}</td>
+                  <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: center;"><span style="background: #f3f4f6; color: #374151; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; font-weight: 600;">${item.unit}</span></td>
+                  <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: 700;">
+                    ${activeQty} شكارة
+                    ${returned > 0 ? `<div style="font-size: 0.72rem; color: #dc2626; font-weight: 700; margin-top: 2px;">(مرتجع: ${returned} من أصل ${item.qty})</div>` : ''}
+                  </td>
+                  <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">${App.formatCurrency(item.price)}</td>
+                  <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; font-weight: 800; color: #059669;">${App.formatCurrency(rowTotal)}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
 
       <!-- Totals Breakdown & Official Seal -->
-      <div style="display: flex; justify-content: space-between; align-items: flex-end; border-top: 2px solid #e2e8f0; padding-top: 14px;">
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <!-- Official Stamp -->
-          <div style="border: 2px solid #059669; padding: 8px 14px; border-radius: 8px; color: #059669; text-align: center; background: rgba(5, 150, 105, 0.04);">
-            <img src="${(typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png'}" alt="شعار" style="height: 28px; display: block; margin: 0 auto 3px auto;">
-            <strong style="font-size: 0.85rem; display: block;">مصنع الإيمان للمكرونة</strong>
-            <span style="font-size: 0.75rem; font-weight: 700;">معتمدة رسمياً 🌾</span>
+      <div style="display: flex; justify-content: space-between; align-items: stretch; flex-wrap: wrap; gap: 10px; border-top: 2px solid #e2e8f0; padding-top: 10px; position: relative; z-index: 1;">
+        <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 220px;">
+          <!-- Authentic Luxury Stamped Official Circular Seal -->
+          <div style="position: relative; width: 105px; height: 105px; border: 3px double #059669; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #059669; background: radial-gradient(circle, rgba(5, 150, 105, 0.08) 0%, rgba(5, 150, 105, 0.01) 70%); transform: rotate(-10deg); box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.25), inset 0 0 8px rgba(5, 150, 105, 0.06); flex-shrink: 0; user-select: none;">
+            <div style="width: 90px; height: 90px; border: 1.5px dashed #059669; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; box-sizing: border-box;">
+              <span style="font-size: 0.62rem; font-weight: 900; line-height: 1; letter-spacing: 0.5px;">مصنع الإيمان</span>
+              <div style="display: flex; align-items: center; gap: 2px; margin: 1px 0;">
+                <span style="font-size: 0.55rem;">★</span>
+                <span style="font-size: 1.1rem; line-height: 1;">🌾</span>
+                <span style="font-size: 0.55rem;">★</span>
+              </div>
+              <span style="font-size: 0.55rem; font-weight: 800; background: #059669; color: #ffffff; padding: 1px 6px; border-radius: 8px; margin: 1px 0;">${isDraft ? 'مسودة' : 'معتمد وموثق'}</span>
+              <span style="font-size: 0.5rem; font-weight: 700; color: #047857;">إدارة المبيعات</span>
+              <span style="font-size: 0.42rem; color: #059669; margin-top: 1px; letter-spacing: 0.5px;">ELEMAN CERTIFIED</span>
+            </div>
           </div>
-          <div style="font-size: 0.8rem; color: #64748b; max-width: 280px; line-height: 1.4;">
+
+          <div style="font-size: 0.75rem; color: #64748b; line-height: 1.3;">
             <p style="font-weight: 700; color: #334155; margin: 0 0 2px 0;">شكراً لتعاملكم مع مصنع الإيمان للمكرونة 🌾</p>
             <p style="margin: 0;">* يسعدنا خدمتكم دائماً وتوفير أجود أنواع المكرونة بالشكارة.</p>
           </div>
         </div>
 
-        <div style="width: 270px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px;">
-          <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px; color: #475569;">
-            <span>المجموع الفرعي للشكاير:</span>
+        <div style="flex: 1; min-width: 220px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px;">
+          ${(inv.totalReturnedValue && inv.totalReturnedValue > 0) ? `
+          <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 3px; color: #64748b;">
+            <span>المجموع الأصلي قبل المرتجع:</span>
+            <strong style="color: #64748b; text-decoration: line-through;">${App.formatCurrency(inv.subtotal + inv.totalReturnedValue)}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 3px; color: #dc2626;">
+            <span>قيمة المرتجع المسترد للمخزن (${inv.totalReturnedSacks || 0} شكارة):</span>
+            <strong>-${App.formatCurrency(inv.totalReturnedValue)}</strong>
+          </div>
+          ` : ''}
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 3px; color: #475569;">
+            <span>صافي المجموع الفرعي للشكاير المباعة:</span>
             <strong style="color: #1e293b;">${App.formatCurrency(inv.subtotal)}</strong>
           </div>
           ${inv.discount > 0 ? `
-          <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px; color: #dc2626;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 3px; color: #dc2626;">
             <span>الخصم المباشر:</span>
             <strong>-${App.formatCurrency(inv.discount)}</strong>
           </div>
           ` : ''}
-          <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.1rem; border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 4px; color: #059669; font-family: 'Cairo', sans-serif;">
-            <span>الإجمالي الواجب سداده:</span>
+          <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.05rem; border-top: 1px solid #cbd5e1; padding-top: 4px; margin-top: 3px; color: #059669; font-family: 'Cairo', sans-serif;">
+            <span>صافي الإجمالي الواجب سداده:</span>
             <span>${App.formatCurrency(inv.grandTotal)}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b; margin-top: 6px; border-top: 1px dashed #e2e8f0; padding-top: 4px;">
-            <span>المسدد: ${App.formatCurrency(inv.paidAmount)}</span>
-            <span>المتبقي: ${App.formatCurrency(inv.remainingAmount)}</span>
+          <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #64748b; margin-top: 4px; border-top: 1px dashed #e2e8f0; padding-top: 3px;">
+            <span>المسدد كاش: <strong class="text-success">${App.formatCurrency(inv.paidAmount)}</strong></span>
+            <span>المتبقي آجل: <strong class="${inv.remainingAmount > 0 ? 'text-danger' : 'text-success'}">${App.formatCurrency(inv.remainingAmount)}</strong></span>
           </div>
         </div>
       </div>
 
     </div>
   `;
+}
+
+function previewInvoice(invId) {
+  let inv = App.db.invoices ? App.db.invoices.find(i => i.id === invId) : null;
+  if (!inv && typeof currentDraftInvoice !== 'undefined' && currentDraftInvoice && currentDraftInvoice.id === invId) {
+    inv = currentDraftInvoice;
+  }
+  if (!inv) return;
+
+  renderInvoicePreviewContent(inv, !!inv.isDraft);
 
   const btnPrint = document.getElementById('btn-print-inv');
   if (btnPrint) btnPrint.onclick = () => window.print();

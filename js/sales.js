@@ -1046,13 +1046,20 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
 
       <!-- Totals Breakdown & Official Seal -->
       <div style="display: flex; justify-content: space-between; align-items: stretch; flex-wrap: wrap; gap: 10px; border-top: 2px solid #e2e8f0; padding-top: 10px; position: relative; z-index: 1;">
-        <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 220px;">
-          <!-- Realistic Official Rubber Stamp Seal -->
-          <div style="border: 2px dashed #059669; padding: 6px 8px; border-radius: 50%; width: 96px; height: 96px; color: #059669; text-align: center; background: rgba(5, 150, 105, 0.04); flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: rotate(-8deg); box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2); user-select: none;">
-            <span style="font-size: 0.62rem; font-weight: 900; line-height: 1;">مصنع الإيمان</span>
-            <span style="font-size: 1.15rem; line-height: 1.1; margin: 1px 0;">🌾</span>
-            <span style="font-size: 0.58rem; font-weight: 800; background: #059669; color: #ffffff; padding: 1px 6px; border-radius: 8px; margin: 1px 0;">${isDraft ? 'مسودة' : 'معتمد وموثق'}</span>
-            <span style="font-size: 0.5rem; font-weight: 700; color: #047857;">إدارة المبيعات 𝓅</span>
+        <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 220px;">
+          <!-- Authentic Luxury Stamped Official Circular Seal -->
+          <div style="position: relative; width: 105px; height: 105px; border: 3px double #059669; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #059669; background: radial-gradient(circle, rgba(5, 150, 105, 0.08) 0%, rgba(5, 150, 105, 0.01) 70%); transform: rotate(-10deg); box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.25), inset 0 0 8px rgba(5, 150, 105, 0.06); flex-shrink: 0; user-select: none;">
+            <div style="width: 90px; height: 90px; border: 1.5px dashed #059669; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; box-sizing: border-box;">
+              <span style="font-size: 0.62rem; font-weight: 900; line-height: 1; letter-spacing: 0.5px;">مصنع الإيمان</span>
+              <div style="display: flex; align-items: center; gap: 2px; margin: 1px 0;">
+                <span style="font-size: 0.55rem;">★</span>
+                <span style="font-size: 1.1rem; line-height: 1;">🌾</span>
+                <span style="font-size: 0.55rem;">★</span>
+              </div>
+              <span style="font-size: 0.55rem; font-weight: 800; background: #059669; color: #ffffff; padding: 1px 6px; border-radius: 8px; margin: 1px 0;">${isDraft ? 'مسودة' : 'معتمد وموثق'}</span>
+              <span style="font-size: 0.5rem; font-weight: 700; color: #047857;">إدارة المبيعات</span>
+              <span style="font-size: 0.42rem; color: #059669; margin-top: 1px; letter-spacing: 0.5px;">ELEMAN CERTIFIED</span>
+            </div>
           </div>
           <div style="font-size: 0.75rem; color: #64748b; line-height: 1.3;">
             <p style="font-weight: 700; color: #334155; margin: 0 0 2px 0;">شكراً لتعاملكم مع مصنع الإيمان للمكرونة 🌾</p>
