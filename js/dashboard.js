@@ -57,30 +57,35 @@ function loadDashboardData() {
     filteredExpenses = expenses.filter(e => e.date.startsWith(yearStr));
   }
 
-  // Calculate Sales Breakdown
-  const salesToday = invoices.filter(i => i.date.startsWith(todayStr)).reduce((a, b) => a + b.grandTotal, 0);
-  const salesMonth = invoices.filter(i => i.date.startsWith(monthStr)).reduce((a, b) => a + b.grandTotal, 0);
-  const salesYear = invoices.filter(i => i.date.startsWith(yearStr)).reduce((a, b) => a + b.grandTotal, 0);
-  const totalSalesAll = invoices.reduce((a, b) => a + b.grandTotal, 0);
+  // Helper for Net Sales of an invoice (excluding full returns, and using active net grandTotal)
+  const getNetSales = (inv) => inv.status === 'مرتجعة بالكامل' ? 0 : (inv.grandTotal || 0);
 
-  // COGS Calculation Helper
+  // Helper for Net Active COGS
   function getCOGS(invList) {
     let cogs = 0;
     invList.forEach(inv => {
-      inv.items.forEach(item => {
-        const prd = products.find(p => p.id === item.id);
+      if (inv.status === 'مرتجعة بالكامل') return;
+      (inv.items || []).forEach(item => {
+        const prd = products.find(p => p.id === item.id || p.name === item.name);
         const cost = prd ? prd.costPrice : (item.price * 0.8);
-        cogs += (cost * item.qty);
+        const activeQty = Math.max(0, (item.qty || 0) - (item.returnedQty || 0));
+        cogs += (cost * activeQty);
       });
     });
     return cogs;
   }
 
+  // Calculate Net Sales Breakdown
+  const salesToday = invoices.filter(i => i.date.startsWith(todayStr)).reduce((a, b) => a + getNetSales(b), 0);
+  const salesMonth = invoices.filter(i => i.date.startsWith(monthStr)).reduce((a, b) => a + getNetSales(b), 0);
+  const salesYear = invoices.filter(i => i.date.startsWith(yearStr)).reduce((a, b) => a + getNetSales(b), 0);
+  const totalSalesAll = invoices.reduce((a, b) => a + getNetSales(b), 0);
+
   const profitToday = salesToday - getCOGS(invoices.filter(i => i.date.startsWith(todayStr))) - expenses.filter(e => e.date.startsWith(todayStr)).reduce((a, b) => a + b.amount, 0);
   const profitMonth = salesMonth - getCOGS(invoices.filter(i => i.date.startsWith(monthStr))) - expenses.filter(e => e.date.startsWith(monthStr)).reduce((a, b) => a + b.amount, 0);
   const profitYear = salesYear - getCOGS(invoices.filter(i => i.date.startsWith(yearStr))) - expenses.filter(e => e.date.startsWith(yearStr)).reduce((a, b) => a + b.amount, 0);
   
-  const currentSales = filteredInvoices.reduce((a, b) => a + b.grandTotal, 0);
+  const currentSales = filteredInvoices.reduce((a, b) => a + getNetSales(b), 0);
   const currentExp = filteredExpenses.reduce((a, b) => a + b.amount, 0);
   const currentCOGS = getCOGS(filteredInvoices);
   const currentNetProfit = currentSales - currentCOGS - currentExp;
@@ -160,25 +165,28 @@ function loadDashboardData() {
   loadRecentInvoicesTable(filteredInvoices);
 }
 
-// Render Recent Invoices with Clickable Links anywhere
+// Render Recent Invoices sorted descending with Status badges
 function loadRecentInvoicesTable(invList) {
   const tbody = document.getElementById('recent-invoices-tbody');
   if (!tbody) return;
 
-  if (invList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted p-4">لا يوجد فواتير مبينة لهذه الفترة الزمنية</td></tr>`;
+  if (!invList || invList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted p-4">لا يوجد فواتير صادرة مطبقة لهذه الفترة</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = invList.map(inv => `
+  const sorted = [...invList].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 10);
+
+  tbody.innerHTML = sorted.map(inv => `
     <tr>
       <td><strong class="clickable-invoice" onclick="previewInvoice('${inv.id}')">${inv.id} ↗</strong></td>
       <td>${inv.customerName}</td>
       <td>${App.formatTimestamp(inv.date)}</td>
       <td><span class="badge ${inv.paymentType === 'كاش' ? 'badge-success' : 'badge-warning'}">${inv.paymentType}</span></td>
       <td><strong class="text-success">${App.formatCurrency(inv.grandTotal)}</strong></td>
+      <td><span class="badge ${inv.status === 'مؤكدة' ? 'badge-success' : (inv.status === 'مرتجعة بالكامل' ? 'badge-danger' : 'badge-warning')}">${inv.status}</span></td>
       <td>
-        <button class="btn btn-secondary btn-sm" onclick="previewInvoice('${inv.id}')"><i class="fa-solid fa-eye"></i> معاينة الفاتورة</button>
+        <button class="btn btn-secondary btn-sm" onclick="previewInvoice('${inv.id}')" title="معاينة الفاتورة"><i class="fa-solid fa-eye text-primary-color"></i> معاينة</button>
       </td>
     </tr>
   `).join('');

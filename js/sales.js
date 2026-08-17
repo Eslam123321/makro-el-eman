@@ -341,10 +341,11 @@ function loadInvoicesTable(invoicesData = null) {
     return;
   }
 
-  const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
-  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+  syncInvoicesAccounting();
 
-  tbody.innerHTML = invoices.map(inv => `
+  const sortedInvoices = [...invoices].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  tbody.innerHTML = sortedInvoices.map(inv => `
     <tr>
       <td><strong>${inv.id}</strong></td>
       <td>${inv.customerName}</td>
@@ -580,14 +581,35 @@ function confirmProcessItemizedReturn() {
     inv.paidAmount = Math.max(0, (inv.paidAmount || 0) - remainingRefund);
   }
 
-  // 4. Update Invoice Status
+  // 4. Update Invoice GrandTotal, Subtotal, Paid/Remaining, and Active Status
   const totalOriginalSacks = (inv.items || []).reduce((s, i) => s + (i.qty || 0), 0);
   const totalAccumulatedReturned = (inv.items || []).reduce((s, i) => s + (i.returnedQty || 0), 0);
+  const activeSacks = Math.max(0, totalOriginalSacks - totalAccumulatedReturned);
+
+  const activeSubtotal = (inv.items || []).reduce((sum, item) => sum + Math.max(0, (item.qty || 0) - (item.returnedQty || 0)) * (item.price || 0), 0);
+  const discount = inv.discount || 0;
+  const activeGrandTotal = Math.max(0, activeSubtotal - discount);
+
+  inv.subtotal = activeSubtotal;
+  inv.grandTotal = activeGrandTotal;
+  inv.totalSacks = activeSacks;
+  inv.totalReturnedSacks = totalAccumulatedReturned;
+  inv.totalReturnedValue = (inv.items || []).reduce((sum, item) => sum + ((item.returnedQty || 0) * (item.price || 0)), 0);
 
   if (totalAccumulatedReturned >= totalOriginalSacks) {
     inv.status = 'مرتجعة بالكامل';
+    inv.paidAmount = 0;
+    inv.remainingAmount = 0;
+    inv.grandTotal = 0;
   } else {
     inv.status = `مرتجع جزئي (${totalAccumulatedReturned} شكارة)`;
+    // If paid cash was equal to grandTotal, keep it synced
+    if (inv.paymentType === 'كاش') {
+      inv.paidAmount = activeGrandTotal;
+      inv.remainingAmount = 0;
+    } else {
+      inv.remainingAmount = Math.max(0, activeGrandTotal - (inv.paidAmount || 0));
+    }
   }
 
   // Track return history log on invoice
@@ -608,6 +630,40 @@ function confirmProcessItemizedReturn() {
   loadInvoicesTable();
   renderPageSummaryCards('sales', 'sales-summary-cards');
   App.showToast(`تم إرجاع (${totalReturnSacks} شكارة) بنجاح وإعادتها للمخزن وتحديث الحسابات ↩️📦`, 'success');
+}
+
+function syncInvoicesAccounting() {
+  (App.db.invoices || []).forEach(inv => {
+    const hasReturns = (inv.items || []).some(item => (item.returnedQty || 0) > 0);
+    if (hasReturns) {
+      const totalReturnedSacks = (inv.items || []).reduce((s, i) => s + (i.returnedQty || 0), 0);
+      const totalOriginalSacks = (inv.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+      const totalReturnedVal = (inv.items || []).reduce((s, i) => s + ((i.returnedQty || 0) * (i.price || 0)), 0);
+      const activeSubtotal = (inv.items || []).reduce((sum, item) => sum + Math.max(0, (item.qty || 0) - (item.returnedQty || 0)) * (item.price || 0), 0);
+      const discount = inv.discount || 0;
+      const activeGrandTotal = Math.max(0, activeSubtotal - discount);
+
+      inv.subtotal = activeSubtotal;
+      inv.grandTotal = activeGrandTotal;
+      inv.totalSacks = Math.max(0, totalOriginalSacks - totalReturnedSacks);
+      inv.totalReturnedSacks = totalReturnedSacks;
+      inv.totalReturnedValue = totalReturnedVal;
+
+      if (totalReturnedSacks >= totalOriginalSacks) {
+        inv.status = 'مرتجعة بالكامل';
+        inv.paidAmount = 0;
+        inv.remainingAmount = 0;
+      } else {
+        inv.status = `مرتجع جزئي (${totalReturnedSacks} شكارة)`;
+        if (inv.paymentType === 'كاش' || (inv.paidAmount >= activeGrandTotal)) {
+          inv.paidAmount = activeGrandTotal;
+          inv.remainingAmount = 0;
+        } else {
+          inv.remainingAmount = Math.max(0, activeGrandTotal - (inv.paidAmount || 0));
+        }
+      }
+    }
+  });
 }
 
 // --------------------------------------------------------------------------
@@ -948,18 +1004,23 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
             </tr>
           </thead>
           <tbody>
-            ${inv.items.map(item => `
-              <tr>
-                <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 700;">${item.name}</td>
-                <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: center;"><span style="background: #f3f4f6; color: #374151; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; font-weight: 600;">${item.unit}</span></td>
-                <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: 700;">
-                  ${item.qty} شكارة
-                  ${(item.returnedQty && item.returnedQty > 0) ? `<div style="font-size: 0.72rem; color: #dc2626; font-weight: 700;">(مرتجع: ${item.returnedQty} شكارة)</div>` : ''}
-                </td>
-                <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">${App.formatCurrency(item.price)}</td>
-                <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; font-weight: 800; color: #059669;">${App.formatCurrency(item.total)}</td>
-              </tr>
-            `).join('')}
+            ${(inv.items || []).map(item => {
+              const returned = item.returnedQty || 0;
+              const activeQty = Math.max(0, (item.qty || 0) - returned);
+              const rowTotal = activeQty * (item.price || 0);
+              return `
+                <tr>
+                  <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 700;">${item.name}</td>
+                  <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: center;"><span style="background: #f3f4f6; color: #374151; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; font-weight: 600;">${item.unit}</span></td>
+                  <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: 700;">
+                    ${activeQty} شكارة
+                    ${returned > 0 ? `<div style="font-size: 0.72rem; color: #dc2626; font-weight: 700; margin-top: 2px;">(مرتجع: ${returned} من أصل ${item.qty})</div>` : ''}
+                  </td>
+                  <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">${App.formatCurrency(item.price)}</td>
+                  <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; font-weight: 800; color: #059669;">${App.formatCurrency(rowTotal)}</td>
+                </tr>
+              `;
+            }).join('')}
           </tbody>
         </table>
       </div>
@@ -980,8 +1041,18 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
         </div>
 
         <div style="flex: 1; min-width: 220px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px;">
+          ${(inv.totalReturnedValue && inv.totalReturnedValue > 0) ? `
+          <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 3px; color: #64748b;">
+            <span>المجموع الأصلي قبل المرتجع:</span>
+            <strong style="color: #64748b; text-decoration: line-through;">${App.formatCurrency(inv.subtotal + inv.totalReturnedValue)}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 3px; color: #dc2626;">
+            <span>قيمة المرتجع المسترد للمخزن (${inv.totalReturnedSacks || 0} شكارة):</span>
+            <strong>-${App.formatCurrency(inv.totalReturnedValue)}</strong>
+          </div>
+          ` : ''}
           <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 3px; color: #475569;">
-            <span>المجموع الفرعي للشكاير:</span>
+            <span>صافي المجموع الفرعي للشكاير المباعة:</span>
             <strong style="color: #1e293b;">${App.formatCurrency(inv.subtotal)}</strong>
           </div>
           ${inv.discount > 0 ? `
@@ -991,12 +1062,12 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
           </div>
           ` : ''}
           <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.05rem; border-top: 1px solid #cbd5e1; padding-top: 4px; margin-top: 3px; color: #059669; font-family: 'Cairo', sans-serif;">
-            <span>الإجمالي الواجب سداده:</span>
+            <span>صافي الإجمالي الواجب سداده:</span>
             <span>${App.formatCurrency(inv.grandTotal)}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-top: 4px; border-top: 1px dashed #e2e8f0; padding-top: 3px;">
-            <span>المسدد: ${App.formatCurrency(inv.paidAmount)}</span>
-            <span>المتبقي: ${App.formatCurrency(inv.remainingAmount)}</span>
+          <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #64748b; margin-top: 4px; border-top: 1px dashed #e2e8f0; padding-top: 3px;">
+            <span>المسدد كاش: <strong class="text-success">${App.formatCurrency(inv.paidAmount)}</strong></span>
+            <span>المتبقي آجل: <strong class="${inv.remainingAmount > 0 ? 'text-danger' : 'text-success'}">${App.formatCurrency(inv.remainingAmount)}</strong></span>
           </div>
         </div>
       </div>

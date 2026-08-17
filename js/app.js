@@ -79,6 +79,38 @@ class StorageManager {
         parsed.customers.unshift(DEFAULT_DATABASE.customers[0]);
       }
       if (!Array.isArray(parsed.invoices)) parsed.invoices = [];
+      // Auto-reconcile returned invoices to reflect active net sales, sacks, and collected cash
+      parsed.invoices.forEach(inv => {
+        const hasReturns = (inv.items || []).some(item => (item.returnedQty || 0) > 0);
+        if (hasReturns) {
+          const totalReturnedSacks = (inv.items || []).reduce((s, i) => s + (i.returnedQty || 0), 0);
+          const totalOriginalSacks = (inv.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+          const totalReturnedVal = (inv.items || []).reduce((s, i) => s + ((i.returnedQty || 0) * (i.price || 0)), 0);
+          const activeSubtotal = (inv.items || []).reduce((sum, item) => sum + Math.max(0, (item.qty || 0) - (item.returnedQty || 0)) * (item.price || 0), 0);
+          const discount = inv.discount || 0;
+          const activeGrandTotal = Math.max(0, activeSubtotal - discount);
+
+          inv.subtotal = activeSubtotal;
+          inv.grandTotal = activeGrandTotal;
+          inv.totalSacks = Math.max(0, totalOriginalSacks - totalReturnedSacks);
+          inv.totalReturnedSacks = totalReturnedSacks;
+          inv.totalReturnedValue = totalReturnedVal;
+
+          if (totalReturnedSacks >= totalOriginalSacks) {
+            inv.status = 'مرتجعة بالكامل';
+            inv.paidAmount = 0;
+            inv.remainingAmount = 0;
+          } else {
+            inv.status = `مرتجع جزئي (${totalReturnedSacks} شكارة)`;
+            if (inv.paymentType === 'كاش' || (inv.paidAmount >= activeGrandTotal)) {
+              inv.paidAmount = activeGrandTotal;
+              inv.remainingAmount = 0;
+            } else {
+              inv.remainingAmount = Math.max(0, activeGrandTotal - (inv.paidAmount || 0));
+            }
+          }
+        }
+      });
       if (!Array.isArray(parsed.employees)) parsed.employees = [];
       if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
       parsed.expenses = parsed.expenses.filter(e => !e.id.startsWith('EXP-FLOUR-'));
