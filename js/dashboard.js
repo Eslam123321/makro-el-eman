@@ -161,7 +161,7 @@ function loadDashboardData() {
   renderDashboardBarChart(currentSales, currentCOGS + currentExp, currentNetProfit);
   renderSalesDonutChart(filteredInvoices, products);
   renderProductProfitabilityTable('product-profit-tbody', filteredInvoices);
-  loadRecentInvoicesTable(filteredInvoices);
+  loadRecentInvoicesTable(invoices);
 }
 
 // Render Itemized Product Sales & Profitability Table
@@ -246,20 +246,24 @@ function renderProductProfitabilityTable(containerId = 'product-profit-tbody', i
 }
 
 // Render Recent Invoices sorted descending with Status badges and full actions
-function loadRecentInvoicesTable(invList) {
+function loadRecentInvoicesTable(invList = null) {
   const tbody = document.getElementById('recent-invoices-tbody');
   if (!tbody) return;
 
-  if (!invList || invList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted p-4">لا يوجد فواتير صادرة مطبقة لهذه الفترة</td></tr>`;
+  const allInvoices = (typeof App !== 'undefined' && App.db && App.db.invoices && App.db.invoices.length > 0)
+    ? App.db.invoices 
+    : (invList || []);
+
+  if (!allInvoices || allInvoices.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted p-4">لا توجد فواتير مبيعات مسجلة بالنظام حالياً</td></tr>`;
     return;
   }
 
   const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
   const isSuperAdmin = !currentUser || currentUser.id === 'USR-1' || (currentUser.username === 'admin') || currentUser.role === 'مدير عام';
 
-  // Take the latest 15 invoices sorted descending
-  const sorted = [...invList].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 15);
+  // Strictly sort descending by date/id and take latest 10 invoices
+  const sorted = [...allInvoices].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 10);
 
   tbody.innerHTML = sorted.map(inv => {
     const totalSacks = (inv.items || []).reduce((sum, item) => sum + (item.qty || 0), 0);
