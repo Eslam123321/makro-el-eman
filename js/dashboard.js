@@ -250,52 +250,67 @@ function loadRecentInvoicesTable(invList = null) {
   const tbody = document.getElementById('recent-invoices-tbody');
   if (!tbody) return;
 
-  const allInvoices = (typeof App !== 'undefined' && App.db && App.db.invoices && App.db.invoices.length > 0)
-    ? App.db.invoices 
-    : (invList || []);
+  try {
+    const allInvoices = (typeof App !== 'undefined' && App.db && Array.isArray(App.db.invoices))
+      ? App.db.invoices 
+      : (Array.isArray(invList) ? invList : []);
 
-  if (!allInvoices || allInvoices.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted p-4">لا توجد فواتير مبيعات مسجلة بالنظام حالياً</td></tr>`;
-    return;
+    if (!allInvoices || allInvoices.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted p-4">لا توجد فواتير مبيعات مسجلة بالنظام حالياً</td></tr>`;
+      return;
+    }
+
+    const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
+    const isSuperAdmin = !currentUser || currentUser.id === 'USR-1' || (currentUser.username === 'admin') || currentUser.role === 'مدير عام';
+
+    // Strictly sort descending by date and invoice ID, and take top 10
+    const sorted = [...allInvoices].sort((a, b) => {
+      const dateA = new Date(a.date || 0).getTime();
+      const dateB = new Date(b.date || 0).getTime();
+      if (dateB !== dateA) return dateB - dateA;
+      return String(b.id || '').localeCompare(String(a.id || ''));
+    }).slice(0, 10);
+
+    tbody.innerHTML = sorted.map(inv => {
+      const totalSacks = (inv.items || []).reduce((sum, item) => sum + (item.qty || 0), 0);
+      const returnedSacks = (inv.items || []).reduce((sum, item) => sum + (item.returnedQty || 0), 0);
+      const activeSacks = Math.max(0, totalSacks - returnedSacks);
+      const sacksDisplay = returnedSacks > 0 
+        ? `<strong>${activeSacks} شكارة</strong> <span style="font-size: 0.72rem; color: #dc2626; display: block;">(مرتجع: ${returnedSacks})</span>`
+        : `<strong>${activeSacks} شكارة</strong>`;
+
+      const payType = inv.paymentType || 'كاش';
+      const grandTotalFormatted = typeof App !== 'undefined' ? App.formatCurrency(inv.grandTotal || 0) : `${inv.grandTotal || 0} ج.م`;
+      const dateFormatted = typeof App !== 'undefined' ? App.formatTimestamp(inv.date) : (inv.date || '');
+      const statusText = inv.status || 'مؤكدة';
+      const custName = inv.customerName || 'عميل نقدي';
+
+      return `
+      <tr>
+        <td><strong class="clickable-invoice" onclick="previewInvoice('${inv.id}')" title="اضغط لمعاينة الفاتورة">${inv.id} ↗</strong></td>
+        <td><strong>${custName}</strong></td>
+        <td>${dateFormatted}</td>
+        <td style="text-align: center;">${sacksDisplay}</td>
+        <td><span class="badge ${payType === 'كاش' ? 'badge-success' : 'badge-warning'}">${payType}</span></td>
+        <td><strong class="text-success">${grandTotalFormatted}</strong></td>
+        <td><span class="badge ${statusText === 'مؤكدة' ? 'badge-success' : (statusText === 'مرتجعة بالكامل' ? 'badge-danger' : 'badge-warning')}">${statusText}</span></td>
+        <td>
+          <div class="flex gap-1 flex-wrap">
+            <button class="btn btn-secondary btn-sm" onclick="previewInvoice('${inv.id}')" title="معاينة"><i class="fa-solid fa-eye text-primary-color"></i> معاينة</button>
+            <button class="btn btn-whatsapp btn-sm" onclick="sendInvoiceWhatsApp('${inv.id}')" title="إرسال عبر الواتساب"><i class="fa-brands fa-whatsapp"></i> واتساب</button>
+            ${isSuperAdmin ? `
+              ${statusText !== 'مرتجعة بالكامل' ? `<button class="btn btn-secondary btn-sm" onclick="openInvoiceReturnModal('${inv.id}')" title="إرجاع أصناف أو شكاير محددة من الفاتورة" style="color: #d97706;"><i class="fa-solid fa-rotate-left"></i> مرتجع</button>` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="openEditInvoiceModal('${inv.id}')" title="تعديل بيانات وأصناف الفاتورة"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${inv.id}')" title="حذف الفاتورة نهائياً"><i class="fa-solid fa-trash"></i> حذف</button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Error rendering recent invoices table:', err);
   }
-
-  const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
-  const isSuperAdmin = !currentUser || currentUser.id === 'USR-1' || (currentUser.username === 'admin') || currentUser.role === 'مدير عام';
-
-  // Strictly sort descending by date/id and take latest 10 invoices
-  const sorted = [...allInvoices].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 10);
-
-  tbody.innerHTML = sorted.map(inv => {
-    const totalSacks = (inv.items || []).reduce((sum, item) => sum + (item.qty || 0), 0);
-    const returnedSacks = (inv.items || []).reduce((sum, item) => sum + (item.returnedQty || 0), 0);
-    const activeSacks = Math.max(0, totalSacks - returnedSacks);
-    const sacksDisplay = returnedSacks > 0 
-      ? `<strong>${activeSacks} شكارة</strong> <span style="font-size: 0.72rem; color: #dc2626; display: block;">(مرتجع: ${returnedSacks})</span>`
-      : `<strong>${activeSacks} شكارة</strong>`;
-
-    return `
-    <tr>
-      <td><strong class="clickable-invoice" onclick="previewInvoice('${inv.id}')" title="اضغط لمعاينة الفاتورة">${inv.id} ↗</strong></td>
-      <td><strong>${inv.customerName}</strong></td>
-      <td>${App.formatTimestamp(inv.date)}</td>
-      <td style="text-align: center;">${sacksDisplay}</td>
-      <td><span class="badge ${inv.paymentType === 'كاش' ? 'badge-success' : 'badge-warning'}">${inv.paymentType}</span></td>
-      <td><strong class="text-success">${App.formatCurrency(inv.grandTotal)}</strong></td>
-      <td><span class="badge ${inv.status === 'مؤكدة' ? 'badge-success' : (inv.status === 'مرتجعة بالكامل' ? 'badge-danger' : 'badge-warning')}">${inv.status}</span></td>
-      <td>
-        <div class="flex gap-1 flex-wrap">
-          <button class="btn btn-secondary btn-sm" onclick="previewInvoice('${inv.id}')" title="معاينة"><i class="fa-solid fa-eye text-primary-color"></i> معاينة</button>
-          <button class="btn btn-whatsapp btn-sm" onclick="sendInvoiceWhatsApp('${inv.id}')" title="إرسال عبر الواتساب"><i class="fa-brands fa-whatsapp"></i> واتساب</button>
-          ${isSuperAdmin ? `
-            ${inv.status !== 'مرتجعة بالكامل' ? `<button class="btn btn-secondary btn-sm" onclick="openInvoiceReturnModal('${inv.id}')" title="إرجاع أصناف أو شكاير محددة من الفاتورة" style="color: #d97706;"><i class="fa-solid fa-rotate-left"></i> مرتجع</button>` : ''}
-            <button class="btn btn-secondary btn-sm" onclick="openEditInvoiceModal('${inv.id}')" title="تعديل بيانات وأصناف الفاتورة"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${inv.id}')" title="حذف الفاتورة نهائياً"><i class="fa-solid fa-trash"></i> حذف</button>
-          ` : ''}
-        </div>
-      </td>
-    </tr>
-    `;
-  }).join('');
 }
 
 function renderDashboardBarChart(sales, expenses, profit) {
