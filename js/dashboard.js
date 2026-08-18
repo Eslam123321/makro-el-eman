@@ -258,7 +258,8 @@ function loadRecentInvoicesTable(invList) {
   const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
   const isSuperAdmin = !currentUser || currentUser.id === 'USR-1' || (currentUser.username === 'admin') || currentUser.role === 'مدير عام';
 
-  const sorted = [...invList].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(10);
+  // Take the latest 15 invoices sorted descending
+  const sorted = [...invList].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 15);
 
   tbody.innerHTML = sorted.map(inv => {
     const totalSacks = (inv.items || []).reduce((sum, item) => sum + (item.qty || 0), 0);
