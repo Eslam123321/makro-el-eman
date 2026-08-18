@@ -185,7 +185,7 @@ function renderProductProfitabilityTable(containerId = 'product-profit-tbody', i
       name: p.name,
       unit: p.unit || 'شكارة',
       costPrice: p.costPrice || 0,
-      price: p.price || 0,
+      price: p.sellPrice || p.price || 0,
       sacksSold: 0,
       totalRevenue: 0,
       totalCost: 0,
@@ -211,6 +211,7 @@ function renderProductProfitabilityTable(containerId = 'product-profit-tbody', i
         targetStat.sacksSold += activeQty;
         targetStat.totalRevenue += itemRev;
         targetStat.totalCost += itemCst;
+        if (item.price) targetStat.price = item.price;
       }
     });
   });

@@ -83,6 +83,7 @@ function renderAuditTable(productsData = null, invoicesData = null) {
     let sacksSold = 0;
     let totalRevenue = 0;
     let totalCost = 0;
+    let resolvedSellPrice = p.sellPrice || p.price || 0;
 
     invoices.forEach(inv => {
       if (inv.status === 'مرتجعة بالكامل') return;
@@ -90,11 +91,12 @@ function renderAuditTable(productsData = null, invoicesData = null) {
         if (item.id === p.id || item.name === p.name) {
           const activeQty = Math.max(0, (item.qty || 0) - (item.returnedQty || 0));
           if (activeQty > 0) {
-            const itemPrice = item.price || p.price || 0;
+            const itemPrice = item.price || p.sellPrice || p.price || 0;
             const itemCost = p.costPrice || (itemPrice * 0.8);
             sacksSold += activeQty;
             totalRevenue += (activeQty * itemPrice);
             totalCost += (activeQty * itemCost);
+            if (item.price) resolvedSellPrice = item.price;
           }
         }
       });
@@ -109,7 +111,7 @@ function renderAuditTable(productsData = null, invoicesData = null) {
         <td style="text-align: center;"><strong class="${p.stock < 150 ? 'text-danger' : 'text-primary-color'}">${p.stock} شكارة</strong></td>
         <td style="text-align: center;"><strong class="text-dark">${sacksSold} شكارة</strong></td>
         <td style="text-align: center;"><span class="text-muted font-bold">${App.formatCurrency(p.costPrice || 0)}</span></td>
-        <td style="text-align: center;"><strong class="text-primary-color">${App.formatCurrency(p.price || 0)}</strong></td>
+        <td style="text-align: center;"><strong class="text-primary-color">${App.formatCurrency(resolvedSellPrice)}</strong></td>
         <td style="text-align: center;"><strong class="text-success">${App.formatCurrency(totalRevenue)}</strong></td>
         <td style="text-align: center;"><strong class="text-warning">${App.formatCurrency(totalCost)}</strong></td>
         <td style="text-align: left;">
