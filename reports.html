@@ -83,6 +83,37 @@
           </div>
         </div>
 
+        <!-- Itemized Product Profitability Analysis Table -->
+        <div class="card mb-6">
+          <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+            <div>
+              <h3><i class="fa-solid fa-chart-pie text-primary-color ml-2"></i> تقرير تحليل مبيعات وربحية كل صنف مكرونة بالتفصيل 🌾</h3>
+              <p class="text-sm text-muted">كشف فوري يوضح إجمالي الكميات المباعة، تكلفة التصنيع، الإيراد الصافي، ومكسبك الفعلي من كل نوع</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="printReport()"><i class="fa-solid fa-print"></i> طباعة التقرير الشامل</button>
+          </div>
+
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>صنف المكرونة</th>
+                  <th style="text-align: center;">سعر التكلفة</th>
+                  <th style="text-align: center;">سعر البيع</th>
+                  <th style="text-align: center;">الكمية المباعة الصافية</th>
+                  <th style="text-align: center;">إجمالي المبيعات</th>
+                  <th style="text-align: center;">إجمالي التكلفة</th>
+                  <th style="text-align: left;">صافي ربح الصنف</th>
+                  <th style="text-align: center;">هامش الربح</th>
+                </tr>
+              </thead>
+              <tbody id="rep-product-profit-tbody">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Inventory Audit Table -->
         <div class="card mb-6">
           <div class="flex justify-between items-center mb-4 flex-wrap gap-3">

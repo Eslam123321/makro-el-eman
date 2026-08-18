@@ -62,8 +62,91 @@ function generateFinancialAuditReport(period = 'monthly') {
   const elProfit = document.getElementById('rep-net-profit');
   if (elProfit) elProfit.textContent = App.formatCurrency(netProfit);
 
+  // Render Itemized Product Profitability Analysis table
+  renderProductProfitabilityTable('rep-product-profit-tbody', invoices);
+
   // Render inventory audit table
   renderAuditTable(products, invoices);
+}
+
+// Render Itemized Product Sales & Profitability Table
+function renderProductProfitabilityTable(containerId = 'rep-product-profit-tbody', invoicesList = null) {
+  const tbody = document.getElementById(containerId);
+  if (!tbody) return;
+
+  const products = (typeof App !== 'undefined' && App.db && App.db.products) ? App.db.products : [];
+  const invoices = invoicesList || ((typeof App !== 'undefined' && App.db && App.db.invoices) ? App.db.invoices : []);
+
+  if (products.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted p-4">لا توجد أصناف مكرونة مضافة بالمخزن حالياً</td></tr>`;
+    return;
+  }
+
+  // Aggregate stats per product
+  const productStats = {};
+  products.forEach(p => {
+    productStats[p.id] = {
+      id: p.id,
+      name: p.name,
+      unit: p.unit || 'شكارة',
+      costPrice: p.costPrice || 0,
+      price: p.price || 0,
+      sacksSold: 0,
+      totalRevenue: 0,
+      totalCost: 0,
+      netProfit: 0,
+      profitMargin: 0
+    };
+  });
+
+  invoices.forEach(inv => {
+    if (inv.status === 'مرتجعة بالكامل') return;
+    (inv.items || []).forEach(item => {
+      const activeQty = Math.max(0, (item.qty || 0) - (item.returnedQty || 0));
+      if (activeQty <= 0) return;
+
+      const pId = item.id;
+      const targetStat = productStats[pId] || Object.values(productStats).find(ps => ps.name === item.name);
+      if (targetStat) {
+        const itemSellingPrice = item.price || targetStat.price || 0;
+        const itemCostPrice = targetStat.costPrice || (itemSellingPrice * 0.8);
+        const itemRev = activeQty * itemSellingPrice;
+        const itemCst = activeQty * itemCostPrice;
+
+        targetStat.sacksSold += activeQty;
+        targetStat.totalRevenue += itemRev;
+        targetStat.totalCost += itemCst;
+      }
+    });
+  });
+
+  // Calculate net profit and margin
+  const rows = Object.values(productStats).map(stat => {
+    stat.netProfit = stat.totalRevenue - stat.totalCost;
+    stat.profitMargin = stat.totalRevenue > 0 ? ((stat.netProfit / stat.totalRevenue) * 100).toFixed(1) : 0;
+    return stat;
+  });
+
+  tbody.innerHTML = rows.map(stat => `
+    <tr>
+      <td><strong>${stat.name}</strong> <span class="badge badge-secondary" style="font-size: 0.75rem; margin-right: 4px;">${stat.unit}</span></td>
+      <td style="text-align: center;"><span class="text-muted font-bold">${App.formatCurrency(stat.costPrice)}</span></td>
+      <td style="text-align: center;"><strong class="text-primary-color">${App.formatCurrency(stat.price)}</strong></td>
+      <td style="text-align: center;"><strong class="text-dark">${stat.sacksSold} شكارة</strong></td>
+      <td style="text-align: center;"><strong class="text-success">${App.formatCurrency(stat.totalRevenue)}</strong></td>
+      <td style="text-align: center;"><strong class="text-warning">${App.formatCurrency(stat.totalCost)}</strong></td>
+      <td style="text-align: left;">
+        <strong class="${stat.netProfit >= 0 ? 'text-success' : 'text-danger'}" style="font-size: 1rem;">
+          ${stat.netProfit >= 0 ? '+' : ''}${App.formatCurrency(stat.netProfit)}
+        </strong>
+      </td>
+      <td style="text-align: center;">
+        <span class="badge ${stat.profitMargin >= 25 ? 'badge-success' : (stat.profitMargin > 0 ? 'badge-warning' : 'badge-secondary')}">
+          ${stat.profitMargin}%
+        </span>
+      </td>
+    </tr>
+  `).join('');
 }
 
 function renderAuditTable(products, invoices) {
