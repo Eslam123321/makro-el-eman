@@ -250,20 +250,29 @@ function loadRecentInvoicesTable(invList) {
   if (!tbody) return;
 
   if (!invList || invList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted p-4">لا يوجد فواتير صادرة مطبقة لهذه الفترة</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted p-4">لا يوجد فواتير صادرة مطبقة لهذه الفترة</td></tr>`;
     return;
   }
 
   const currentUser = typeof App !== 'undefined' && typeof App.getCurrentUser === 'function' ? App.getCurrentUser() : null;
   const isSuperAdmin = !currentUser || currentUser.id === 'USR-1' || (currentUser.username === 'admin') || currentUser.role === 'مدير عام';
 
-  const sorted = [...invList].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 10);
+  const sorted = [...invList].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(10);
 
-  tbody.innerHTML = sorted.map(inv => `
+  tbody.innerHTML = sorted.map(inv => {
+    const totalSacks = (inv.items || []).reduce((sum, item) => sum + (item.qty || 0), 0);
+    const returnedSacks = (inv.items || []).reduce((sum, item) => sum + (item.returnedQty || 0), 0);
+    const activeSacks = Math.max(0, totalSacks - returnedSacks);
+    const sacksDisplay = returnedSacks > 0 
+      ? `<strong>${activeSacks} شكارة</strong> <span style="font-size: 0.72rem; color: #dc2626; display: block;">(مرتجع: ${returnedSacks})</span>`
+      : `<strong>${activeSacks} شكارة</strong>`;
+
+    return `
     <tr>
       <td><strong class="clickable-invoice" onclick="previewInvoice('${inv.id}')" title="اضغط لمعاينة الفاتورة">${inv.id} ↗</strong></td>
       <td><strong>${inv.customerName}</strong></td>
       <td>${App.formatTimestamp(inv.date)}</td>
+      <td style="text-align: center;">${sacksDisplay}</td>
       <td><span class="badge ${inv.paymentType === 'كاش' ? 'badge-success' : 'badge-warning'}">${inv.paymentType}</span></td>
       <td><strong class="text-success">${App.formatCurrency(inv.grandTotal)}</strong></td>
       <td><span class="badge ${inv.status === 'مؤكدة' ? 'badge-success' : (inv.status === 'مرتجعة بالكامل' ? 'badge-danger' : 'badge-warning')}">${inv.status}</span></td>
@@ -279,7 +288,8 @@ function loadRecentInvoicesTable(invList) {
         </div>
       </td>
     </tr>
-  `).join('');
+    `;
+  }).join('');
 }
 
 function renderDashboardBarChart(sales, expenses, profit) {

@@ -342,7 +342,7 @@ function loadInvoicesTable(invoicesData = null) {
 
   const invoices = invoicesData || App.db.invoices || [];
   if (invoices.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted p-6">لا يوجد فواتير صادرة مسجلة بالنظام</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted p-6">لا يوجد فواتير صادرة مسجلة بالنظام</td></tr>`;
     return;
   }
 
@@ -353,11 +353,20 @@ function loadInvoicesTable(invoicesData = null) {
 
   const sortedInvoices = [...invoices].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
-  tbody.innerHTML = sortedInvoices.map(inv => `
+  tbody.innerHTML = sortedInvoices.map(inv => {
+    const totalSacks = (inv.items || []).reduce((sum, item) => sum + (item.qty || 0), 0);
+    const returnedSacks = (inv.items || []).reduce((sum, item) => sum + (item.returnedQty || 0), 0);
+    const activeSacks = Math.max(0, totalSacks - returnedSacks);
+    const sacksDisplay = returnedSacks > 0 
+      ? `<strong>${activeSacks} شكارة</strong> <span style="font-size: 0.72rem; color: #dc2626; display: block;">(مرتجع: ${returnedSacks})</span>`
+      : `<strong>${activeSacks} شكارة</strong>`;
+
+    return `
     <tr>
       <td><strong class="clickable-invoice" onclick="previewInvoice('${inv.id}')" title="اضغط لمعاينة الفاتورة">${inv.id} ↗</strong></td>
       <td>${inv.customerName}</td>
       <td>${App.formatTimestamp(inv.date)}</td>
+      <td style="text-align: center;">${sacksDisplay}</td>
       <td><span class="badge ${inv.paymentType === 'كاش' ? 'badge-success' : 'badge-warning'}">${inv.paymentType}</span></td>
       <td><strong class="text-success">${App.formatCurrency(inv.grandTotal)}</strong></td>
       <td><span class="badge ${inv.status === 'مؤكدة' ? 'badge-success' : (inv.status === 'مرتجعة بالكامل' ? 'badge-danger' : 'badge-warning')}">${inv.status}</span></td>
@@ -373,7 +382,8 @@ function loadInvoicesTable(invoicesData = null) {
         </div>
       </td>
     </tr>
-  `).join('');
+    `;
+  }).join('');
 }
 
 // --------------------------------------------------------------------------

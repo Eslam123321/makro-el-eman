@@ -62,119 +62,66 @@ function generateFinancialAuditReport(period = 'monthly') {
   const elProfit = document.getElementById('rep-net-profit');
   if (elProfit) elProfit.textContent = App.formatCurrency(netProfit);
 
-  // Render Itemized Product Profitability Analysis table
-  renderProductProfitabilityTable('rep-product-profit-tbody', invoices);
-
-  // Render inventory audit table
+  // Render Master Inventory & Profit Audit Table
   renderAuditTable(products, invoices);
 }
 
-// Render Itemized Product Sales & Profitability Table
-function renderProductProfitabilityTable(containerId = 'rep-product-profit-tbody', invoicesList = null) {
-  const tbody = document.getElementById(containerId);
-  if (!tbody) return;
-
-  const products = (typeof App !== 'undefined' && App.db && App.db.products) ? App.db.products : [];
-  const invoices = invoicesList || ((typeof App !== 'undefined' && App.db && App.db.invoices) ? App.db.invoices : []);
-
-  if (products.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted p-4">لا توجد أصناف مكرونة مضافة بالمخزن حالياً</td></tr>`;
-    return;
-  }
-
-  // Aggregate stats per product
-  const productStats = {};
-  products.forEach(p => {
-    productStats[p.id] = {
-      id: p.id,
-      name: p.name,
-      unit: p.unit || 'شكارة',
-      costPrice: p.costPrice || 0,
-      price: p.price || 0,
-      sacksSold: 0,
-      totalRevenue: 0,
-      totalCost: 0,
-      netProfit: 0,
-      profitMargin: 0
-    };
-  });
-
-  invoices.forEach(inv => {
-    if (inv.status === 'مرتجعة بالكامل') return;
-    (inv.items || []).forEach(item => {
-      const activeQty = Math.max(0, (item.qty || 0) - (item.returnedQty || 0));
-      if (activeQty <= 0) return;
-
-      const pId = item.id;
-      const targetStat = productStats[pId] || Object.values(productStats).find(ps => ps.name === item.name);
-      if (targetStat) {
-        const itemSellingPrice = item.price || targetStat.price || 0;
-        const itemCostPrice = targetStat.costPrice || (itemSellingPrice * 0.8);
-        const itemRev = activeQty * itemSellingPrice;
-        const itemCst = activeQty * itemCostPrice;
-
-        targetStat.sacksSold += activeQty;
-        targetStat.totalRevenue += itemRev;
-        targetStat.totalCost += itemCst;
-      }
-    });
-  });
-
-  // Calculate net profit and margin
-  const rows = Object.values(productStats).map(stat => {
-    stat.netProfit = stat.totalRevenue - stat.totalCost;
-    stat.profitMargin = stat.totalRevenue > 0 ? ((stat.netProfit / stat.totalRevenue) * 100).toFixed(1) : 0;
-    return stat;
-  });
-
-  tbody.innerHTML = rows.map(stat => `
-    <tr>
-      <td><strong>${stat.name}</strong> <span class="badge badge-secondary" style="font-size: 0.75rem; margin-right: 4px;">${stat.unit}</span></td>
-      <td style="text-align: center;"><span class="text-muted font-bold">${App.formatCurrency(stat.costPrice)}</span></td>
-      <td style="text-align: center;"><strong class="text-primary-color">${App.formatCurrency(stat.price)}</strong></td>
-      <td style="text-align: center;"><strong class="text-dark">${stat.sacksSold} شكارة</strong></td>
-      <td style="text-align: center;"><strong class="text-success">${App.formatCurrency(stat.totalRevenue)}</strong></td>
-      <td style="text-align: center;"><strong class="text-warning">${App.formatCurrency(stat.totalCost)}</strong></td>
-      <td style="text-align: left;">
-        <strong class="${stat.netProfit >= 0 ? 'text-success' : 'text-danger'}" style="font-size: 1rem;">
-          ${stat.netProfit >= 0 ? '+' : ''}${App.formatCurrency(stat.netProfit)}
-        </strong>
-      </td>
-      <td style="text-align: center;">
-        <span class="badge ${stat.profitMargin >= 25 ? 'badge-success' : (stat.profitMargin > 0 ? 'badge-warning' : 'badge-secondary')}">
-          ${stat.profitMargin}%
-        </span>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function renderAuditTable(products, invoices) {
+// Master Unified Inventory & Profit Audit Table
+function renderAuditTable(productsData = null, invoicesData = null) {
   const tbody = document.getElementById('inventory-audit-tbody');
   if (!tbody) return;
 
+  const products = productsData || App.db.products || [];
+  const invoices = invoicesData || App.db.invoices || [];
+
   if (products.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted p-6">لا يوجد أصناف مسجلة بالمخزن</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted p-6">لا يوجد أصناف مسجلة بالمخزن</td></tr>`;
     return;
   }
 
   tbody.innerHTML = products.map(p => {
-    const soldQty = invoices.reduce((acc, inv) => {
-      const item = (inv.items || []).find(i => i.id === p.id);
-      return acc + (item ? item.qty : 0);
-    }, 0);
+    let sacksSold = 0;
+    let totalRevenue = 0;
+    let totalCost = 0;
 
-    const totalValuation = p.stock * p.costPrice;
+    invoices.forEach(inv => {
+      if (inv.status === 'مرتجعة بالكامل') return;
+      (inv.items || []).forEach(item => {
+        if (item.id === p.id || item.name === p.name) {
+          const activeQty = Math.max(0, (item.qty || 0) - (item.returnedQty || 0));
+          if (activeQty > 0) {
+            const itemPrice = item.price || p.price || 0;
+            const itemCost = p.costPrice || (itemPrice * 0.8);
+            sacksSold += activeQty;
+            totalRevenue += (activeQty * itemPrice);
+            totalCost += (activeQty * itemCost);
+          }
+        }
+      });
+    });
+
+    const netProfit = totalRevenue - totalCost;
+    const margin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0;
 
     return `
       <tr>
-        <td><strong>${p.id}</strong></td>
-        <td><strong>${p.name}</strong></td>
-        <td><span class="badge badge-blue">${p.unit}</span></td>
-        <td><strong class="${p.stock < 150 ? 'text-danger' : 'text-primary-color'}">${p.stock} شكارة</strong></td>
-        <td><span class="badge badge-success">${soldQty} شكارة</span></td>
-        <td>${App.formatCurrency(p.costPrice)} / شكارة</td>
-        <td><strong class="text-success">${App.formatCurrency(totalValuation)}</strong></td>
+        <td><strong>${p.name}</strong> <span class="badge badge-secondary" style="font-size: 0.75rem; margin-right: 4px;">${p.unit || 'شكارة'}</span></td>
+        <td style="text-align: center;"><strong class="${p.stock < 150 ? 'text-danger' : 'text-primary-color'}">${p.stock} شكارة</strong></td>
+        <td style="text-align: center;"><strong class="text-dark">${sacksSold} شكارة</strong></td>
+        <td style="text-align: center;"><span class="text-muted font-bold">${App.formatCurrency(p.costPrice || 0)}</span></td>
+        <td style="text-align: center;"><strong class="text-primary-color">${App.formatCurrency(p.price || 0)}</strong></td>
+        <td style="text-align: center;"><strong class="text-success">${App.formatCurrency(totalRevenue)}</strong></td>
+        <td style="text-align: center;"><strong class="text-warning">${App.formatCurrency(totalCost)}</strong></td>
+        <td style="text-align: left;">
+          <strong class="${netProfit >= 0 ? 'text-success' : 'text-danger'}" style="font-size: 1rem;">
+            ${netProfit >= 0 ? '+' : ''}${App.formatCurrency(netProfit)}
+          </strong>
+        </td>
+        <td style="text-align: center;">
+          <span class="badge ${margin >= 25 ? 'badge-success' : (margin > 0 ? 'badge-warning' : 'badge-secondary')}">
+            ${margin}%
+          </span>
+        </td>
       </tr>
     `;
   }).join('');
@@ -865,17 +812,22 @@ function renderFinancialAuditReportContent() {
         </thead>
         <tbody>
           ${products.map(p => {
-            const soldQty = invoices.reduce((acc, inv) => {
-              const item = (inv.items || []).find(i => i.id === p.id);
-              return acc + (item ? item.qty : 0);
-            }, 0);
+            let itemSold = 0;
+            invoices.forEach(inv => {
+              if (inv.status === 'مرتجعة بالكامل') return;
+              (inv.items || []).forEach(item => {
+                if (item.id === p.id || item.name === p.name) {
+                  itemSold += Math.max(0, (item.qty || 0) - (item.returnedQty || 0));
+                }
+              });
+            });
             return `
               <tr>
                 <td style="padding: 6px 8px; border: 1px solid #e2e8f0; font-weight: bold;">${p.id}</td>
                 <td style="padding: 6px 8px; border: 1px solid #e2e8f0;"><strong>${p.name}</strong></td>
                 <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center;"><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${p.unit}</span></td>
                 <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold; color: ${p.stock < 150 ? '#dc2626' : '#059669'};">${p.stock} شكارة</td>
-                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold;">${soldQty > 0 ? `<span style="color: #b45309;">${soldQty} شكارة</span>` : '<span style="color: #94a3b8;">-</span>'}</td>
+                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold;">${itemSold > 0 ? `<span style="color: #b45309;">${itemSold} شكارة</span>` : '<span style="color: #94a3b8;">-</span>'}</td>
                 <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: left;">${App.formatCurrency(p.costPrice)}</td>
                 <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: left; font-weight: bold; color: #059669;">${App.formatCurrency(p.stock * p.costPrice)}</td>
               </tr>
