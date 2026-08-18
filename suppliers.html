@@ -81,31 +81,46 @@
             </div>
           </div>
 
-          <div class="form-group mb-4">
-            <label>عنوان المطحن / الفرع</label>
-            <input type="text" id="sup-address" class="form-control" placeholder="طنطا - المنطقة الصناعية">
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>عنوان المطحن / الفرع</label>
+              <input type="text" id="sup-address" class="form-control" placeholder="طنطا - المنطقة الصناعية">
+            </div>
+            <div class="form-group">
+              <label>كمية الشحنة الأولى الموردة (بالطن) <span class="text-xs text-muted">(اختياري - تحسب تلقائياً)</span></label>
+              <input type="number" id="sup-initial-tons" class="form-control" placeholder="مثال: 10 طن" min="0" step="0.5">
+            </div>
           </div>
 
-          <div class="form-group mb-4">
-            <label>ملاحظات وشروط التعامل</label>
-            <input type="text" id="sup-notes" class="form-control" placeholder="ملاحظات اختيارية">
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="form-group">
+              <label>رصيد مستحقات سابق قديم للمطحن (ج.م) <span class="text-xs text-muted">(اختياري)</span></label>
+              <input type="number" id="sup-opening-balance" class="form-control" placeholder="0" min="0">
+            </div>
+            <div class="form-group">
+              <label>ملاحظات وشروط التعامل</label>
+              <input type="text" id="sup-notes" class="form-control" placeholder="ملاحظات اختيارية">
+            </div>
           </div>
 
           <div class="flex justify-end pt-2 border-t">
-            <button class="btn btn-primary" onclick="saveNewSupplier()"><i class="fa-solid fa-check ml-1"></i> حفظ المطحن بالسجل 🌾</button>
+            <button class="btn btn-primary" onclick="saveNewSupplier()"><i class="fa-solid fa-check ml-1"></i> حفظ المطحن بالسجل وحساب المستحقات 🌾</button>
           </div>
         </div>
 
         <!-- Suppliers & Mills Table Section -->
-        <div class="card mb-6">
+        <div class="card mb-6" id="suppliers-table-section">
           <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
             <div>
               <h3>سجل مطاحن وموردي الدقيق الخام (سعر وحساب مختلف لكل مطحن)</h3>
               <p class="text-sm text-muted">متابعة شحنات الدقيق الموردة ومسحوبات ومستحقات المطاحن</p>
             </div>
-            <div class="search-box">
-              <i class="fa-solid fa-magnifying-glass"></i>
-              <input type="text" class="form-control" placeholder="بحث باسم المطحن أو الهاتف..." onkeyup="filterSuppliers(this.value)">
+            <div class="flex gap-2 items-center flex-wrap">
+              <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" class="form-control" placeholder="بحث باسم المطحن أو الهاتف..." onkeyup="filterSuppliers(this.value)">
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="printSuppliersRegistry()"><i class="fa-solid fa-print"></i> طباعة كشف المطاحن</button>
             </div>
           </div>
 
@@ -151,13 +166,20 @@
         <p class="text-sm font-semibold mb-3 text-primary-color" id="batch-sup-title"></p>
         
         <div class="form-group mb-4">
-          <label>كمية الدقيق الموردة (بالطن)</label>
-          <input type="number" id="batch-tons-qty" class="form-control" placeholder="مثال: 10 طن" min="0.5" step="0.5">
+          <label>كمية الدقيق الموردة (بالطن) <span class="text-danger">*</span></label>
+          <input type="number" id="batch-tons-qty" class="form-control" placeholder="مثال: 10 طن" min="0.1" step="0.1" oninput="updateBatchLiveTotal()">
         </div>
 
         <div class="form-group mb-4">
-          <label>سعر الطن المعتمد لهذه الشحنة (جنيه)</label>
-          <input type="number" id="batch-unit-price" class="form-control" placeholder="السعر الافتراضي للمطحن">
+          <label>سعر الطن المعتمد لهذه الشحنة (جنيه) <span class="text-danger">*</span></label>
+          <input type="number" id="batch-unit-price" class="form-control" placeholder="السعر الافتراضي للمطحن" oninput="updateBatchLiveTotal()">
+        </div>
+
+        <div class="card p-3 mb-4" style="background: #f0fdf4; border: 1px solid #bbf7d0;">
+          <div class="flex justify-between items-center">
+            <span class="text-xs text-muted font-bold">إجمالي تكلفة الشحنة المضافة للمطحن:</span>
+            <h3 class="text-success font-bold" id="batch-live-total">0 ج.م</h3>
+          </div>
         </div>
 
         <div class="form-group">
@@ -168,7 +190,7 @@
 
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('supply-batch-modal')">إلغاء</button>
-        <button class="btn btn-primary" onclick="processFlourSupplyBatch()"><i class="fa-solid fa-calculator"></i> تسجيل التوريد وتحديث المستحقات</button>
+        <button class="btn btn-primary" onclick="processFlourSupplyBatch()"><i class="fa-solid fa-check ml-1"></i> تسجيل الشحنة وتحديث المستحقات فوراً 🌾</button>
       </div>
     </div>
   </div>
@@ -189,19 +211,28 @@
         <p class="text-sm font-semibold mb-4 text-primary-color" id="pay-sup-title"></p>
 
         <div class="form-group mb-4">
-          <label>المبلغ المسدد للمطحن من الخزنة (جنيه)</label>
+          <label>المبلغ المراد سداده للمطحن (جنيه) <span class="text-danger">*</span></label>
           <input type="number" id="pay-sup-amount" class="form-control" placeholder="ادخل المبلغ المسدد" min="1">
         </div>
 
+        <div class="form-group mb-4">
+          <label>طريقة السداد <span class="text-danger">*</span></label>
+          <select id="pay-sup-method" class="form-control">
+            <option value="كاش (نقداً من الخزينة)">كاش (نقداً من خزينة المصنع) 💵</option>
+            <option value="تحويل بنكي / إنستاباي">تحويل بنكي / إنستاباي / فودافون كاش 📱</option>
+            <option value="شيك بنكي">شيك بنكي 📑</option>
+          </select>
+        </div>
+
         <div class="form-group">
-          <label>طريقة السداد / رقم الشيك أو الإيصال</label>
-          <input type="text" id="pay-sup-notes" class="form-control" placeholder="تحويل بنكي / نقدي / شيك">
+          <label>البيان والملاحظات / رقم الشيك أو الإيصال</label>
+          <input type="text" id="pay-sup-notes" class="form-control" placeholder="سداد دفعة نقدية / رقم الشيك">
         </div>
       </div>
 
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('pay-supplier-modal')">إلغاء</button>
-        <button class="btn btn-primary" onclick="processSupplierPayment()"><i class="fa-solid fa-check"></i> الخصم من الخزنة والتأكيد</button>
+        <button class="btn btn-primary" onclick="processSupplierPayment()"><i class="fa-solid fa-check ml-1"></i> تأكيد السداد وتحديث الحساب 💰</button>
       </div>
     </div>
   </div>

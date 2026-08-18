@@ -125,15 +125,17 @@
               <i class="fa-solid fa-truck"></i>
             </div>
             <div>
-              <h3 class="font-bold text-lg">تسجيل سيارة / عربية توصيل وسائق جديد 🚚</h3>
-              <p class="text-xs text-muted">إضافة سيارة جديدة لأسطول النقل، اسم السائق، الراتب الشهري، نمرة اللوحة، ورقم التواصل (يتم ربطه فوراً بسجل الموظفين والرواتب والحضور)</p>
+              <h3 class="font-bold text-lg">تسجيل سيارة / عربية توصيل وربطها بسائق 🚚</h3>
+              <p class="text-xs text-muted">إضافة سيارة جديدة لأسطول النقل واختيار السائق من سجل الموظفين (الراتب ويوم القبض مسجلان تلقائياً بملف السائق)</p>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4 mb-4">
             <div class="form-group">
-              <label>اسم السائق <span class="text-danger">*</span></label>
-              <input type="text" id="trk-driver" class="form-control" placeholder="مثال: محمود سعد علي">
+              <label>اختيار السائق من قائمة السائقين بالـ HR <span class="text-danger">*</span></label>
+              <select id="trk-driver" class="form-control" onchange="onFleetDriverChange(this.value)">
+                <option value="">-- اختر السائق المعين --</option>
+              </select>
             </div>
             <div class="form-group">
               <label>نمرة العربية (رقم اللوحة) <span class="text-danger">*</span></label>
@@ -143,19 +145,8 @@
 
           <div class="grid grid-cols-2 gap-4 mb-4">
             <div class="form-group">
-              <label>الراتب الشهري الأساسي للسائق (ج.م) <span class="text-danger">*</span></label>
-              <input type="number" id="trk-salary" class="form-control" placeholder="مثال: 7500" value="7500">
-            </div>
-            <div class="form-group">
-              <label>رقم الموبايل <span class="text-danger">*</span></label>
+              <label>رقم موبايل السائق <span class="text-xs text-muted">(مجلوب تلقائياً من HR)</span></label>
               <input type="text" id="trk-phone" class="form-control" placeholder="010XXXXXXXX">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <div class="form-group">
-              <label>يوم استحقاق القبض الشهري</label>
-              <input type="number" id="trk-pay-day" class="form-control" min="1" max="31" value="1" placeholder="مثال: 1 أو 30">
             </div>
             <div class="form-group">
               <label>حالة العربية / الشحنة</label>
@@ -168,7 +159,7 @@
           </div>
 
           <div class="flex justify-end pt-2 border-t">
-            <button class="btn btn-primary" onclick="saveNewTruck()"><i class="fa-solid fa-check ml-1"></i> حفظ وتسجيل السيارة والسائق والراتب بالسجل 🚚</button>
+            <button class="btn btn-primary" onclick="saveNewTruck()"><i class="fa-solid fa-check ml-1"></i> حفظ وتسجيل السيارة وربطها بالسائق 🚚</button>
           </div>
         </div>
 

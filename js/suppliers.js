@@ -74,6 +74,14 @@ function filterSuppliers(query) {
   loadSuppliersTable(filtered);
 }
 
+function updateBatchLiveTotal() {
+  const qtyTons = parseFloat(document.getElementById('batch-tons-qty').value) || 0;
+  const unitPrice = parseFloat(document.getElementById('batch-unit-price').value) || 0;
+  const total = qtyTons * unitPrice;
+  const liveEl = document.getElementById('batch-live-total');
+  if (liveEl) liveEl.textContent = App.formatCurrency(total);
+}
+
 function saveNewSupplier() {
   const name = document.getElementById('sup-name').value.trim();
   const phone = document.getElementById('sup-phone').value.trim();
@@ -81,11 +89,18 @@ function saveNewSupplier() {
   const price = parseFloat(document.getElementById('sup-price').value) || 0;
   const address = document.getElementById('sup-address').value.trim();
   const notes = document.getElementById('sup-notes').value.trim();
+  const initialTonsInput = document.getElementById('sup-initial-tons');
+  const initialTons = initialTonsInput ? (parseFloat(initialTonsInput.value) || 0) : 0;
+  const openingBalanceInput = document.getElementById('sup-opening-balance');
+  const openingBalance = openingBalanceInput ? (parseFloat(openingBalanceInput.value) || 0) : 0;
 
   if (!name || !phone || price <= 0) {
     App.showToast('رجاء ادخل اسم المطحن، الهاتف، وسعر التوريد المحدد', 'warning');
     return;
   }
+
+  const initialShipmentCost = initialTons * price;
+  const totalBalance = openingBalance + initialShipmentCost;
 
   const newSup = {
     id: `SUP-${String((App.db.suppliers || []).length + 101)}`,
@@ -94,9 +109,23 @@ function saveNewSupplier() {
     address: address || 'المنطقة الصناعية',
     flourType: flourType,
     unitPrice: price,
-    totalBalance: 0,
+    totalBalance: totalBalance,
+    batches: [],
+    payments: [],
     notes: notes || 'تعامل جديد'
   };
+
+  if (initialTons > 0) {
+    newSup.batches.push({
+      id: `BATCH-${Date.now().toString().slice(-4)}`,
+      qtyTons: initialTons,
+      unitPrice: price,
+      totalCost: initialShipmentCost,
+      refNum: 'شحنة افتتاحية أولى',
+      date: App.getNowISO(),
+      flourType: flourType
+    });
+  }
 
   if (!App.db.suppliers) App.db.suppliers = [];
   App.db.suppliers.push(newSup);
@@ -112,8 +141,10 @@ function saveNewSupplier() {
   document.getElementById('sup-price').value = '';
   document.getElementById('sup-address').value = '';
   document.getElementById('sup-notes').value = '';
+  if (initialTonsInput) initialTonsInput.value = '';
+  if (openingBalanceInput) openingBalanceInput.value = '';
 
-  App.showToast(`تم إضافة المطحن/المورد (${newSup.name}) بنجاح 🌾`, 'success');
+  App.showToast(`تم إضافة المطحن/المورد (${newSup.name}) واحتساب المستحقات بنجاح 🌾`, 'success');
 }
 
 function openSupplyBatchModal(supId) {
@@ -121,10 +152,13 @@ function openSupplyBatchModal(supId) {
   if (!sup) return;
 
   document.getElementById('batch-sup-id').value = sup.id;
-  document.getElementById('batch-sup-title').textContent = `المطحن: ${sup.name} | نوع الدقيق: ${sup.flourType}`;
+  document.getElementById('batch-sup-title').textContent = `المطحن: ${sup.name} | نوع الدقيق: ${sup.flourType} | الرصيد الحالي: ${App.formatCurrency(sup.totalBalance || 0)}`;
   document.getElementById('batch-unit-price').value = sup.unitPrice;
   document.getElementById('batch-tons-qty').value = '';
   document.getElementById('batch-ref-num').value = `REC-${Math.floor(1000 + Math.random() * 9000)}`;
+  
+  const liveEl = document.getElementById('batch-live-total');
+  if (liveEl) liveEl.textContent = '0 ج.م';
 
   openModal('supply-batch-modal');
 }
@@ -145,9 +179,8 @@ function processFlourSupplyBatch() {
 
   const totalCost = qtyTons * unitPrice;
   sup.totalBalance = (sup.totalBalance || 0) + totalCost;
-  sup.unitPrice = unitPrice; // Update last unit price
+  sup.unitPrice = unitPrice;
 
-  // Track batches in supplier's dedicated ledger (NOT mixed into general operating expenses)
   if (!sup.batches) sup.batches = [];
   sup.batches.unshift({
     id: `BATCH-${Date.now().toString().slice(-4)}`,
@@ -156,13 +189,8 @@ function processFlourSupplyBatch() {
     totalCost: totalCost,
     refNum: refNum || 'بدون إذن',
     date: App.getNowISO(),
-    flourType: flourType || sup.flourType
+    flourType: sup.flourType || 'دقيق فاخر استخراج 72%'
   });
-
-  // Clean any old EXP-FLOUR from general expenses
-  if (App.db.expenses) {
-    App.db.expenses = App.db.expenses.filter(e => !e.id.startsWith('EXP-FLOUR-'));
-  }
 
   if (typeof App.logActivity === 'function') {
     App.logActivity('استلام شحنة دقيق 🌾', `تم تسجيل توريد (${qtyTons} طن) دقيق من المطحن (${sup.name}) بقيمة (${App.formatCurrency(totalCost)})`, 'info');
@@ -190,6 +218,8 @@ function openPaySupplierModal(supId) {
 function processSupplierPayment() {
   const supId = document.getElementById('pay-sup-id').value;
   const amount = parseFloat(document.getElementById('pay-sup-amount').value) || 0;
+  const methodSelect = document.getElementById('pay-sup-method');
+  const method = methodSelect ? methodSelect.value : 'كاش (نقداً من الخزينة)';
   const notes = document.getElementById('pay-sup-notes').value.trim();
 
   if (amount <= 0) {
@@ -201,19 +231,23 @@ function processSupplierPayment() {
   if (!sup) return;
 
   sup.totalBalance = Math.max(0, (sup.totalBalance || 0) - amount);
-  App.db.treasury = Math.max(0, App.db.treasury - amount);
 
-  // Track payments in supplier's dedicated ledger
+  // If cash, deduct from Treasury
+  if (method.includes('كاش')) {
+    App.db.treasury = Math.max(0, App.db.treasury - amount);
+  }
+
   if (!sup.payments) sup.payments = [];
   sup.payments.unshift({
     id: `PAY-${Date.now().toString().slice(-4)}`,
     amount: amount,
+    method: method,
     date: App.getNowISO(),
-    notes: notes || 'سداد دفعة نقدية'
+    notes: notes || `سداد دفعة للمطحن (${method})`
   });
 
   if (typeof App.logActivity === 'function') {
-    App.logActivity('سداد دفعة لمطحن 💰', `تم سداد (${App.formatCurrency(amount)}) للمطحن (${sup.name})`, 'warning');
+    App.logActivity('سداد دفعة لمطحن 💰', `تم سداد (${App.formatCurrency(amount)}) للمطحن (${sup.name}) عبر (${method})`, 'warning');
   }
 
   App.save();
@@ -221,7 +255,7 @@ function processSupplierPayment() {
   renderPageSummaryCards('suppliers', 'suppliers-summary-cards');
   closeModal('pay-supplier-modal');
 
-  App.showToast(`تم سداد ${App.formatCurrency(amount)} للمطحن (${sup.name}) والخصم من الخزنة بنجاح 💰`, 'success');
+  App.showToast(`تم سداد ${App.formatCurrency(amount)} للمطحن (${sup.name}) بنجاح 💰`, 'success');
 }
 
 function openSupplierStatementModal(supId) {
@@ -231,12 +265,13 @@ function openSupplierStatementModal(supId) {
   const container = document.getElementById('supplier-statement-body');
   const batches = sup.batches || [];
   const payments = sup.payments || [];
+  const logoSrc = (typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png';
 
   container.innerHTML = `
     <div id="printable-supplier-statement" class="p-6 bg-white rounded-xl border">
       <div class="flex justify-between items-center border-b pb-4 mb-4">
         <div class="flex items-center gap-3">
-          <img src="image/logo.png" alt="شعار مصنع الإيمان" style="height: 52px; width: 52px; object-fit: contain;">
+          <img src="${logoSrc}" alt="شعار مصنع الإيمان" style="height: 52px; width: 52px; object-fit: contain;">
           <div>
             <h2 class="text-primary-color font-bold" style="font-size: 1.5rem; margin: 0;">مصنع الإيمان للمكرونة</h2>
             <p class="text-xs text-muted" style="margin: 2px 0;">كشف حساب ومعاملات مطحن الدقيق الخام</p>
@@ -258,8 +293,8 @@ function openSupplierStatementModal(supId) {
           <span class="text-xs text-muted">نوع الخامة الموردة</span>
           <h4 class="text-secondary mt-1">${sup.flourType}</h4>
         </div>
-        <div class="card bg-light p-4" style="background: var(--accent-rose-light); border-color: var(--accent-rose-border);">
-          <span class="text-xs text-muted font-bold text-danger">صافي المستحقات المتبقية</span>
+        <div class="card bg-light p-4" style="background: #fee2e2; border-color: #fca5a5;">
+          <span class="text-xs text-muted font-bold text-danger">صافي المستحقات المتبقية للمطحن</span>
           <h2 class="text-danger font-bold mt-1">${App.formatCurrency(sup.totalBalance)}</h2>
         </div>
       </div>
@@ -290,12 +325,13 @@ function openSupplierStatementModal(supId) {
         </tbody>
       </table>
 
-      <h4 class="font-bold mb-3"><i class="fa-solid fa-money-bill-wave text-success ml-1"></i> سجل الدفعات المسددة للمطحن</h4>
+      <h4 class="font-bold mb-3"><i class="fa-solid fa-money-bill-wave text-success ml-1"></i> سجل الدفعات وسندات الصرف المسددة</h4>
       <table class="table mb-4">
         <thead>
           <tr>
             <th>كود السداد</th>
             <th>المبلغ المسدد</th>
+            <th>طريقة السداد</th>
             <th>الملاحظات والبيان</th>
             <th>التاريخ والوقت</th>
           </tr>
@@ -305,16 +341,90 @@ function openSupplierStatementModal(supId) {
             <tr>
               <td><strong>${p.id}</strong></td>
               <td><strong class="text-success">${App.formatCurrency(p.amount)}</strong></td>
-              <td>${p.notes || 'سداد نقدي'}</td>
+              <td><span class="badge badge-secondary">${p.method || 'كاش'}</span></td>
+              <td>${p.notes || 'سداد دفعة للمطحن'}</td>
               <td>${App.formatTimestamp(p.date)}</td>
             </tr>
-          `).join('') : '<tr><td colspan="4" class="text-center text-muted">لا يوجد دفعات مسددة مسجلة بعد</td></tr>'}
+          `).join('') : '<tr><td colspan="5" class="text-center text-muted">لا يوجد دفعات مسددة مسجلة بعد</td></tr>'}
         </tbody>
       </table>
     </div>
   `;
 
   openModal('supplier-statement-modal');
+}
+
+function printSuppliersRegistry() {
+  const suppliers = App.db.suppliers || [];
+  const logoSrc = (typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png';
+  const totalDues = suppliers.reduce((sum, s) => sum + (s.totalBalance || 0), 0);
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="UTF-8">
+      <title>كشف حساب وسجل المطاحن - مصنع الإيمان</title>
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        body { font-family: 'Cairo', sans-serif; padding: 25px; direction: rtl; color: #1e293b; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #059669; padding-bottom: 12px; margin-bottom: 18px; }
+        .logo-box { display: flex; align-items: center; gap: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
+        th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: right; }
+        th { background: #f8fafc; font-weight: 700; }
+        .total-box { margin-top: 18px; padding: 12px; background: #fee2e2; border-radius: 8px; font-weight: bold; text-align: left; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="logo-box">
+          <img src="${logoSrc}" style="height: 55px; width: 55px; object-fit: contain;">
+          <div>
+            <h2 style="color: #059669; margin: 0;">مصنع الإيمان للمكرونة</h2>
+            <p style="margin: 0; font-size: 11px; color: #64748b;">كشف حساب وسجل مستحقات مطاحن الدقيق الخام</p>
+          </div>
+        </div>
+        <div>
+          <p style="margin: 0; font-size: 12px;">تاريخ الطباعة: <strong>${new Date().toLocaleDateString('ar-EG')}</strong></p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>كود المطحن</th>
+            <th>اسم المطحن / المورد</th>
+            <th>الهاتف</th>
+            <th>نوع الدقيق المورد</th>
+            <th>سعر الطن المعتمد</th>
+            <th>المستحقات المتبقية للمطحن</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${suppliers.map(s => `
+            <tr>
+              <td><strong>${s.id}</strong></td>
+              <td><strong>${s.name}</strong></td>
+              <td>${s.phone}</td>
+              <td>${s.flourType}</td>
+              <td>${App.formatCurrency(s.unitPrice)}</td>
+              <td><strong style="color: ${s.totalBalance > 0 ? '#dc2626' : '#059669'};">${App.formatCurrency(s.totalBalance)}</strong></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="total-box">
+        إجمالي مستحقات المطاحن المتبقية (علينا): <span style="color: #dc2626; font-size: 16px;">${App.formatCurrency(totalDues)}</span>
+      </div>
+
+      <script>window.onload = function() { window.print(); }<\/script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
 
 function openEditSupplierModal(supId) {

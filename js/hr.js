@@ -63,12 +63,15 @@ function initAttendanceFilterSelects() {
   }
 }
 
-// Net Salary Calculator: (Base - Advances - (Absences * (Base / 30)))
+// Net Salary Calculator: (Base - Advances - Deductions - (Absences * (Base / 30)))
 function calculateNetSalary(emp) {
-  const dailyRate = Math.round((emp.baseSalary || 0) / 30);
+  const base = emp.baseSalary || 0;
+  const dailyRate = Math.round(base / 30);
   const absenceDeduction = Math.round((emp.absences || 0) * dailyRate);
-  const net = Math.max(0, (emp.baseSalary || 0) - (emp.advances || 0) - absenceDeduction);
-  return { net, absenceDeduction, dailyRate };
+  const advances = emp.advances || 0;
+  const deductions = emp.deductions || 0;
+  const net = Math.max(0, base - advances - deductions - absenceDeduction);
+  return { net, absenceDeduction, dailyRate, advances, deductions };
 }
 
 // Get today's attendance entry for an employee
@@ -101,7 +104,7 @@ function loadEmployeesTable() {
   }
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted p-6">لا يوجد موظفين مسجلين مطابقين للبحث</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted p-6">لا يوجد موظفين مسجلين مطابقين للبحث</td></tr>`;
     return;
   }
 
@@ -129,6 +132,7 @@ function loadEmployeesTable() {
         </td>
         <td><strong class="text-slate-800">${App.formatCurrency(emp.baseSalary)}</strong></td>
         <td><strong class="${(emp.advances || 0) > 0 ? 'text-warning font-bold' : 'text-slate-600'}">${App.formatCurrency(emp.advances || 0)}</strong></td>
+        <td><strong class="${(emp.deductions || 0) > 0 ? 'text-danger font-bold' : 'text-slate-600'}">${App.formatCurrency(emp.deductions || 0)}</strong></td>
         <td>
           <span class="badge badge-danger text-xs font-bold">${emp.absences || 0} أيام (-${App.formatCurrency(absenceDeduction)})</span>
         </td>
@@ -443,22 +447,22 @@ function processEmployeeAdvance() {
   }
 
   emp.advances = (emp.advances || 0) + amount;
-
-  if (!App.db.expenses) App.db.expenses = [];
-  App.db.expenses.unshift({
-    id: `EXP-${String(App.db.expenses.length + 101)}`,
-    title: `سلفة نقدية - ${emp.name}`,
-    category: 'رواتب وأجور',
+  if (!emp.advancesList) emp.advancesList = [];
+  emp.advancesList.unshift({
+    id: `ADV-${Date.now().toString().slice(-4)}`,
     amount: amount,
-    date: new Date().toISOString(),
-    notes: 'صرف سلفة موظف نقدية من الخزينة'
+    date: App.getNowISO(),
+    notes: 'صرف سلفة نقدية على حساب الراتب'
   });
+
+  // Deduct from cash treasury
+  App.db.treasury = Math.max(0, App.db.treasury - amount);
 
   App.save();
   loadEmployeesTable();
   renderPageSummaryCards('hr', 'hr-summary-cards-container');
   closeModal('add-advance-modal');
-  App.showToast(`تم صرف سلفة بقيمة (${App.formatCurrency(amount)}) للموظف (${emp.name}) 💸`, 'success');
+  App.showToast(`تم صرف سلفة بقيمة (${App.formatCurrency(amount)}) للموظف (${emp.name}) من الخزينة 💸`, 'success');
 }
 
 // Open Deduction Modal
@@ -487,23 +491,20 @@ function processFinancialDeduction() {
     return;
   }
 
-  emp.advances = (emp.advances || 0) + amount;
-
-  if (!App.db.expenses) App.db.expenses = [];
-  App.db.expenses.unshift({
-    id: `EXP-${String(App.db.expenses.length + 101)}`,
-    title: `خصم مالي - ${emp.name}`,
-    category: 'رواتب وأجور',
+  emp.deductions = (emp.deductions || 0) + amount;
+  if (!emp.deductionsList) emp.deductionsList = [];
+  emp.deductionsList.unshift({
+    id: `DED-${Date.now().toString().slice(-4)}`,
     amount: amount,
-    date: new Date().toISOString(),
-    notes: reason || 'خصم مالي إداري مباشر'
+    reason: reason || 'خصم مالي إداري مباشر',
+    date: App.getNowISO()
   });
 
   App.save();
   loadEmployeesTable();
   renderPageSummaryCards('hr', 'hr-summary-cards-container');
   closeModal('deduction-modal');
-  App.showToast(`تم تطبيق خصم مالي بقيمة (${App.formatCurrency(amount)}) على الموظف (${emp.name}) 💰`, 'success');
+  App.showToast(`تم تطبيق خصم مالي بقيمة (${App.formatCurrency(amount)}) على الموظف (${emp.name}) 💰`, 'warning');
 }
 
 // Disburse Monthly Salary
@@ -511,32 +512,36 @@ function disburseSalary(empId) {
   const emp = (App.db.employees || []).find(e => e.id === empId);
   if (!emp) return;
 
-  const { net, absenceDeduction } = calculateNetSalary(emp);
+  const { net, absenceDeduction, advances, deductions } = calculateNetSalary(emp);
   if (net <= 0) {
-    App.showToast('عفواً، صافي الراتب المستحق هو صفر بعد خصم السلف والغياب', 'warning');
+    App.showToast('عفواً، صافي الراتب المستحق هو صفر بعد خصم السلف والجزاءات والغياب', 'warning');
     return;
   }
 
   App.showConfirmModal({
     title: 'صرف وتسوية الراتب الشهري',
-    message: `هل أنت متأكد من تسوية وصرف صافي راتب الموظف (${emp.name}) بقيمة (${App.formatCurrency(net)})؟ سيتم تسجيله بالمصروفات وتصفير السلف وأيام الغياب وبدء دورة شهرية جديدة.`,
+    message: `هل أنت متأكد من تسوية وصرف صافي راتب الموظف (${emp.name}) بقيمة (${App.formatCurrency(net)})؟ سيتم صرفه من الخزينة وتصفير السلف والخصومات وبدء دورة شهرية جديدة.`,
     icon: 'fa-solid fa-money-bill-transfer',
     iconBg: '#dcfce7',
     iconColor: '#059669',
     confirmText: 'تأكيد الصرف والتسوية 💵',
     confirmBtnClass: 'btn-success',
     onConfirm: () => {
+      // Deduct net payout from Treasury
+      App.db.treasury = Math.max(0, App.db.treasury - net);
+
       if (!App.db.expenses) App.db.expenses = [];
       App.db.expenses.unshift({
         id: `EXP-${String(App.db.expenses.length + 101)}`,
         title: `صرف راتب شهري - ${emp.name}`,
         category: 'رواتب وأجور',
         amount: net,
-        date: new Date().toISOString(),
-        notes: `صرف صافي الراتب بعد خصم (${App.formatCurrency(emp.advances || 0)}) سلف و (${App.formatCurrency(absenceDeduction)}) غياب`
+        date: App.getNowISO(),
+        notes: `صافي الراتب بعد خصم (${App.formatCurrency(advances)}) سلف و (${App.formatCurrency(deductions)}) جزاءات و (${App.formatCurrency(absenceDeduction)}) غياب`
       });
 
       emp.advances = 0;
+      emp.deductions = 0;
       emp.absences = 0;
 
       App.save();
@@ -785,7 +790,7 @@ function renderEmployeeStatementContent() {
       </div>
 
       <!-- Financial Calculation Cards Grid -->
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;">
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px;">
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center;">
           <span style="font-size: 0.75rem; color: #64748b; font-weight: bold; display: block;">الراتب الأساسي</span>
           <strong style="font-size: 1.1rem; color: #1e293b; display: block; margin: 2px 0;">${App.formatCurrency(emp.baseSalary)}</strong>
@@ -793,9 +798,15 @@ function renderEmployeeStatementContent() {
         </div>
 
         <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px; text-align: center;">
-          <span style="font-size: 0.75rem; color: #b45309; font-weight: bold; display: block;">السلف المستقطعة</span>
+          <span style="font-size: 0.75rem; color: #b45309; font-weight: bold; display: block;">السلف النقدية</span>
           <strong style="font-size: 1.1rem; color: #d97706; display: block; margin: 2px 0;">-${App.formatCurrency(emp.advances || 0)}</strong>
           <span style="font-size: 0.7rem; color: #b45309;">سلفيات معلقة</span>
+        </div>
+
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px; text-align: center;">
+          <span style="font-size: 0.75rem; color: #b91c1c; font-weight: bold; display: block;">الجزاءات والخصومات</span>
+          <strong style="font-size: 1.1rem; color: #dc2626; display: block; margin: 2px 0;">-${App.formatCurrency(emp.deductions || 0)}</strong>
+          <span style="font-size: 0.7rem; color: #b91c1c;">خصم إداري مباشر</span>
         </div>
 
         <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 10px; text-align: center;">
@@ -806,7 +817,7 @@ function renderEmployeeStatementContent() {
 
         <div style="background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 8px; padding: 10px; text-align: center;">
           <span style="font-size: 0.75rem; color: #047857; font-weight: bold; display: block;">صافي المستحق</span>
-          <strong style="font-size: 1.25rem; color: #059669; display: block; margin: 2px 0;">${App.formatCurrency(periodNet)}</strong>
+          <strong style="font-size: 1.25rem; color: #059669; display: block; margin: 2px 0;">${App.formatCurrency(Math.max(0, (emp.baseSalary || 0) - (emp.advances || 0) - (emp.deductions || 0) - periodAbsenceDeduction))}</strong>
           <span style="font-size: 0.7rem; color: #047857; font-weight: bold;">جاهز للصرف والتسوية</span>
         </div>
       </div>

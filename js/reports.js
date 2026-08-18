@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAppLayout('reports');
   generateFinancialAuditReport('monthly');
   loadDeliveryTrucksTable();
+  populateFleetDriversDropdown();
 
   // Handle URL Search query from Quick Search
   const urlParams = new URLSearchParams(window.location.search);
@@ -209,20 +210,52 @@ function filterTrucks(query) {
   loadDeliveryTrucksTable(filtered);
 }
 
+function populateFleetDriversDropdown() {
+  const driverSelect = document.getElementById('trk-driver');
+  if (!driverSelect) return;
+
+  const employees = App.db.employees || [];
+  // Filter for drivers specifically, or fallback to all employees
+  let drivers = employees.filter(e => e.jobTitle && (e.jobTitle.includes('سائق') || e.jobTitle.includes('توزيع') || e.jobTitle.includes('نقل') || e.jobTitle.includes('عربية')));
+  if (drivers.length === 0) drivers = employees;
+
+  driverSelect.innerHTML = `
+    <option value="">-- اختر السائق المعين من سجل HR --</option>
+    ${drivers.map(d => `<option value="${d.name}">${d.name} (${d.jobTitle}) - راتب: ${App.formatCurrency(d.baseSalary)}</option>`).join('')}
+  `;
+}
+
+function onFleetDriverChange(driverName) {
+  const phoneInput = document.getElementById('trk-phone');
+  if (!phoneInput) return;
+
+  if (!driverName) {
+    phoneInput.value = '';
+    return;
+  }
+
+  const emp = (App.db.employees || []).find(e => e.name === driverName);
+  if (emp && emp.phone) {
+    phoneInput.value = emp.phone;
+  }
+}
+
 function saveNewTruck() {
-  const driver = document.getElementById('trk-driver').value.trim();
+  const driverSelect = document.getElementById('trk-driver');
+  const driver = driverSelect ? driverSelect.value.trim() : '';
   const plate = document.getElementById('trk-plate').value.trim();
-  const salaryInput = document.getElementById('trk-salary');
-  const salary = salaryInput ? (parseFloat(salaryInput.value) || 7500) : 7500;
-  const payDayInput = document.getElementById('trk-pay-day');
-  const payDay = payDayInput ? (parseInt(payDayInput.value) || 1) : 1;
   const phone = document.getElementById('trk-phone').value.trim();
   const status = document.getElementById('trk-status').value;
 
-  if (!driver || !plate || !phone) {
-    App.showToast('رجاء ادخل اسم السائق ونمرة العربية ورقم الموبايل', 'warning');
+  if (!driver || !plate) {
+    App.showToast('رجاء اختر السائق وادخل نمرة العربية', 'warning');
     return;
   }
+
+  // Get driver info from HR
+  const existingEmp = (App.db.employees || []).find(e => e.name === driver);
+  const salary = existingEmp ? (existingEmp.baseSalary || 0) : 0;
+  const payDay = existingEmp ? (existingEmp.payDay || 1) : 1;
 
   const newTruck = {
     id: `TRK-${String((App.db.deliveryTrucks || []).length + 101)}`,
@@ -230,52 +263,31 @@ function saveNewTruck() {
     plateNumber: plate,
     salary: salary,
     payDay: payDay,
-    phone: phone,
+    phone: phone || (existingEmp ? existingEmp.phone : ''),
     status: status
   };
 
   if (!App.db.deliveryTrucks) App.db.deliveryTrucks = [];
   App.db.deliveryTrucks.push(newTruck);
 
-  // Auto Sync Driver to Factory Employees & HR & Attendance Records
-  if (!App.db.employees) App.db.employees = [];
-  let existingEmp = App.db.employees.find(e => e.name === driver || (e.truckPlate && e.truckPlate === plate));
-  if (!existingEmp) {
-    const newDriverEmp = {
-      id: `EMP-${App.db.employees.length + 1}`,
-      name: driver,
-      phone: phone,
-      jobTitle: `سائق توزيع (${plate})`,
-      baseSalary: salary,
-      hireDate: new Date().toISOString().slice(0, 10),
-      payDay: payDay,
-      advances: 0,
-      absences: 0,
-      netSalary: salary,
-      status: 'نشط',
-      truckPlate: plate
-    };
-    App.db.employees.push(newDriverEmp);
-  } else {
-    existingEmp.baseSalary = salary;
-    existingEmp.payDay = payDay;
+  // Link truck plate to Employee in HR
+  if (existingEmp) {
     existingEmp.truckPlate = plate;
-    existingEmp.phone = phone;
   }
 
   if (typeof App.logActivity === 'function') {
-    App.logActivity('تسجيل سيارة وسائق وراتب 🚚', `تم تسجيل السيارة (${plate}) والسائق (${driver}) براتب (${App.formatCurrency(salary)}) وإضافته فوراً لسجل الموظفين والرواتب والحضور`, 'info');
+    App.logActivity('تسجيل سيارة توصيل 🚚', `تم تسجيل السيارة (${plate}) وربطها بالسائق (${driver})`, 'info');
   }
 
   App.save();
   loadDeliveryTrucksTable();
 
   // Reset form inputs
-  document.getElementById('trk-driver').value = '';
+  if (driverSelect) driverSelect.value = '';
   document.getElementById('trk-plate').value = '';
   document.getElementById('trk-phone').value = '';
 
-  App.showToast(`تم تسجيل سيارة التوصيل والسائق (${newTruck.driverName}) براتب (${App.formatCurrency(salary)}) وتثبيته بسجل الموظفين والرواتب بنجاح! 🚚✨`, 'success');
+  App.showToast(`تم تسجيل سيارة التوصيل (${plate}) وربطها بالسائق (${newTruck.driverName}) بنجاح! 🚚✨`, 'success');
 }
 
 function openEditTruckModal(trkId) {
