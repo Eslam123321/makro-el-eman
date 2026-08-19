@@ -513,7 +513,7 @@ function renderTruckStatementContent(trkId, periodVal = 'current_month') {
           <img src="${logoSrc}" alt="شعار مصنع الإيمان" style="height: 58px; width: 58px; object-fit: contain;">
           <div>
             <h2 style="color: #059669; font-weight: 800; font-size: 1.35rem; margin: 0 0 2px 0;">مصنع الإيمان للمكرونة</h2>
-            <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 2px 0;">كشف حساب السائق والسيارة المعتمد (الرواتب، الحضور، ومصروفات التشغيل)</p>
+            <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 2px 0;">كشف حساب السائق والسيارة المعتمد (الرواتب، الحضور)</p>
             <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">نظام إدارة الأسطول واللوجستيات والموارد البشرية</p>
           </div>
         </div>
@@ -524,11 +524,11 @@ function renderTruckStatementContent(trkId, periodVal = 'current_month') {
         </div>
       </div>
 
-      <!-- Financial & HR Metrics Grid -->
-      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px;">
+      <!-- Financial & Absence Cards Grid -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px;">
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; text-align: center;">
           <span style="font-size: 0.7rem; color: #64748b; font-weight: bold; display: block;">الراتب الأساسي</span>
-          <strong style="font-size: 1.05rem; color: #059669; display: block; margin-top: 2px;">${App.formatCurrency(emp.baseSalary)}</strong>
+          <strong style="font-size: 1.05rem; color: #1e293b; display: block; margin-top: 2px;">${App.formatCurrency(emp.baseSalary)}</strong>
           <span style="font-size: 0.65rem; color: #94a3b8;">استحقاق يوم ${emp.payDay || 1} شهرياً</span>
         </div>
 
@@ -548,12 +548,6 @@ function renderTruckStatementContent(trkId, periodVal = 'current_month') {
           <span style="font-size: 0.7rem; color: #065f46; font-weight: bold; display: block;">صافي الراتب المستحق</span>
           <strong style="font-size: 1.15rem; color: #047857; display: block; margin-top: 2px;">${App.formatCurrency(netPayable)}</strong>
           <span style="font-size: 0.65rem; color: #065f46;">جاهز للصرف</span>
-        </div>
-
-        <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 8px; padding: 8px; text-align: center;">
-          <span style="font-size: 0.7rem; color: #9d174d; font-weight: bold; display: block;">مصروفات السولار والصيانة</span>
-          <strong style="font-size: 1.05rem; color: #be185d; display: block; margin-top: 2px;">${App.formatCurrency(totalTruckExp)}</strong>
-          <span style="font-size: 0.65rem; color: #9d174d;">${truckExpenses.length} حركة مسجلة</span>
         </div>
       </div>
 
@@ -587,33 +581,6 @@ function renderTruckStatementContent(trkId, periodVal = 'current_month') {
               <td style="padding: 5px 8px; border: 1px solid #e2e8f0; color: #64748b;">${l.notes || '-'}</td>
             </tr>
           `).join('') : `<tr><td colspan="6" style="padding: 10px; text-align: center; color: #94a3b8;">لا توجد سجلات حضور مسجلة للسائق في هذه الفترة</td></tr>`}
-        </tbody>
-      </table>
-
-      <!-- Fuel & Maintenance Expenses Table -->
-      <h4 style="font-size: 0.9rem; font-weight: 700; margin: 0 0 6px 0; color: #0f172a; border-bottom: 2px solid #3b82f6; display: inline-block; padding-bottom: 2px;">
-        <i class="fa-solid fa-gas-pump ml-1"></i> مصروفات السولار والصيانة والشحن الخاصة بالسيارة (${trk.plateNumber})
-      </h4>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px; border: 1px solid #e2e8f0; font-size: 0.78rem;">
-        <thead style="background: #f1f5f9;">
-          <tr>
-            <th style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: right;">كود الحركة</th>
-            <th style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: right;">البيان والتفاصيل</th>
-            <th style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: center;">الفئة</th>
-            <th style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: center;">التاريخ والوقت</th>
-            <th style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: left;">المبلغ المنصرف</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${truckExpenses.length > 0 ? truckExpenses.map(e => `
-            <tr>
-              <td style="padding: 5px 8px; border: 1px solid #e2e8f0; font-weight: bold;">${e.id}</td>
-              <td style="padding: 5px 8px; border: 1px solid #e2e8f0;"><strong>${e.title}</strong> ${e.notes ? `<span style="color: #64748b; font-size: 0.7rem;">(${e.notes})</span>` : ''}</td>
-              <td style="padding: 5px 8px; border: 1px solid #e2e8f0; text-align: center;"><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${e.category}</span></td>
-              <td style="padding: 5px 8px; border: 1px solid #e2e8f0; text-align: center;">${App.formatTimestamp(e.date)}</td>
-              <td style="padding: 5px 8px; border: 1px solid #e2e8f0; text-align: left; font-weight: bold; color: #dc2626;">${App.formatCurrency(e.amount)}</td>
-            </tr>
-          `).join('') : `<tr><td colspan="5" style="padding: 10px; text-align: center; color: #94a3b8;">لا توجد مصروفات أو سولار مسجلة للسيارة في هذه الفترة</td></tr>`}
         </tbody>
       </table>
 
