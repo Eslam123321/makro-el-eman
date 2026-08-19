@@ -901,3 +901,309 @@ function renderEmployeeStatementContent() {
     </div>
   `;
 }
+
+// Master Payroll Ledger Printable Document
+function printMasterPayrollReport() {
+  const employees = App.db.employees || [];
+  const logoSrc = (typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png';
+  const todayStr = new Intl.DateTimeFormat('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date());
+
+  let totalBase = 0;
+  let totalAdvances = 0;
+  let totalDeductions = 0;
+  let totalAbsencesDeduction = 0;
+  let totalNet = 0;
+
+  const rows = employees.map((emp, index) => {
+    const { net, absenceDeduction, advances, deductions } = calculateNetSalary(emp);
+    totalBase += (emp.baseSalary || 0);
+    totalAdvances += advances;
+    totalDeductions += deductions;
+    totalAbsencesDeduction += absenceDeduction;
+    totalNet += net;
+
+    const hireDate = emp.hireDate || '2024-01-15';
+    const payDay = emp.payDay || 30;
+
+    return `
+      <tr>
+        <td style="text-align: center; font-weight: bold;">${index + 1}</td>
+        <td style="text-align: center;"><span class="badge-code">${emp.id}</span></td>
+        <td><strong>${emp.name}</strong></td>
+        <td>${emp.jobTitle}</td>
+        <td style="direction: ltr; text-align: center;">${emp.phone || '-'}</td>
+        <td style="text-align: center; white-space: nowrap;">${hireDate}</td>
+        <td style="text-align: center; white-space: nowrap;">يوم ${payDay}</td>
+        <td style="text-align: right; font-weight: bold;">${App.formatCurrency(emp.baseSalary)}</td>
+        <td style="text-align: right; color: #d97706; font-weight: bold;">${advances > 0 ? '-' + App.formatCurrency(advances) : '0 ج.م'}</td>
+        <td style="text-align: right; color: #dc2626; font-weight: bold;">${deductions > 0 ? '-' + App.formatCurrency(deductions) : '0 ج.م'}</td>
+        <td style="text-align: right; color: #be123c; font-weight: bold;">${absenceDeduction > 0 ? '-' + App.formatCurrency(absenceDeduction) : '0 ج.م'}</td>
+        <td style="text-align: right; color: #059669; font-weight: 800; font-size: 13px; background: #ecfdf5;">${App.formatCurrency(net)}</td>
+        <td style="text-align: center; min-width: 90px; color: #94a3b8; font-size: 10px;">________________</td>
+      </tr>
+    `;
+  }).join('');
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="UTF-8">
+      <title>مسير وكشف حساب الرواتب والأجور - مصنع الإيمان</title>
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        @page { size: A4 landscape; margin: 10mm; }
+        body { font-family: 'Cairo', sans-serif; padding: 15px; direction: rtl; color: #0f172a; margin: 0; background: #fff; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #059669; padding-bottom: 12px; margin-bottom: 15px; }
+        .logo-box { display: flex; align-items: center; gap: 14px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 15px; }
+        .kpi-card { border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; text-align: center; background: #f8fafc; }
+        .kpi-card.highlight { background: #ecfdf5; border-color: #a7f3d0; }
+        .kpi-card span { font-size: 10px; color: #64748b; display: block; font-weight: 700; margin-bottom: 2px; }
+        .kpi-card strong { font-size: 13px; color: #0f172a; display: block; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 5px; }
+        th, td { border: 1px solid #94a3b8; padding: 6px 7px; text-align: right; }
+        th { background: #f1f5f9; font-weight: 800; color: #1e293b; text-align: center; }
+        .badge-code { background: #e0e7ff; color: #3730a3; padding: 2px 5px; border-radius: 4px; font-weight: bold; font-size: 10px; }
+        .footer-signatures { display: flex; justify-content: space-between; align-items: center; margin-top: 25px; border-top: 2px solid #cbd5e1; padding-top: 15px; }
+        .sig-item { text-align: center; width: 22%; }
+        .sig-item p { font-size: 11px; font-weight: bold; margin: 0 0 25px 0; color: #334155; }
+        .sig-line { border-bottom: 1px dashed #94a3b8; width: 100%; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="logo-box">
+          <img src="${logoSrc}" style="height: 55px; width: 55px; object-fit: contain;">
+          <div>
+            <h2 style="color: #059669; margin: 0; font-size: 1.3rem;">مصنع الإيمان للمكرونة 🌾</h2>
+            <p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b;">إدارة الموارد البشرية وشؤون العاملين | مسير الأجور الشهري المعتمد</p>
+          </div>
+        </div>
+        <div style="text-align: left;">
+          <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">كشف مسير الرواتب المعتمد</h3>
+          <p style="margin: 2px 0 0 0; font-size: 11px; color: #475569;">تاريخ الإصدار: <strong>${todayStr}</strong></p>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span>إجمالي الموظفين</span>
+          <strong>${employees.length} موظف</strong>
+        </div>
+        <div class="kpi-card">
+          <span>إجمالي الرواتب الأساسية</span>
+          <strong>${App.formatCurrency(totalBase)}</strong>
+        </div>
+        <div class="kpi-card">
+          <span>إجمالي السلف النقدية</span>
+          <strong style="color: #d97706;">-${App.formatCurrency(totalAdvances)}</strong>
+        </div>
+        <div class="kpi-card">
+          <span>إجمالي الجزاءات</span>
+          <strong style="color: #dc2626;">-${App.formatCurrency(totalDeductions)}</strong>
+        </div>
+        <div class="kpi-card">
+          <span>خصم أيام الغياب</span>
+          <strong style="color: #be123c;">-${App.formatCurrency(totalAbsencesDeduction)}</strong>
+        </div>
+        <div class="kpi-card highlight">
+          <span style="color: #047857;">صافي الرواتب المستحقة</span>
+          <strong style="color: #059669; font-size: 14px;">${App.formatCurrency(totalNet)}</strong>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 25px;">#</th>
+            <th style="width: 60px;">الكود</th>
+            <th>اسم الموظف</th>
+            <th>الوظيفة / القسم</th>
+            <th style="width: 85px;">الهاتف</th>
+            <th style="width: 75px;">التعيين</th>
+            <th style="width: 65px;">القبض</th>
+            <th>الأساسي</th>
+            <th>السلف (-)</th>
+            <th>الجزاءات (-)</th>
+            <th>الغياب (-)</th>
+            <th>صافي القبض</th>
+            <th>توقيع الاستلام</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+
+      <div class="footer-signatures">
+        <div class="sig-item">
+          <p>إعداد / مسؤول HR</p>
+          <div class="sig-line"></div>
+        </div>
+        <div class="sig-item">
+          <p>مراجعة رئيس الحسابات</p>
+          <div class="sig-line"></div>
+        </div>
+        <div class="sig-item">
+          <p>اعتماد المدير العام</p>
+          <div class="sig-line"></div>
+        </div>
+        <div class="sig-item" style="border: 2px solid #059669; border-radius: 8px; padding: 6px; background: rgba(5, 150, 105, 0.05);">
+          <span style="font-size: 10px; font-weight: bold; color: #059669; display: block;">خاتم مصنع الإيمان</span>
+          <span style="font-size: 9px; color: #64748b;">معتمد رسمياً 🌾</span>
+        </div>
+      </div>
+
+      <script>window.onload = function() { window.print(); }<\/script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
+// Daily Attendance Report Printable Document
+function printDailyAttendanceReport() {
+  const employees = App.db.employees || [];
+  const logs = App.db.attendanceLog || [];
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayFormatted = new Intl.DateTimeFormat('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date());
+  const logoSrc = (typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png';
+
+  let presentCount = 0;
+  let absentCount = 0;
+  let unrecordedCount = 0;
+
+  const rows = employees.map((emp, index) => {
+    const rec = logs.find(a => a.empId === emp.id && a.date === todayStr);
+    let statusText = 'لم يسجل اليوم ⚪';
+    let statusBg = '#f1f5f9';
+    let statusColor = '#64748b';
+    let timeIn = '-';
+    let timeOut = '-';
+    let notes = '-';
+
+    if (rec) {
+      if (rec.type === 'حاضر') {
+        statusText = 'حاضر 🟢';
+        statusBg = '#dcfce7';
+        statusColor = '#15803d';
+        presentCount++;
+      } else if (rec.type === 'غياب') {
+        statusText = 'غائب 🔴';
+        statusBg = '#fee2e2';
+        statusColor = '#b91c1c';
+        absentCount++;
+      }
+      timeIn = rec.timeIn || '-';
+      timeOut = rec.timeOut || '-';
+      notes = rec.notes || '-';
+    } else {
+      unrecordedCount++;
+    }
+
+    return `
+      <tr>
+        <td style="text-align: center; font-weight: bold;">${index + 1}</td>
+        <td style="text-align: center;"><span class="badge-code">${emp.id}</span></td>
+        <td><strong>${emp.name}</strong></td>
+        <td>${emp.jobTitle}</td>
+        <td style="direction: ltr; text-align: center;">${emp.phone || '-'}</td>
+        <td style="text-align: center;"><span style="background: ${statusBg}; color: ${statusColor}; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 10px;">${statusText}</span></td>
+        <td style="text-align: center;">${timeIn}</td>
+        <td style="text-align: center;">${timeOut}</td>
+        <td>${notes}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="UTF-8">
+      <title>صحيفة الحضور والانصراف اليومية - مصنع الإيمان</title>
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        @page { size: A4 portrait; margin: 10mm; }
+        body { font-family: 'Cairo', sans-serif; padding: 15px; direction: rtl; color: #0f172a; margin: 0; background: #fff; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #059669; padding-bottom: 12px; margin-bottom: 15px; }
+        .logo-box { display: flex; align-items: center; gap: 14px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+        .kpi-card { border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; text-align: center; background: #f8fafc; }
+        .kpi-card span { font-size: 11px; color: #64748b; display: block; font-weight: 700; }
+        .kpi-card strong { font-size: 14px; color: #0f172a; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 5px; }
+        th, td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: right; }
+        th { background: #f1f5f9; font-weight: 800; color: #1e293b; text-align: center; }
+        .badge-code { background: #e0e7ff; color: #3730a3; padding: 2px 5px; border-radius: 4px; font-weight: bold; font-size: 10px; }
+        .footer-signatures { display: flex; justify-content: space-between; align-items: center; margin-top: 25px; border-top: 2px solid #cbd5e1; padding-top: 15px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="logo-box">
+          <img src="${logoSrc}" style="height: 55px; width: 55px; object-fit: contain;">
+          <div>
+            <h2 style="color: #059669; margin: 0; font-size: 1.3rem;">مصنع الإيمان للمكرونة 🌾</h2>
+            <p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b;">صحيفة الحضور والانصراف والغياب اليومي للعمال والموظفين</p>
+          </div>
+        </div>
+        <div style="text-align: left;">
+          <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">صحيفة يومية</h3>
+          <p style="margin: 2px 0 0 0; font-size: 11px; color: #059669; font-weight: bold;">${todayFormatted}</p>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span>إجمالي القوة</span>
+          <strong>${employees.length} موظف</strong>
+        </div>
+        <div class="kpi-card" style="background: #f0fdf4; border-color: #bbf7d0;">
+          <span style="color: #15803d;">حاضرون اليوم</span>
+          <strong style="color: #15803d;">${presentCount}</strong>
+        </div>
+        <div class="kpi-card" style="background: #fef2f2; border-color: #fecaca;">
+          <span style="color: #b91c1c;">غائبون اليوم</span>
+          <strong style="color: #b91c1c;">${absentCount}</strong>
+        </div>
+        <div class="kpi-card">
+          <span>لم يسجل بعد</span>
+          <strong>${unrecordedCount}</strong>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 25px;">#</th>
+            <th style="width: 60px;">الكود</th>
+            <th>اسم الموظف</th>
+            <th>الوظيفة</th>
+            <th style="width: 90px;">الهاتف</th>
+            <th style="width: 85px;">الحالة اليومية</th>
+            <th style="width: 75px;">وقت الحضور</th>
+            <th style="width: 75px;">وقت الانصراف</th>
+            <th>البيان والملاحظات</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+
+      <div class="footer-signatures">
+        <div>مسؤول الحضور: ____________________</div>
+        <div>المشرف العام: ____________________</div>
+        <div>اعتماد الإدارة: ____________________</div>
+      </div>
+
+      <script>window.onload = function() { window.print(); }<\/script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}

@@ -197,6 +197,9 @@
   .sidebar,
   .top-header,
   .app-footer,
+  #footer-container,
+  .mobile-bottom-nav,
+  #bottom-nav-container,
   .no-print,
   .mobile-menu-btn,
   .header-actions,
@@ -208,7 +211,12 @@
   .table td .btn,
   .modal-close,
   .modal-header,
-  .modal-footer {
+  .modal-footer,
+  #add-employee-section,
+  #add-truck-section,
+  #add-supplier-section,
+  #att-filter-tabs,
+  .page-summary-cards {
     display: none !important;
   }
 
@@ -231,11 +239,10 @@
 
   .card {
     box-shadow: none !important;
-    border: 1px solid #cbd5e1 !important;
+    border: none !important;
     margin-bottom: 12px !important;
-    padding: 12px !important;
+    padding: 0 !important;
     background: #ffffff !important;
-    page-break-inside: avoid;
   }
 
   .table-container {
