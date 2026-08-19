@@ -449,5 +449,34 @@ function renderInventoryReportContent() {
 }
 
 function printInventoryReport() {
-  window.print();
+  const contentEl = document.getElementById('printable-inventory-report');
+  if (!contentEl) {
+    window.print();
+    return;
+  }
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="UTF-8">
+      <title>تقرير جرد المخزون وحركة الأصناف الشامل - مصنع الإيمان</title>
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        @page { size: A4 landscape; margin: 8mm; }
+        body { font-family: 'Cairo', sans-serif; padding: 12px; direction: rtl; color: #0f172a; margin: 0; background: #fff; }
+        table { width: 100% !important; border-collapse: collapse !important; font-size: 10px !important; margin-top: 5px; }
+        th, td { border: 1px solid #cbd5e1 !important; padding: 6px 7px !important; text-align: right; }
+        th { background: #f8fafc !important; font-weight: 800; color: #1e293b; text-align: center; }
+        .no-print { display: none !important; }
+      </style>
+    </head>
+    <body>
+      ${contentEl.outerHTML}
+      <script>window.onload = function() { window.print(); }<\/script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
 }

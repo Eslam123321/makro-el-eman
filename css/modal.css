@@ -449,6 +449,14 @@
     background: #ffffff !important;
   }
 
+  #printable-inventory-report table,
+  #printable-inventory-report table th,
+  #printable-inventory-report table td {
+    font-size: 7.5pt !important;
+    padding: 4px 5px !important;
+    white-space: nowrap !important;
+  }
+
   .printable-modal table th:last-child,
   .printable-modal table td:last-child {
     display: table-cell !important;
