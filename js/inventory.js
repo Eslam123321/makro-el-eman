@@ -343,53 +343,53 @@ function renderInventoryReportContent() {
         </div>
       </div>
 
-      <!-- KPI Summary Cards Grid -->
-      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px;">
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; text-align: center;">
-          <span style="font-size: 0.7rem; color: #64748b; font-weight: bold; display: block;">إجمالي الشكاير المتوفرة</span>
-          <strong style="font-size: 1.15rem; color: #059669; display: block; margin-top: 2px;">${totalSacks} شكارة</strong>
-          <span style="font-size: 0.65rem; color: #94a3b8;">(${products.length} أصناف مسجلة)</span>
+      <!-- Inventory Valuation Summary KPI Cards -->
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px;">
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 4px; text-align: center;">
+          <span style="font-size: 0.68rem; color: #166534; font-weight: bold; display: block;">إجمالي الشكاير</span>
+          <strong style="font-size: 1rem; color: #059669; display: block; margin-top: 1px;">${totalSacks} شكارة</strong>
+          <span style="font-size: 0.6rem; color: #166534;">(${products.length} أصناف)</span>
         </div>
 
-        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px; text-align: center;">
-          <span style="font-size: 0.7rem; color: #1e40af; font-weight: bold; display: block;">تقييم المخزون بالتكلفة</span>
-          <strong style="font-size: 1.05rem; color: #1d4ed8; display: block; margin-top: 2px;">${App.formatCurrency(totalCostVal)}</strong>
-          <span style="font-size: 0.65rem; color: #1e40af;">رأس المال بالمخزن</span>
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 6px 4px; text-align: center;">
+          <span style="font-size: 0.68rem; color: #1e40af; font-weight: bold; display: block;">المخزون بالتكلفة</span>
+          <strong style="font-size: 0.95rem; color: #1d4ed8; display: block; margin-top: 1px;">${App.formatCurrency(totalCostVal)}</strong>
+          <span style="font-size: 0.6rem; color: #1e40af;">رأس المال</span>
         </div>
 
-        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 8px; text-align: center;">
-          <span style="font-size: 0.7rem; color: #065f46; font-weight: bold; display: block;">القيمة البيعية المتوقعة</span>
-          <strong style="font-size: 1.05rem; color: #047857; display: block; margin-top: 2px;">${App.formatCurrency(totalSellVal)}</strong>
-          <span style="font-size: 0.65rem; color: #065f46;">إجمالي الإيراد المتوقع</span>
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 6px 4px; text-align: center;">
+          <span style="font-size: 0.68rem; color: #065f46; font-weight: bold; display: block;">القيمة البيعية</span>
+          <strong style="font-size: 0.95rem; color: #047857; display: block; margin-top: 1px;">${App.formatCurrency(totalSellVal)}</strong>
+          <span style="font-size: 0.6rem; color: #065f46;">الإيراد المتوقع</span>
         </div>
 
-        <div style="background: #fdf4ff; border: 1px solid #f0abfc; border-radius: 8px; padding: 8px; text-align: center;">
-          <span style="font-size: 0.7rem; color: #86198f; font-weight: bold; display: block;">هامش الأرباح المتوقع</span>
-          <strong style="font-size: 1.05rem; color: #a21caf; display: block; margin-top: 2px;">+${App.formatCurrency(totalProfitMargin)}</strong>
-          <span style="font-size: 0.65rem; color: #86198f;">ربح البضاعة المتوفرة</span>
+        <div style="background: #fdf4ff; border: 1px solid #f0abfc; border-radius: 6px; padding: 6px 4px; text-align: center;">
+          <span style="font-size: 0.68rem; color: #86198f; font-weight: bold; display: block;">هامش الأرباح</span>
+          <strong style="font-size: 0.95rem; color: #a21caf; display: block; margin-top: 1px;">+${App.formatCurrency(totalProfitMargin)}</strong>
+          <span style="font-size: 0.6rem; color: #86198f;">الربح المتوقع</span>
         </div>
 
-        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px; text-align: center;">
-          <span style="font-size: 0.7rem; color: #92400e; font-weight: bold; display: block;">منصرف المبيعات بالفترة</span>
-          <strong style="font-size: 1.05rem; color: #b45309; display: block; margin-top: 2px;">${totalSoldInPeriod} شكارة</strong>
-          <span style="font-size: 0.65rem; color: #92400e;">(${periodInvoices.length} فاتورة مسجلة)</span>
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px 4px; text-align: center;">
+          <span style="font-size: 0.68rem; color: #92400e; font-weight: bold; display: block;">منصرف المبيعات</span>
+          <strong style="font-size: 0.95rem; color: #b45309; display: block; margin-top: 1px;">${totalSoldInPeriod} شكارة</strong>
+          <span style="font-size: 0.6rem; color: #92400e;">(${periodInvoices.length} فاتورة)</span>
         </div>
       </div>
 
-      <!-- Inventory Breakdown Table -->
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; border: 1px solid #e2e8f0; font-size: 0.78rem;">
-        <thead style="background: #f1f5f9;">
+      <!-- Inventory Breakdown Table (100% Fit without truncation) -->
+      <table style="width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 14px; border: 1px solid #cbd5e1; font-size: 0.72rem;">
+        <thead style="background: #f8fafc;">
           <tr>
-            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">كود الصنف</th>
-            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">اسم المنتج والعبوة</th>
-            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">الفئة والدرجة</th>
-            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">المخزون الحالي</th>
-            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: left;">سعر التكلفة</th>
-            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: left;">إجمالي التكلفة</th>
-            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: left;">سعر البيع</th>
-            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: left;">إجمالي البيع</th>
-            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">المبيعات بالفترة</th>
-            <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">حالة المخزون</th>
+            <th style="width: 8%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">كود الصنف</th>
+            <th style="width: 16%; padding: 4px 4px; border: 1px solid #cbd5e1; text-align: right;">اسم المنتج والعبوة</th>
+            <th style="width: 9%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">الفئة</th>
+            <th style="width: 10%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">المخزون</th>
+            <th style="width: 10%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">سعر التكلفة</th>
+            <th style="width: 11%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">إجمالي التكلفة</th>
+            <th style="width: 10%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">سعر البيع</th>
+            <th style="width: 11%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">إجمالي البيع</th>
+            <th style="width: 8%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">المبيعات</th>
+            <th style="width: 7%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">الحالة</th>
           </tr>
         </thead>
         <tbody>
@@ -398,33 +398,31 @@ function renderInventoryReportContent() {
             const sellTotal = (p.stock || 0) * (p.sellPrice || 0);
             const soldQty = productSoldMap[p.name] || 0;
             
-            let statusTag = `<span style="background: #dcfce7; color: #15803d; padding: 2px 6px; border-radius: 4px; font-weight: bold;">متوفر 🟢</span>`;
+            let statusTag = `<span style="color: #15803d; font-weight: bold;">متوفر 🟢</span>`;
             if (p.stock <= 0) {
-              statusTag = `<span style="background: #fee2e2; color: #b91c1c; padding: 2px 6px; border-radius: 4px; font-weight: bold;">نفد 🔴</span>`;
+              statusTag = `<span style="color: #b91c1c; font-weight: bold;">نفد 🔴</span>`;
             } else if (p.stock < 150) {
-              statusTag = `<span style="background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; font-weight: bold;">منخفض ⚠️</span>`;
+              statusTag = `<span style="color: #b45309; font-weight: bold;">منخفض ⚠️</span>`;
             }
 
             return `
               <tr>
-                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; font-weight: bold;">${p.id}</td>
-                <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">
+                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${p.id}</td>
+                <td style="padding: 4px 4px; border: 1px solid #cbd5e1; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                   <strong>${p.name}</strong>
                 </td>
-                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center;">
-                  <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${p.category}</span>
+                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">${p.category}</td>
+                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: ${p.stock < 150 ? '#dc2626' : '#059669'};">
+                  ${p.stock} ش
                 </td>
-                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold; font-size: 0.85rem; color: ${p.stock < 150 ? '#dc2626' : '#059669'};">
-                  ${p.stock} شكارة
+                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">${App.formatCurrency(p.costPrice)}</td>
+                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #1d4ed8;">${App.formatCurrency(costTotal)}</td>
+                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">${App.formatCurrency(p.sellPrice)}</td>
+                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #059669;">${App.formatCurrency(sellTotal)}</td>
+                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">
+                  ${soldQty > 0 ? `<span style="color: #b45309;">${soldQty} ش</span>` : '<span style="color: #94a3b8;">-</span>'}
                 </td>
-                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: left;">${App.formatCurrency(p.costPrice)}</td>
-                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: left; font-weight: bold; color: #1d4ed8;">${App.formatCurrency(costTotal)}</td>
-                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: left;">${App.formatCurrency(p.sellPrice)}</td>
-                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: left; font-weight: bold; color: #059669;">${App.formatCurrency(sellTotal)}</td>
-                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold;">
-                  ${soldQty > 0 ? `<span style="color: #b45309;">${soldQty} شكارة</span>` : '<span style="color: #94a3b8;">-</span>'}
-                </td>
-                <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center;">${statusTag}</td>
+                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center; font-size: 0.65rem;">${statusTag}</td>
               </tr>
             `;
           }).join('')}
