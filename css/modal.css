@@ -215,8 +215,7 @@
   #add-employee-section,
   #add-truck-section,
   #add-supplier-section,
-  #att-filter-tabs,
-  .page-summary-cards {
+  #att-filter-tabs {
     display: none !important;
   }
 
@@ -235,6 +234,54 @@
     margin: 0 !important;
     overflow: visible !important;
     direction: rtl !important;
+  }
+
+  /* Make Summary KPI Cards visible and clean in print */
+  .page-summary-cards {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+    width: 100% !important;
+    page-break-inside: avoid !important;
+  }
+
+  .page-summary-cards .summary-card,
+  .page-summary-cards .card {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    padding: 8px 10px !important;
+    background: #f8fafc !important;
+    box-shadow: none !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .page-summary-cards .summary-card h3,
+  .page-summary-cards .summary-card h2,
+  .page-summary-cards .card h3 {
+    font-size: 11pt !important;
+    font-weight: 800 !important;
+    margin: 1px 0 !important;
+  }
+
+  .page-summary-cards .summary-card p,
+  .page-summary-cards .card p {
+    font-size: 8pt !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    margin: 0 !important;
+  }
+
+  .page-summary-cards .brand-icon,
+  .page-summary-cards .summary-icon {
+    display: flex !important;
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 10pt !important;
   }
 
   .card {

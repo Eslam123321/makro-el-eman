@@ -358,6 +358,7 @@ function printSuppliersRegistry() {
   const suppliers = App.db.suppliers || [];
   const logoSrc = (typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png';
   const totalDues = suppliers.reduce((sum, s) => sum + (s.totalBalance || 0), 0);
+  const uniqueFlourTypes = new Set(suppliers.map(s => s.flourType)).size;
 
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`
@@ -365,16 +366,22 @@ function printSuppliersRegistry() {
     <html dir="rtl" lang="ar">
     <head>
       <meta charset="UTF-8">
-      <title>كشف حساب وسجل المطاحن - مصنع الإيمان</title>
+      <title>كشف حساب وسجل المطاحن الشامل - مصنع الإيمان</title>
       <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
       <style>
-        body { font-family: 'Cairo', sans-serif; padding: 25px; direction: rtl; color: #1e293b; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #059669; padding-bottom: 12px; margin-bottom: 18px; }
+        @page { size: A4 portrait; margin: 10mm; }
+        body { font-family: 'Cairo', sans-serif; padding: 15px; direction: rtl; color: #0f172a; margin: 0; background: #fff; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #059669; padding-bottom: 12px; margin-bottom: 15px; }
         .logo-box { display: flex; align-items: center; gap: 12px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
-        th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: right; }
-        th { background: #f8fafc; font-weight: 700; }
-        .total-box { margin-top: 18px; padding: 12px; background: #fee2e2; border-radius: 8px; font-weight: bold; text-align: left; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+        .kpi-card { border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; text-align: center; background: #f8fafc; }
+        .kpi-card span { font-size: 11px; color: #64748b; display: block; font-weight: 700; margin-bottom: 2px; }
+        .kpi-card strong { font-size: 13px; color: #0f172a; display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 11px; }
+        th, td { border: 1px solid #cbd5e1; padding: 7px 10px; text-align: right; }
+        th { background: #f8fafc; font-weight: 800; color: #1e293b; border-bottom: 2px solid #94a3b8; }
+        .total-box { margin-top: 15px; padding: 10px 14px; background: #fee2e2; border-radius: 6px; font-weight: bold; text-align: left; font-size: 12px; }
+        .footer-signatures { display: flex; justify-content: space-between; align-items: center; margin-top: 25px; border-top: 2px solid #cbd5e1; padding-top: 15px; font-size: 11px; }
       </style>
     </head>
     <body>
@@ -382,32 +389,54 @@ function printSuppliersRegistry() {
         <div class="logo-box">
           <img src="${logoSrc}" style="height: 55px; width: 55px; object-fit: contain;">
           <div>
-            <h2 style="color: #059669; margin: 0;">مصنع الإيمان للمكرونة</h2>
-            <p style="margin: 0; font-size: 11px; color: #64748b;">كشف حساب وسجل مستحقات مطاحن الدقيق الخام</p>
+            <h2 style="color: #059669; margin: 0; font-size: 1.3rem;">مصنع الإيمان للمكرونة 🌾</h2>
+            <p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b;">إدارة الموردين والمطاحن | كشف حساب ومسحوبات الدقيق الخام</p>
           </div>
         </div>
-        <div>
-          <p style="margin: 0; font-size: 12px;">تاريخ الطباعة: <strong>${new Date().toLocaleDateString('ar-EG')}</strong></p>
+        <div style="text-align: left;">
+          <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">سجل المطاحن المعتمد</h3>
+          <p style="margin: 2px 0 0 0; font-size: 11px; color: #475569;">تاريخ الطباعة: <strong>${new Date().toLocaleDateString('ar-EG')}</strong></p>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span>إجمالي المطاحن والموردين</span>
+          <strong>${suppliers.length} مطحن</strong>
+        </div>
+        <div class="kpi-card">
+          <span>أنواع الدقيق الموردة</span>
+          <strong>${uniqueFlourTypes || 3} درجات دقيق</strong>
+        </div>
+        <div class="kpi-card" style="background: #fef2f2; border-color: #fecaca;">
+          <span style="color: #b91c1c;">إجمالي المستحقات (علينا)</span>
+          <strong style="color: #dc2626;">${App.formatCurrency(totalDues)}</strong>
+        </div>
+        <div class="kpi-card" style="background: #f0fdf4; border-color: #bbf7d0;">
+          <span style="color: #15803d;">حالة توريدات الخامات</span>
+          <strong style="color: #15803d;">مستقرة 🟢</strong>
         </div>
       </div>
 
       <table>
         <thead>
           <tr>
+            <th style="width: 30px; text-align: center;">#</th>
             <th>كود المطحن</th>
             <th>اسم المطحن / المورد</th>
-            <th>الهاتف</th>
+            <th>الهاتف والعنوان</th>
             <th>نوع الدقيق المورد</th>
             <th>سعر الطن المعتمد</th>
             <th>المستحقات المتبقية للمطحن</th>
           </tr>
         </thead>
         <tbody>
-          ${suppliers.map(s => `
+          ${suppliers.map((s, idx) => `
             <tr>
+              <td style="text-align: center; font-weight: bold;">${idx + 1}</td>
               <td><strong>${s.id}</strong></td>
               <td><strong>${s.name}</strong></td>
-              <td>${s.phone}</td>
+              <td>${s.phone} ${s.address ? '- ' + s.address : ''}</td>
               <td>${s.flourType}</td>
               <td>${App.formatCurrency(s.unitPrice)}</td>
               <td><strong style="color: ${s.totalBalance > 0 ? '#dc2626' : '#059669'};">${App.formatCurrency(s.totalBalance)}</strong></td>
@@ -417,7 +446,13 @@ function printSuppliersRegistry() {
       </table>
 
       <div class="total-box">
-        إجمالي مستحقات المطاحن المتبقية (علينا): <span style="color: #dc2626; font-size: 16px;">${App.formatCurrency(totalDues)}</span>
+        إجمالي مستحقات مطاحن الدقيق المتبقية (علينا): <span style="color: #dc2626; font-size: 15px;">${App.formatCurrency(totalDues)}</span>
+      </div>
+
+      <div class="footer-signatures">
+        <div>إعداد ومراجعة المشتريات: ____________________</div>
+        <div>رئيس الحسابات: ____________________</div>
+        <div>اعتماد المدير العام: ____________________</div>
       </div>
 
       <script>window.onload = function() { window.print(); }<\/script>
