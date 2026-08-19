@@ -68,8 +68,14 @@
 
           <div class="grid grid-cols-2 gap-4 mb-4">
             <div class="form-group">
-              <label>المسمى الوظيفي / القسم</label>
-              <input type="text" id="emp-job" class="form-control" placeholder="مشرف خط إنتاج - فني تعبئة - سائق">
+              <label>المسمى الوظيفي / القسم <span class="text-danger">*</span></label>
+              <select id="emp-job-select" class="form-control" onchange="toggleCustomJobInput(this.value)">
+                <option value="مشرف خط إنتاج">مشرف خط إنتاج 🏭</option>
+                <option value="فني تعبئة وتغليف">فني تعبئة وتغليف 📦</option>
+                <option value="سائق (توزيع / نقل)">سائق (توزيع / نقل) 🚚</option>
+                <option value="أخرى">أخرى (كتابة مسمى مخصص...) ✍️</option>
+              </select>
+              <input type="text" id="emp-job-custom" class="form-control mt-2" placeholder="اكتب المسمى الوظيفي المخصص..." style="display: none;">
             </div>
             <div class="form-group">
               <label>الراتب الشهري الأساسي (جنيه) <span class="text-danger">*</span></label>

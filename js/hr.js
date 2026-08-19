@@ -552,11 +552,36 @@ function disburseSalary(empId) {
   });
 }
 
+function toggleCustomJobInput(val) {
+  const customInput = document.getElementById('emp-job-custom');
+  if (!customInput) return;
+  if (val === 'أخرى') {
+    customInput.style.display = 'block';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+    customInput.value = '';
+  }
+}
+
 // Add New Employee Form
 function saveNewEmployee() {
   const name = document.getElementById('emp-name').value.trim();
   const phone = document.getElementById('emp-phone') ? document.getElementById('emp-phone').value.trim() : '';
-  const job = document.getElementById('emp-job').value.trim();
+  const jobSelect = document.getElementById('emp-job-select');
+  const jobCustom = document.getElementById('emp-job-custom');
+  let job = 'مشرف خط إنتاج';
+
+  if (jobSelect) {
+    if (jobSelect.value === 'أخرى') {
+      job = (jobCustom && jobCustom.value.trim()) ? jobCustom.value.trim() : 'موظف مصنع';
+    } else {
+      job = jobSelect.value;
+    }
+  } else if (document.getElementById('emp-job')) {
+    job = document.getElementById('emp-job').value.trim() || 'عامل مصنع';
+  }
+
   const salary = parseFloat(document.getElementById('emp-salary').value) || 0;
   const hireDate = document.getElementById('emp-hire-date') && document.getElementById('emp-hire-date').value ? document.getElementById('emp-hire-date').value : new Date().toISOString().split('T')[0];
   const payDay = document.getElementById('emp-pay-day') && document.getElementById('emp-pay-day').value ? parseInt(document.getElementById('emp-pay-day').value) : 30;
@@ -575,6 +600,7 @@ function saveNewEmployee() {
     hireDate: hireDate,
     payDay: Math.min(31, Math.max(1, payDay || 30)),
     advances: 0,
+    deductions: 0,
     absences: 0,
     status: 'نشط'
   };
@@ -589,7 +615,11 @@ function saveNewEmployee() {
   // Reset inputs
   document.getElementById('emp-name').value = '';
   if (document.getElementById('emp-phone')) document.getElementById('emp-phone').value = '';
-  document.getElementById('emp-job').value = '';
+  if (jobSelect) jobSelect.value = 'مشرف خط إنتاج';
+  if (jobCustom) {
+    jobCustom.value = '';
+    jobCustom.style.display = 'none';
+  }
   document.getElementById('emp-salary').value = '';
   if (document.getElementById('emp-hire-date')) document.getElementById('emp-hire-date').value = '';
   if (document.getElementById('emp-pay-day')) document.getElementById('emp-pay-day').value = '';
