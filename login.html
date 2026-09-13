@@ -165,10 +165,13 @@
         return;
       }
 
-      // Automatically convert plain username to email format if user didn't type @
+      // Automatically convert plain username to email format if user didn't type @ or domain
       let email = uInput;
       if (!email.includes('@')) {
-        email = `${email.toLowerCase()}@eleman.com`;
+        email = `${email.toLowerCase()}@eman.com`;
+      } else if (!email.includes('.')) {
+        // e.g. user entered admin@eman -> becomes admin@eman.com
+        email = `${email.toLowerCase()}.com`;
       }
 
       btn.disabled = true;
@@ -200,7 +203,7 @@
         );
 
         if (!userInDb) {
-          const isAdmin = cleanEmail === 'admin@eleman.com' || cleanEmail.startsWith('admin');
+          const isAdmin = cleanEmail === 'admin@eman.com' || cleanEmail === 'admin@eleman.com' || cleanEmail.startsWith('admin');
           userInDb = {
             id: isAdmin ? 'USR-1' : `USR-${Date.now().toString().slice(-4)}`,
             name: isAdmin ? 'المدير العام' : cleanEmail.split('@')[0],

@@ -109,7 +109,7 @@ const App = {
     try {
       const u = JSON.parse(userStr);
       // Ensure superadmin has full permissions
-      if (u.id === 'USR-1' || u.email === 'admin@eleman.com') {
+      if (u.id === 'USR-1' || (u.email && u.email.startsWith('admin@')) || u.role === 'مدير عام' || u.username === 'admin') {
         u.role = 'مدير عام';
         u.permissions = ['dashboard', 'sales', 'inventory', 'suppliers', 'customers', 'hr', 'expenses', 'reports', 'users', 'notifications'];
       }
@@ -145,8 +145,8 @@ const App = {
   hasPermission(permissionKey) {
     const user = this.getCurrentUser();
     if (!user || user.status === 'معطل') return false;
-    // Only the Super Admin (USR-1 or admin with General Manager role or admin@eleman.com) has automatic full access
-    if (user.id === 'USR-1' || user.email === 'admin@eleman.com' || (user.username === 'admin' && user.role === 'مدير عام')) {
+    // Only the Super Admin (USR-1, General Manager, or admin email) has automatic full access
+    if (user.id === 'USR-1' || user.role === 'مدير عام' || (user.email && user.email.startsWith('admin@')) || user.username === 'admin') {
       return true;
     }
     // Any other user ONLY has permissions that are explicitly in their permissions array
@@ -157,7 +157,7 @@ const App = {
   isSuperAdmin(targetUser = null) {
     const user = targetUser || this.getCurrentUser();
     if (!user) return false;
-    return user.id === 'USR-1' || user.email === 'admin@eleman.com' || (user.username === 'admin' && user.role === 'مدير عام') || user.role === 'مدير عام';
+    return user.id === 'USR-1' || user.role === 'مدير عام' || (user.email && user.email.startsWith('admin@')) || user.username === 'admin';
   },
 
   checkPageAccess(pageKey) {

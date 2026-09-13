@@ -62,13 +62,16 @@ function loadUsersTable(usersData = null) {
   if (!App.db.users) App.db.users = [];
 
   // Ensure Admin user always exists in DB and is active
-  let adminRecord = App.db.users.find(u => u.id === 'USR-1' || u.email === 'admin@eleman.com' || (u.username === 'admin' && u.role === 'مدير عام'));
+  const curUser = App.getCurrentUser();
+  const currentAdminEmail = (curUser && curUser.email) ? curUser.email : 'admin@eman.com';
+
+  let adminRecord = App.db.users.find(u => u.id === 'USR-1' || App.isSuperAdmin(u));
   if (!adminRecord) {
     adminRecord = {
       id: 'USR-1',
       username: 'admin',
       name: 'المدير العام',
-      email: 'admin@eleman.com',
+      email: currentAdminEmail,
       role: 'مدير عام',
       phone: '01000000000',
       status: 'نشط',
@@ -77,7 +80,11 @@ function loadUsersTable(usersData = null) {
     };
     App.db.users.unshift(adminRecord);
     App.save();
-  } else if (!adminRecord.role || adminRecord.role !== 'مدير عام') {
+  } else {
+    // If the logged in super admin has an updated email, sync it to adminRecord
+    if (curUser && App.isSuperAdmin(curUser) && curUser.email && (!adminRecord.email || adminRecord.email.includes('eleman.com'))) {
+      adminRecord.email = curUser.email;
+    }
     adminRecord.role = 'مدير عام';
     adminRecord.status = 'نشط';
     adminRecord.permissions = ['dashboard', 'sales', 'inventory', 'suppliers', 'customers', 'hr', 'expenses', 'reports', 'users', 'notifications'];
@@ -116,9 +123,9 @@ function loadUsersTable(usersData = null) {
   };
 
   tbody.innerHTML = filtered.map(u => {
-    const isMasterAdmin = u.id === 'USR-1' || u.email === 'admin@eleman.com' || (u.username === 'admin' && u.role === 'مدير عام');
+    const isMasterAdmin = App.isSuperAdmin(u);
     const isActive = u.status === 'نشط';
-    const emailDisplay = u.email || (u.username ? `${u.username}@eleman.com` : 'بدون بريد');
+    const emailDisplay = u.email || (u.username ? `${u.username}@eman.com` : 'بدون بريد');
 
     const badgesHTML = (u.permissions || []).map(pKey => {
       const label = permissionLabels[pKey] || pKey;
@@ -270,7 +277,7 @@ function toggleUserStatus(userId) {
   const user = (App.db.users || []).find(u => u.id === userId);
   if (!user) return;
 
-  if (user.id === 'USR-1' || user.email === 'admin@eleman.com') {
+  if (user.id === 'USR-1' || App.isSuperAdmin(user)) {
     App.showToast('لا يمكن تعطيل حساب المدير العام الرئيسي للنظام!', 'warning');
     return;
   }
@@ -413,7 +420,7 @@ function deleteUserAccount(userId) {
   const user = (App.db.users || []).find(u => u.id === userId);
   if (!user) return;
 
-  if (user.id === 'USR-1' || user.email === 'admin@eleman.com') {
+  if (user.id === 'USR-1' || App.isSuperAdmin(user)) {
     App.showToast('عفواً، لا يمكن حذف حساب المدير العام الرئيسي لحماية النظام!', 'warning');
     return;
   }
@@ -448,7 +455,7 @@ function openChangeMyPasswordModal() {
   const user = App.getCurrentUser();
   const emailInput = document.getElementById('my-account-email');
   if (emailInput) {
-    emailInput.value = (user && user.email) ? user.email : 'admin@eleman.com';
+    emailInput.value = (user && user.email) ? user.email : 'admin@eman.com';
   }
   const p1 = document.getElementById('my-new-password');
   const p2 = document.getElementById('my-new-password-confirm');
@@ -476,7 +483,7 @@ async function saveMyNewPassword() {
   }
 
   const currentUser = App.getCurrentUser();
-  const userEmail = (currentUser && currentUser.email) ? currentUser.email : 'admin@eleman.com';
+  const userEmail = (currentUser && currentUser.email) ? currentUser.email : 'admin@eman.com';
 
   // 1. Update in Firebase Auth directly if supported
   try {
