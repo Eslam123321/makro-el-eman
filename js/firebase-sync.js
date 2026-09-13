@@ -67,7 +67,7 @@ const FirebaseSync = {
       // User is not signed in
       if (!isLoginPage) {
         // Redirect to login page if session is missing
-        const currentSession = localStorage.getItem('eleman_current_user');
+        const currentSession = sessionStorage.getItem('eleman_current_user');
         if (!currentSession) {
           window.location.href = 'login.html';
         }
@@ -131,6 +131,7 @@ const FirebaseSync = {
 
     if (userInDb && userInDb.status === 'معطل') {
       await this.auth.signOut();
+      sessionStorage.removeItem('eleman_current_user');
       localStorage.removeItem('eleman_current_user');
       throw new Error('عفواً، هذا الحساب معطل من قبل إدارة المصنع. يرجى مراجعة المدير العام.');
     }
@@ -148,6 +149,7 @@ const FirebaseSync = {
     } catch (e) {
       console.warn('Auth signOut notice:', e);
     }
+    sessionStorage.removeItem('eleman_current_user');
     localStorage.removeItem('eleman_current_user');
     window.location.href = 'login.html';
   },

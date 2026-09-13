@@ -1,5 +1,5 @@
 /* Service Worker for Makro El-Eman ERP PWA */
-const CACHE_NAME = 'makro-eleman-v1';
+const CACHE_NAME = 'makro-eleman-v4';
 const STATIC_ASSETS = [
   './',
   './index.html',

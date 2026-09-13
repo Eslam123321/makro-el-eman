@@ -100,9 +100,9 @@ class StorageManager {
 const App = {
   db: StorageManager.getDB(),
 
-  // Current Logged-in User Session
+  // Current Logged-in User Session (Strict Session: closing browser/tab requires login)
   getCurrentUser() {
-    const userStr = localStorage.getItem('eleman_current_user');
+    const userStr = sessionStorage.getItem('eleman_current_user');
     if (!userStr) {
       return null;
     }
@@ -117,7 +117,9 @@ const App = {
   },
 
   setCurrentUser(user) {
-    localStorage.setItem('eleman_current_user', JSON.stringify(user));
+    sessionStorage.setItem('eleman_current_user', JSON.stringify(user));
+    // Clean up any legacy localStorage entry
+    localStorage.removeItem('eleman_current_user');
   },
 
   logout() {
@@ -126,6 +128,7 @@ const App = {
         FirebaseSync.auth.signOut().catch(() => {});
       } catch (e) {}
     }
+    sessionStorage.removeItem('eleman_current_user');
     localStorage.removeItem('eleman_current_user');
     window.location.href = 'login.html';
   },

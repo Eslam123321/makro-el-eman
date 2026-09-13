@@ -18,6 +18,12 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap">
 
+  <script>
+    // Strict Security Guard: Always clear any existing session when on login page
+    sessionStorage.removeItem('eleman_current_user');
+    localStorage.removeItem('eleman_current_user');
+  </script>
+
   <style>
     body {
       background: radial-gradient(circle at 10% 20%, #ecfdf5 0%, #f8fafc 50%, #ffffff 100%);
@@ -130,9 +136,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="js/firebase-sync.js"></script>
+  <script src="js/firebase-sync.js?v=4.0"></script>
   <script src="js/logo.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=4.0"></script>
   <script>
     function togglePasswordVisibility() {
       const pwd = document.getElementById('password');
@@ -159,7 +165,7 @@
         return;
       }
 
-      // Convert username without @ to standard email format if needed
+      // Automatically convert plain username to email format if user didn't type @
       let email = uInput;
       if (!email.includes('@')) {
         email = `${email.toLowerCase()}@eleman.com`;
@@ -169,53 +175,83 @@
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin ml-2"></i> جاري التحقق من السحابة...`;
 
       try {
-        if (typeof FirebaseSync !== 'undefined' && FirebaseSync.auth) {
-          // 1. Authenticate with Firebase Auth directly
-          const fbUser = await FirebaseSync.loginWithFirebase(email, pInput);
-          const currentUser = App.getCurrentUser();
-          const displayName = (currentUser && currentUser.name) ? currentUser.name : (fbUser.displayName || 'المدير العام');
-
-          App.showToast(`تم تسجيل الدخول بنجاح! مرحباً بك يا ${displayName} ✨`, 'success');
-          setTimeout(() => {
-            window.location.href = 'index.html';
-          }, 400);
-        } else {
-          // Offline fallback
-          App.db = StorageManager.getDB();
-          const users = App.db.users || [];
-          const found = users.find(u => 
-            (u.email && u.email.toLowerCase() === email.toLowerCase()) ||
-            (u.username && u.username.toLowerCase() === uInput.toLowerCase())
-          );
-
-          if (!found || found.password !== pInput) {
-            throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة');
-          }
-          if (found.status === 'معطل') {
-            throw new Error('عفواً، هذا الحساب معطل حالياً من قبل إدارة المصنع');
-          }
-
-          App.setCurrentUser(found);
-          App.showToast(`تم تسجيل الدخول محلياً! مرحباً بك يا ${found.name}`, 'success');
-          setTimeout(() => {
-            window.location.href = 'index.html';
-          }, 400);
+        if (typeof firebase === 'undefined' || !firebase.auth) {
+          throw new Error('تعذر تحميل مكتبات فايربيز. يرجى التأكد من اتصال الإنترنت وتحديث الصفحة.');
         }
+
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+
+        const auth = firebase.auth();
+        // Strict Session: Closing tab/browser requires re-login!
+        await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+
+        // 1. Direct Firebase Auth Sign In
+        const userCredential = await auth.signInWithEmailAndPassword(email, pInput);
+        const fbUser = userCredential.user;
+
+        // 2. Fetch fresh DB to check status & permissions
+        App.db = StorageManager.getDB();
+        const cleanEmail = fbUser.email.toLowerCase();
+        let userInDb = (App.db.users || []).find(u => 
+          (u.email && u.email.toLowerCase() === cleanEmail) || 
+          (u.username && u.username.toLowerCase() === cleanEmail.split('@')[0])
+        );
+
+        if (!userInDb) {
+          const isAdmin = cleanEmail === 'admin@eleman.com' || cleanEmail.startsWith('admin');
+          userInDb = {
+            id: isAdmin ? 'USR-1' : `USR-${Date.now().toString().slice(-4)}`,
+            name: isAdmin ? 'المدير العام' : cleanEmail.split('@')[0],
+            username: cleanEmail.split('@')[0],
+            email: cleanEmail,
+            role: isAdmin ? 'مدير عام' : 'موظف مبيعات',
+            status: 'نشط',
+            createdAt: new Date().toISOString().slice(0, 10),
+            permissions: isAdmin 
+              ? ['dashboard', 'sales', 'inventory', 'suppliers', 'customers', 'hr', 'expenses', 'reports', 'users', 'notifications']
+              : ['dashboard', 'sales', 'customers']
+          };
+          if (!App.db.users) App.db.users = [];
+          App.db.users.push(userInDb);
+          if (typeof FirebaseSync !== 'undefined' && typeof FirebaseSync.pushToCloud === 'function') {
+            FirebaseSync.pushToCloud(true);
+          }
+        }
+
+        if (userInDb.status === 'معطل') {
+          await auth.signOut();
+          sessionStorage.removeItem('eleman_current_user');
+          localStorage.removeItem('eleman_current_user');
+          throw new Error('عفواً، هذا الحساب معطل حالياً من قبل إدارة المصنع');
+        }
+
+        // Set strictly in sessionStorage so closing browser or tab requires logging in again!
+        App.setCurrentUser(userInDb);
+
+        App.showToast(`تم تسجيل الدخول بنجاح! مرحباً بك يا ${userInDb.name} ✨`, 'success');
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 400);
+
       } catch (err) {
-        console.error('Login error:', err);
+        console.error('Firebase Login Error:', err);
         let errorMsg = 'تعذر تسجيل الدخول';
         const code = err.code || '';
 
         if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
           errorMsg = 'كلمة المرور غير صحيحة أو البريد الإلكتروني غير متطابق!';
         } else if (code === 'auth/user-not-found') {
-          errorMsg = 'عفواً، لا يوجد حساب مسجل بهذا البريد الإلكتروني في السحابة.';
+          errorMsg = 'عفواً، لا يوجد حساب مسجل بهذا البريد الإلكتروني في فايربيز.';
         } else if (code === 'auth/invalid-email') {
           errorMsg = 'صيغة البريد الإلكتروني غير صحيحة.';
         } else if (code === 'auth/user-disabled') {
-          errorMsg = 'عفواً، تم تعطيل هذا الحساب من قبل إدارة المصنع.';
+          errorMsg = 'عفواً، هذا الحساب معطل من قبل إدارة المصنع.';
         } else if (code === 'auth/too-many-requests') {
-          errorMsg = 'تم حظر المحاولات مؤقتاً بسبب كثرة المحاولات الخاطئة. يرجى الانتظار دقيقة والمحاولة مجدداً.';
+          errorMsg = 'تم حظر المحاولات مؤقتاً لكثرة المحاولات الخاطئة. انتظر دقيقة وحاول مجدداً.';
+        } else if (code === 'auth/network-request-failed') {
+          errorMsg = 'تعذر الاتصال بسحابة فايربيز. يرجى التأكد من اتصال الإنترنت.';
         } else if (err.message) {
           errorMsg = err.message;
         }
