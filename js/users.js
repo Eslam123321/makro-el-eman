@@ -63,32 +63,44 @@ function loadUsersTable(usersData = null) {
 
   // Ensure Admin user always exists in DB and is active
   const curUser = App.getCurrentUser();
-  const currentAdminEmail = (curUser && curUser.email) ? curUser.email : 'admin@eman.com';
+  const currentAdminEmail = (curUser && curUser.email) ? curUser.email.toLowerCase() : 'admin@eman.com';
+
+  // Auto-cleanup: remove obsolete test emails ('sayd@eman') or duplicate USR-1 records
+  const initialLen = App.db.users.length;
+  App.db.users = App.db.users.filter(u => {
+    const em = (u.email || '').toLowerCase();
+    if (em === 'sayd@eman') return false; // Clean up old test email
+    // If duplicate USR-1 exists and doesn't match active admin email
+    if (u.id === 'USR-1' && em && currentAdminEmail && em !== currentAdminEmail && (em === 'admin@eleman.com' || em.includes('sayd'))) {
+      return false;
+    }
+    return true;
+  });
 
   let adminRecord = App.db.users.find(u => u.id === 'USR-1' || App.isSuperAdmin(u));
   if (!adminRecord) {
     adminRecord = {
       id: 'USR-1',
-      username: 'admin',
+      username: currentAdminEmail.split('@')[0],
       name: 'المدير العام',
       email: currentAdminEmail,
       role: 'مدير عام',
       phone: '01000000000',
       status: 'نشط',
       permissions: ['dashboard', 'sales', 'inventory', 'suppliers', 'customers', 'hr', 'expenses', 'reports', 'users', 'notifications'],
-      createdAt: '2025-01-01'
+      createdAt: '2026-09-13'
     };
     App.db.users.unshift(adminRecord);
     App.save();
   } else {
-    // If the logged in super admin has an updated email, sync it to adminRecord
-    if (curUser && App.isSuperAdmin(curUser) && curUser.email && (!adminRecord.email || adminRecord.email.includes('eleman.com'))) {
-      adminRecord.email = curUser.email;
-    }
+    adminRecord.id = 'USR-1';
+    if (currentAdminEmail) adminRecord.email = currentAdminEmail;
     adminRecord.role = 'مدير عام';
     adminRecord.status = 'نشط';
     adminRecord.permissions = ['dashboard', 'sales', 'inventory', 'suppliers', 'customers', 'hr', 'expenses', 'reports', 'users', 'notifications'];
-    App.save();
+    if (App.db.users.length !== initialLen) {
+      App.save();
+    }
   }
 
   const users = usersData || App.db.users || [];
@@ -124,6 +136,10 @@ function loadUsersTable(usersData = null) {
 
   tbody.innerHTML = filtered.map(u => {
     const isMasterAdmin = App.isSuperAdmin(u);
+    const isCurrentLoggedInUser = curUser && (
+      (curUser.email && u.email && curUser.email.toLowerCase() === u.email.toLowerCase()) ||
+      (curUser.id === u.id && (!curUser.email || !u.email || curUser.email.toLowerCase() === u.email.toLowerCase()))
+    );
     const isActive = u.status === 'نشط';
     const emailDisplay = u.email || (u.username ? `${u.username}@eman.com` : 'بدون بريد');
 
@@ -170,15 +186,15 @@ function loadUsersTable(usersData = null) {
               <i class="fa-solid fa-pen-to-square ml-1"></i> تعديل
             </button>
 
-            ${!isMasterAdmin ? `
-              <button class="btn btn-xs ${isActive ? 'btn-danger' : 'btn-primary'}" onclick="toggleUserStatus('${u.id}')" title="${isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}">
+            ${!isCurrentLoggedInUser ? `
+              <button class="btn btn-xs ${isActive ? 'btn-danger' : 'btn-primary'}" onclick="toggleUserStatus('${u.id}', '${u.email || ''}')" title="${isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}">
                 <i class="fa-solid ${isActive ? 'fa-ban' : 'fa-check'} ml-1"></i> ${isActive ? 'تعطيل' : 'تفعيل'}
               </button>
 
-              <button class="btn btn-danger btn-xs" onclick="deleteUserAccount('${u.id}')" title="حذف الحساب نهائياً من السيستم">
+              <button class="btn btn-danger btn-xs" onclick="deleteUserAccount('${u.id}', '${u.email || ''}')" title="حذف الحساب نهائياً من السيستم">
                 <i class="fa-solid fa-trash ml-1"></i> حذف
               </button>
-            ` : '<span class="text-xs text-muted font-bold">(حساب أساسي)</span>'}
+            ` : '<span class="badge badge-amber font-bold text-xs" style="padding: 4px 8px;">👤 حسابك الحالي</span>'}
           </div>
         </td>
       </tr>
@@ -380,11 +396,16 @@ async function updateUserAccount() {
       App.showToast('كلمة المرور يجب ألا تقل عن 6 خانات', 'warning');
       return;
     }
+    const changeTimestamp = Date.now();
     user.password = password;
+    user.passwordVersion = changeTimestamp;
 
     const currentUser = App.getCurrentUser();
     // If the admin is updating their own password in Firebase Auth directly
     if (currentUser && (currentUser.id === user.id || (currentUser.email && currentUser.email === user.email))) {
+      currentUser.password = password;
+      currentUser.passwordVersion = changeTimestamp;
+      App.setCurrentUser(currentUser);
       try {
         if (typeof FirebaseSync !== 'undefined' && FirebaseSync.updateCurrentUserPassword) {
           await FirebaseSync.updateCurrentUserPassword(password);
@@ -416,18 +437,19 @@ async function updateUserAccount() {
 }
 
 // Delete User Account (Deleted instantly from Firestore)
-function deleteUserAccount(userId) {
-  const user = (App.db.users || []).find(u => u.id === userId);
+function deleteUserAccount(userId, userEmail = '') {
+  const user = (App.db.users || []).find(u => (userEmail && u.email === userEmail) || u.id === userId);
   if (!user) return;
 
-  if (user.id === 'USR-1' || App.isSuperAdmin(user)) {
-    App.showToast('عفواً، لا يمكن حذف حساب المدير العام الرئيسي لحماية النظام!', 'warning');
+  const currentUser = App.getCurrentUser();
+  if (currentUser && currentUser.email && user.email && currentUser.email.toLowerCase() === user.email.toLowerCase()) {
+    App.showToast('عفواً، لا يمكن حذف الحساب الذي تستخدمه لتسجيل الدخول حالياً!', 'warning');
     return;
   }
 
   App.showConfirmModal({
     title: 'حذف حساب مستخدم',
-    message: `هل أنت متأكد تماماً من رغبتك في حذف حساب المستخدم (${user.name}) نهائياً من قاعدة البيانات وسحابة فايربيز؟ لن يتمكن من تسجيل الدخول إلى النظام بعد الآن.`,
+    message: `هل أنت متأكد تماماً من رغبتك في حذف حساب المستخدم (${user.name}) البريد (${user.email || user.username}) نهائياً من قاعدة البيانات وسحابة فايربيز؟ لن يتمكن من تسجيل الدخول إلى النظام بعد الآن.`,
     icon: 'fa-solid fa-user-xmark',
     iconBg: '#fee2e2',
     iconColor: '#dc2626',
@@ -436,10 +458,14 @@ function deleteUserAccount(userId) {
     onConfirm: () => {
       const deletedName = user.name;
       const deletedUser = user.username;
-      App.db.users = (App.db.users || []).filter(u => u.id !== userId);
+      App.db.users = (App.db.users || []).filter(u => {
+        if (userEmail && u.email === userEmail) return false;
+        if (u.id === userId && (!userEmail || u.email === user.email)) return false;
+        return true;
+      });
 
       if (typeof App.logActivity === 'function') {
-        App.logActivity('حذف حساب مستخدم 🗑️', `تم حذف حساب الموظف (${deletedName}) اسم الدخول (${deletedUser}) نهائياً من السيستم والسحابة`, 'danger');
+        App.logActivity('حذف حساب مستخدم 🗑️', `تم حذف حساب المستخدم (${deletedName}) بريد (${user.email || deletedUser}) نهائياً من السيستم والسحابة`, 'danger');
       }
 
       App.save(); // Saves and sets payload to Firestore makro_db/system_data
@@ -494,13 +520,17 @@ async function saveMyNewPassword() {
     console.warn('Direct Firebase Auth update notice:', err);
   }
 
+  const changeTimestamp = Date.now();
+
   // 2. Update user in App.db.users
   const userInDb = (App.db.users || []).find(u => u.id === 'USR-1' || u.email === userEmail || u.username === 'admin');
   if (userInDb) {
     userInDb.password = p1;
+    userInDb.passwordVersion = changeTimestamp;
   }
   if (currentUser) {
     currentUser.password = p1;
+    currentUser.passwordVersion = changeTimestamp;
     App.setCurrentUser(currentUser);
   }
 

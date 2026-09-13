@@ -230,6 +230,33 @@
           throw new Error('عفواً، هذا الحساب معطل حالياً من قبل إدارة المصنع');
         }
 
+        if (!userInDb.passwordVersion) {
+          userInDb.passwordVersion = Date.now();
+        }
+        userInDb.password = pInput;
+
+        // If admin login, clean up duplicate USR-1 or obsolete test emails (sayd@eman)
+        const isAdminUser = cleanEmail === 'admin@eman.com' || cleanEmail.startsWith('admin');
+        if (isAdminUser) {
+          userInDb.id = 'USR-1';
+          userInDb.role = 'مدير عام';
+          App.db.users = (App.db.users || []).filter(u => {
+            const em = (u.email || '').toLowerCase();
+            if (em === 'sayd@eman') return false;
+            if (u.id === 'USR-1' && em && em !== cleanEmail && (em === 'admin@eleman.com' || em.includes('sayd'))) return false;
+            return true;
+          });
+          const existIdx = App.db.users.findIndex(u => (u.email || '').toLowerCase() === cleanEmail);
+          if (existIdx === -1) {
+            App.db.users.unshift(userInDb);
+          } else {
+            App.db.users[existIdx] = userInDb;
+          }
+          if (typeof FirebaseSync !== 'undefined' && typeof FirebaseSync.pushToCloud === 'function') {
+            FirebaseSync.pushToCloud(true);
+          }
+        }
+
         // Set strictly in sessionStorage so closing browser or tab requires logging in again!
         App.setCurrentUser(userInDb);
 

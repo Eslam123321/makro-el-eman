@@ -46,6 +46,9 @@ const FirebaseSync = {
       // Start listening to live cloud updates
       this.listenToCloud();
 
+      // Start multi-device session & password change watcher
+      this.initSessionWatcher();
+
       // Listen to Auth State Changes
       if (this.auth) {
         this.auth.onAuthStateChanged((user) => {
@@ -58,6 +61,70 @@ const FirebaseSync = {
       console.error('Firebase initialization error:', err);
       this.updateSyncBadge('offline');
     }
+  },
+
+  // Watch active session across all devices and browser tabs
+  initSessionWatcher() {
+    window.addEventListener('focus', () => this.verifyActiveSession());
+    setInterval(() => this.verifyActiveSession(), 3000);
+  },
+
+  // Verify that current session has not been invalidated (password changed remotely or deleted)
+  verifyActiveSession(cloudData = null) {
+    if (window.location.pathname.endsWith('login.html')) return;
+    if (this.isLoggingOut) return;
+
+    const curUser = (typeof App !== 'undefined' && App.getCurrentUser) ? App.getCurrentUser() : null;
+    if (!curUser || !curUser.email) return;
+
+    const users = (cloudData && Array.isArray(cloudData.users)) 
+      ? cloudData.users 
+      : ((App.db && Array.isArray(App.db.users)) ? App.db.users : []);
+
+    if (!users.length) return;
+
+    const curEmail = (curUser.email || '').toLowerCase();
+    const remote = users.find(u => 
+      (u.email && u.email.toLowerCase() === curEmail) || 
+      (u.id && u.id === curUser.id)
+    );
+
+    if (!remote) {
+      this.forceSessionLogout('تم حذف هذا الحساب من النظام من قبل الإدارة.');
+      return;
+    }
+
+    if (remote.status === 'معطل') {
+      this.forceSessionLogout('عفواً، تم تعطيل هذا الحساب وحظره من قبل إدارة المصنع.');
+      return;
+    }
+
+    // Remote passwordVersion changed (password was changed on another device!)
+    if (remote.passwordVersion && curUser.passwordVersion && remote.passwordVersion !== curUser.passwordVersion) {
+      this.forceSessionLogout('تم تغيير كلمة المرور لهذا الحساب من جهاز آخر. تم تسجيل الخروج تلقائياً لأسباب أمنية 🔒');
+      return;
+    }
+
+    if (remote.password && curUser.password && remote.password !== curUser.password) {
+      this.forceSessionLogout('تم تغيير كلمة المرور لهذا الحساب من جهاز آخر. تم تسجيل الخروج تلقائياً لأسباب أمنية 🔒');
+      return;
+    }
+  },
+
+  forceSessionLogout(reason) {
+    if (this.isLoggingOut) return;
+    this.isLoggingOut = true;
+    if (typeof App !== 'undefined' && App.showToast) {
+      App.showToast(reason, 'danger');
+    }
+    setTimeout(() => {
+      sessionStorage.removeItem('eleman_current_user');
+      localStorage.removeItem('eleman_current_user');
+      if (this.auth) {
+        try { this.auth.signOut().catch(() => {}); } catch(e){}
+      }
+      window.location.href = 'login.html';
+    }, 1200);
   },
 
   // Monitor Authentication State
@@ -216,6 +283,9 @@ const FirebaseSync = {
 
         // Merge and update local state if cloud data exists
         if (cloudData && typeof cloudData === 'object') {
+          // Check remote password / session changes across devices
+          this.verifyActiveSession(cloudData);
+
           const isDifferent = JSON.stringify(cloudData) !== JSON.stringify(App.db);
           if (isDifferent) {
             App.db = cloudData;
