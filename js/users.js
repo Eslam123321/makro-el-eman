@@ -1,22 +1,13 @@
 /* ==========================================================================
    مصنع الإيمان للمكرونة - Users, Authentication & Permissions Matrix
    Pure JavaScript (ES6+) - Enterprise RBAC (Role-Based Access Control)
+   Connected to Google Firebase Authentication & Firestore Realtime Sync
    Developed by Speed Up (https://speed-up.tech/)
    ========================================================================== */
 
 let currentUsersSearch = '';
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Repair legacy user records if any were corrupted with duplicate admin username
-  if (App.db && App.db.users) {
-    App.db.users.forEach(u => {
-      if (u.id === 'USR-2' && u.username === 'admin') u.username = 'sales';
-      if (u.id === 'USR-3' && u.username === 'admin') u.username = 'inventory';
-      if (u.id === 'USR-4' && u.username === 'admin') u.username = 'accountant';
-    });
-    App.save();
-  }
-
   renderAppLayout('users');
   loadUsersTable();
 
@@ -67,13 +58,14 @@ function loadUsersTable(usersData = null) {
   const tbody = document.getElementById('users-list-tbody');
   if (!tbody) return;
 
-  const users = usersData || App.db.users || [];
+  const users = usersData || (App.db && App.db.users) || [];
   let filtered = users;
 
   if (currentUsersSearch) {
     filtered = users.filter(u => 
       (u.name || '').toLowerCase().includes(currentUsersSearch) ||
       (u.username || '').toLowerCase().includes(currentUsersSearch) ||
+      (u.email || '').toLowerCase().includes(currentUsersSearch) ||
       (u.role || '').toLowerCase().includes(currentUsersSearch) ||
       (u.id || '').toLowerCase().includes(currentUsersSearch)
     );
@@ -98,8 +90,9 @@ function loadUsersTable(usersData = null) {
   };
 
   tbody.innerHTML = filtered.map(u => {
-    const isMasterAdmin = u.id === 'USR-1';
+    const isMasterAdmin = u.id === 'USR-1' || u.email === 'admin@eleman.com' || (u.username === 'admin' && u.role === 'مدير عام');
     const isActive = u.status === 'نشط';
+    const emailDisplay = u.email || (u.username ? `${u.username}@eleman.com` : 'بدون بريد');
 
     const badgesHTML = (u.permissions || []).map(pKey => {
       const label = permissionLabels[pKey] || pKey;
@@ -111,12 +104,14 @@ function loadUsersTable(usersData = null) {
         <td><strong class="badge badge-purple font-bold">${u.id}</strong></td>
         <td>
           <div class="flex items-center gap-2">
-            <div class="user-avatar" style="width: 34px; height: 34px; font-size: 0.85rem; background: ${isActive ? 'linear-gradient(135deg, #059669, #10b981)' : '#94a3b8'}; color: #fff;">
+            <div class="user-avatar" style="width: 36px; height: 36px; font-size: 0.85rem; background: ${isActive ? 'linear-gradient(135deg, #059669, #10b981)' : '#94a3b8'}; color: #fff;">
               ${(u.name || 'إ').charAt(0)}
             </div>
             <div>
               <strong class="text-sm text-slate-800 block">${u.name}</strong>
-              <div class="text-xs text-muted">اسم الدخول: <span class="font-bold text-primary-color" style="font-size: 0.85rem;">${u.username}</span></div>
+              <div class="text-xs text-muted">
+                إيميل: <span class="font-bold text-primary-color">${emailDisplay}</span>
+              </div>
             </div>
           </div>
         </td>
@@ -130,7 +125,7 @@ function loadUsersTable(usersData = null) {
             ${badgesHTML || '<span class="text-xs text-muted font-bold text-rose-500">لا توجد صلاحيات</span>'}
           </div>
         </td>
-        <td><span class="text-xs text-muted">${u.createdAt || '2024-01-01'}</span></td>
+        <td><span class="text-xs text-muted">${u.createdAt || '2026-09-13'}</span></td>
         <td>
           <span class="badge ${isActive ? 'badge-success' : 'badge-danger'} text-xs font-bold">
             ${isActive ? 'نشط 🟢' : 'معطل 🔴'}
@@ -158,9 +153,11 @@ function loadUsersTable(usersData = null) {
   }).join('');
 }
 
-// Create New User Account
-function saveNewUserAccount() {
+// Create New User Account in Firebase Auth & Firestore
+async function saveNewUserAccount() {
   const name = document.getElementById('new-user-name').value.trim();
+  const emailInput = document.getElementById('new-user-email');
+  let email = emailInput ? emailInput.value.trim().toLowerCase() : '';
   const role = document.getElementById('new-user-role').value;
   const username = document.getElementById('new-user-username').value.trim();
   const password = document.getElementById('new-user-password').value.trim();
@@ -170,12 +167,24 @@ function saveNewUserAccount() {
     return;
   }
 
-  // Check unique username
+  if (password.length < 6) {
+    App.showToast('كلمة المرور في فايربيز يجب ألا تقل عن 6 أحرف أو أرقام', 'warning');
+    return;
+  }
+
+  if (!email) {
+    email = `${username.toLowerCase()}@eleman.com`;
+  }
+
+  // Check unique username or email
   const users = App.db.users || [];
-  const exists = users.some(u => u.username.toLowerCase() === username.toLowerCase());
+  const exists = users.some(u => 
+    (u.username && u.username.toLowerCase() === username.toLowerCase()) ||
+    (u.email && u.email.toLowerCase() === email.toLowerCase())
+  );
 
   if (exists) {
-    App.showToast('اسم المستخدم مسجل بالفعل بحساب آخر! يرجى اختيار اسم مستخدم مختلف.', 'danger');
+    App.showToast('اسم المستخدم أو البريد الإلكتروني مسجل بالفعل بحساب آخر! يرجى اختيار بيانات مختلفة.', 'danger');
     return;
   }
 
@@ -191,6 +200,7 @@ function saveNewUserAccount() {
   const newUser = {
     id: `USR-${Date.now().toString().slice(-4)}`,
     name: name,
+    email: email,
     username: username,
     password: password,
     role: role === 'مخصص' ? 'موظف مخصص' : role,
@@ -199,20 +209,34 @@ function saveNewUserAccount() {
     permissions: permissions
   };
 
-  App.db.users.push(newUser);
-  if (typeof App.logActivity === 'function') {
-    App.logActivity('إنشاء حساب مستخدم جديد 🛡️', `تم إنشاء حساب للموظف (${newUser.name}) باسم دخول (${newUser.username}) ورتبة (${newUser.role})`, 'success');
+  App.showToast('جاري إنشاء الحساب والمزامنة مع فايربيز... ⏳', 'info');
+
+  try {
+    if (typeof FirebaseSync !== 'undefined' && FirebaseSync.auth) {
+      await FirebaseSync.createEmployeeInFirebaseAuth(email, password, newUser);
+    } else {
+      if (!App.db.users) App.db.users = [];
+      App.db.users.push(newUser);
+      App.save();
+    }
+
+    if (typeof App.logActivity === 'function') {
+      App.logActivity('إنشاء حساب مستخدم جديد 🛡️', `تم إنشاء حساب للموظف (${newUser.name}) بإيميل (${newUser.email}) ورتبة (${newUser.role})`, 'success');
+    }
+    loadUsersTable();
+    renderPageSummaryCards('users', 'users-summary-cards');
+
+    // Reset form
+    document.getElementById('new-user-name').value = '';
+    if (emailInput) emailInput.value = '';
+    document.getElementById('new-user-username').value = '';
+    document.getElementById('new-user-password').value = '';
+
+    App.showToast(`تم إنشاء وتفعيل حساب المستخدم (${newUser.name}) في فايربيز بنجاح! 🛡️✨`, 'success');
+  } catch (err) {
+    console.error('Error creating user in Firebase:', err);
+    App.showToast(`حدث خطأ أثناء إنشاء الحساب في فايربيز: ${err.message}`, 'danger');
   }
-  App.save();
-  loadUsersTable();
-  renderPageSummaryCards('users', 'users-summary-cards');
-
-  // Reset form
-  document.getElementById('new-user-name').value = '';
-  document.getElementById('new-user-username').value = '';
-  document.getElementById('new-user-password').value = '';
-
-  App.showToast(`تم إنشاء وتفعيل حساب المستخدم (${newUser.name}) بنجاح! 🛡️✨`, 'success');
 }
 
 // Toggle Active / Disabled Status
@@ -220,7 +244,7 @@ function toggleUserStatus(userId) {
   const user = (App.db.users || []).find(u => u.id === userId);
   if (!user) return;
 
-  if (user.id === 'USR-1') {
+  if (user.id === 'USR-1' || user.email === 'admin@eleman.com') {
     App.showToast('لا يمكن تعطيل حساب المدير العام الرئيسي للنظام!', 'warning');
     return;
   }
@@ -229,10 +253,10 @@ function toggleUserStatus(userId) {
   user.status = isNowActive ? 'نشط' : 'معطل';
 
   if (typeof App.logActivity === 'function') {
-    App.logActivity('تغيير حالة حساب موظف 🔄', `تم ${isNowActive ? 'تفعيل وتنشيط' : 'تعطيل وحظر'} حساب الموظف (${user.name}) واسم الدخول (${user.username})`, isNowActive ? 'success' : 'danger');
+    App.logActivity('تغيير حالة حساب موظف 🔄', `تم ${isNowActive ? 'تفعيل وتنشيط' : 'تعطيل وحظر'} حساب الموظف (${user.name}) وإيميل (${user.email || user.username})`, isNowActive ? 'success' : 'danger');
   }
 
-  App.save();
+  App.save(); // Pushes update directly to Firebase Firestore
   loadUsersTable();
   renderPageSummaryCards('users', 'users-summary-cards');
 
@@ -250,11 +274,13 @@ function openEditUserModal(userId) {
 
   document.getElementById('edit-user-id').value = user.id;
   document.getElementById('edit-user-name').value = user.name || '';
+  const emailInput = document.getElementById('edit-user-email');
+  if (emailInput) emailInput.value = user.email || (user.username ? `${user.username}@eleman.com` : '');
   document.getElementById('edit-user-role').value = user.role || '';
   document.getElementById('edit-user-username').value = user.username || '';
-  document.getElementById('edit-user-password').value = user.password || '';
+  document.getElementById('edit-user-password').value = ''; // clean for new password
 
-  // Check user permissions
+  // Set permissions
   const checkboxes = document.querySelectorAll('input[name="edit-perm"]');
   checkboxes.forEach(cb => {
     cb.checked = (user.permissions || []).includes(cb.value);
@@ -263,12 +289,37 @@ function openEditUserModal(userId) {
   openModal('edit-user-modal');
 }
 
-function updateUserAccount() {
-  const userId = document.getElementById('edit-user-id').value;
-  const user = (App.db.users || []).find(u => u.id === userId);
-  if (!user) return;
+// Send Password Reset Link to Selected User Email
+async function sendPasswordResetToSelectedUser() {
+  const emailInput = document.getElementById('edit-user-email');
+  const email = emailInput ? emailInput.value.trim() : '';
 
+  if (!email) {
+    App.showToast('رجاء إدخال البريد الإلكتروني للمستخدم لإرسال رابط إعادة التعيين', 'warning');
+    return;
+  }
+
+  App.showToast('جاري إرسال رابط إعادة تعيين كلمة المرور... ✉️', 'info');
+
+  try {
+    if (typeof FirebaseSync !== 'undefined' && FirebaseSync.sendPasswordResetEmail) {
+      await FirebaseSync.sendPasswordResetEmail(email);
+      App.showToast(`تم إرسال رابط رسمي لتعيين كلمة المرور إلى (${email}) بنجاح! تفقد بريدك الإلكتروني. ✉️✨`, 'success');
+    } else {
+      App.showToast('محرك المصادقة غير متاح حالياً', 'danger');
+    }
+  } catch (err) {
+    console.error('sendPasswordResetEmail error:', err);
+    App.showToast(`تعذر إرسال الرابط: ${err.message}`, 'danger');
+  }
+}
+
+// Update User Account in Database & Firebase Auth
+async function updateUserAccount() {
+  const id = document.getElementById('edit-user-id').value;
   const name = document.getElementById('edit-user-name').value.trim();
+  const emailInput = document.getElementById('edit-user-email');
+  const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
   const role = document.getElementById('edit-user-role').value.trim();
   const username = document.getElementById('edit-user-username').value.trim();
   const password = document.getElementById('edit-user-password').value.trim();
@@ -278,27 +329,40 @@ function updateUserAccount() {
     return;
   }
 
-  if (!password) {
-    App.showToast('رجاء إدخال كلمة المرور', 'warning');
-    return;
-  }
+  const user = (App.db.users || []).find(u => u.id === id);
+  if (!user) return;
 
-  // Check unique username with other accounts
-  const isDuplicate = (App.db.users || []).some(u => u.id !== userId && u.username.toLowerCase() === username.toLowerCase());
-  if (isDuplicate) {
-    App.showToast('اسم المستخدم هذا مستخدم بالفعل من قبل حساب آخر!', 'danger');
-    return;
-  }
-
-  // Read checked permissions
   const checkedBoxes = document.querySelectorAll('input[name="edit-perm"]:checked');
   const permissions = Array.from(checkedBoxes).map(cb => cb.value);
 
   user.name = name;
-  user.role = role || user.role;
+  if (email) user.email = email;
+  user.role = role;
   user.username = username;
-  user.password = password;
   user.permissions = permissions;
+
+  // If new password provided
+  if (password) {
+    if (password.length < 6) {
+      App.showToast('كلمة المرور يجب ألا تقل عن 6 خانات', 'warning');
+      return;
+    }
+    user.password = password;
+
+    const currentUser = App.getCurrentUser();
+    // If the admin is updating their own password in Firebase Auth directly
+    if (currentUser && (currentUser.id === user.id || (currentUser.email && currentUser.email === user.email))) {
+      try {
+        if (typeof FirebaseSync !== 'undefined' && FirebaseSync.updateCurrentUserPassword) {
+          await FirebaseSync.updateCurrentUserPassword(password);
+          App.showToast('تم تحديث كلمة المرور في سحابة Firebase Auth بنجاح 🔒', 'success');
+        }
+      } catch (err) {
+        console.warn('Password update direct auth notice:', err);
+        App.showToast(`تم حفظ كلمة المرور بقاعدة البيانات (${err.message})`, 'info');
+      }
+    }
+  }
 
   // If editing currently logged in user, update session
   const currentUser = App.getCurrentUser();
@@ -307,30 +371,30 @@ function updateUserAccount() {
   }
 
   if (typeof App.logActivity === 'function') {
-    App.logActivity('تعديل حساب وصلاحيات موظف ✏️', `تم تحديث بيانات وصلاحيات وكلمة مرور الحساب (${user.name}) اسم الدخول (${user.username})`, 'warning');
+    App.logActivity('تعديل حساب وصلاحيات موظف ✏️', `تم تحديث بيانات وصلاحيات الحساب (${user.name}) وإيميل (${user.email || user.username})`, 'warning');
   }
 
-  App.save();
+  App.save(); // Saves and pushes to Firestore
   loadUsersTable();
   renderPageSummaryCards('users', 'users-summary-cards');
   closeModal('edit-user-modal');
 
-  App.showToast(`تم حفظ وتحديث بيانات وباسورد الحساب (${user.name}) بنجاح! 💾`, 'success');
+  App.showToast(`تم حفظ وتحديث بيانات وباسورد الحساب (${user.name}) بنجاح في السحابة! 💾`, 'success');
 }
 
-// Delete User Account
+// Delete User Account (Deleted instantly from Firestore)
 function deleteUserAccount(userId) {
   const user = (App.db.users || []).find(u => u.id === userId);
   if (!user) return;
 
-  if (user.id === 'USR-1') {
+  if (user.id === 'USR-1' || user.email === 'admin@eleman.com') {
     App.showToast('عفواً، لا يمكن حذف حساب المدير العام الرئيسي لحماية النظام!', 'warning');
     return;
   }
 
   App.showConfirmModal({
     title: 'حذف حساب مستخدم',
-    message: `هل أنت متأكد تماماً من رغبتك في حذف حساب المستخدم (${user.name}) واسم الدخول (${user.username})؟ لن يتمكن من تسجيل الدخول إلى النظام بعد الآن.`,
+    message: `هل أنت متأكد تماماً من رغبتك في حذف حساب المستخدم (${user.name}) نهائياً من قاعدة البيانات وسحابة فايربيز؟ لن يتمكن من تسجيل الدخول إلى النظام بعد الآن.`,
     icon: 'fa-solid fa-user-xmark',
     iconBg: '#fee2e2',
     iconColor: '#dc2626',
@@ -342,13 +406,13 @@ function deleteUserAccount(userId) {
       App.db.users = (App.db.users || []).filter(u => u.id !== userId);
 
       if (typeof App.logActivity === 'function') {
-        App.logActivity('حذف حساب مستخدم 🗑️', `تم حذف حساب الموظف (${deletedName}) اسم الدخول (${deletedUser}) نهائياً من السيستم`, 'danger');
+        App.logActivity('حذف حساب مستخدم 🗑️', `تم حذف حساب الموظف (${deletedName}) اسم الدخول (${deletedUser}) نهائياً من السيستم والسحابة`, 'danger');
       }
 
-      App.save();
+      App.save(); // Saves and sets payload to Firestore makro_db/system_data
       loadUsersTable();
       renderPageSummaryCards('users', 'users-summary-cards');
-      App.showToast(`تم حذف حساب المستخدم (${deletedName}) من النظام نهائياً 🗑️`, 'danger');
+      App.showToast(`تم حذف حساب المستخدم (${deletedName}) من النظام والسحابة نهائياً 🗑️`, 'danger');
     }
   });
 }

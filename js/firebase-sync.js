@@ -1,5 +1,6 @@
 /* ==========================================================================
-   مصنع الإيمان للمكرونة - محرك المزامنة السحابية وقاعدة البيانات الحية (Firebase Realtime Cloud Sync Engine)
+   مصنع الإيمان للمكرونة - محرك المزامنة السحابية وقاعدة البيانات والمصادقة
+   Google Firebase Realtime Cloud Sync & Authentication Engine
    Developed by Speed Up Tech 🚀 (https://speed-up.tech/)
    ========================================================================== */
 
@@ -15,17 +16,18 @@ const firebaseConfig = {
 
 const FirebaseSync = {
   db: null,
+  auth: null,
   isInitialized: false,
   isSyncing: false,
   isCloudOnline: false,
   docRef: null,
   syncTimeout: null,
 
-  // Initialize Firebase and start real-time listener
+  // Initialize Firebase Firestore and Authentication
   init() {
     try {
       if (typeof firebase === 'undefined') {
-        console.warn('Firebase SDK is not loaded. Working in local offline storage mode.');
+        console.warn('Firebase SDK is not loaded. Working in local storage mode.');
         this.updateSyncBadge('offline');
         return;
       }
@@ -35,23 +37,167 @@ const FirebaseSync = {
       }
 
       this.db = firebase.firestore();
+      if (firebase.auth) {
+        this.auth = firebase.auth();
+      }
       this.docRef = this.db.collection('makro_db').doc('system_data');
       this.isInitialized = true;
 
       // Start listening to live cloud updates
       this.listenToCloud();
 
-      // Check one-time cloud zero database reset
-      if (localStorage.getItem('eleman_cloud_reset_v5_zero') !== 'done') {
-        localStorage.setItem('eleman_cloud_reset_v5_zero', 'done');
-        this.pushToCloud(true);
+      // Listen to Auth State Changes
+      if (this.auth) {
+        this.auth.onAuthStateChanged((user) => {
+          this.handleAuthStateChange(user);
+        });
       }
 
-      console.log('✅ Firebase Cloud Engine initialized successfully for makro-el-eman');
+      console.log('✅ Firebase Cloud Engine & Auth initialized successfully for makro-el-eman');
     } catch (err) {
       console.error('Firebase initialization error:', err);
       this.updateSyncBadge('offline');
     }
+  },
+
+  // Monitor Authentication State
+  handleAuthStateChange(firebaseUser) {
+    const isLoginPage = window.location.pathname.endsWith('login.html');
+    if (!firebaseUser) {
+      // User is not signed in
+      if (!isLoginPage) {
+        // Redirect to login page if session is missing
+        const currentSession = localStorage.getItem('eleman_current_user');
+        if (!currentSession) {
+          window.location.href = 'login.html';
+        }
+      }
+    } else {
+      // User is signed in to Firebase Auth
+      // Verify profile is synced in App.db.users
+      this.ensureUserInDB(firebaseUser);
+    }
+  },
+
+  // Ensure Firebase Auth user has corresponding profile record in App.db.users
+  ensureUserInDB(firebaseUser) {
+    if (!firebaseUser || !firebaseUser.email) return;
+    const email = firebaseUser.email.toLowerCase();
+
+    if (!App.db) App.db = StorageManager.getDB();
+    if (!Array.isArray(App.db.users)) App.db.users = [];
+
+    let existing = App.db.users.find(u => (u.email && u.email.toLowerCase() === email) || (u.username && u.username.toLowerCase() === email.split('@')[0]));
+
+    if (!existing) {
+      // If it's the admin user (admin@eleman.com or contains admin)
+      const isAdmin = email === 'admin@eleman.com' || email.startsWith('admin');
+      const newRecord = {
+        id: isAdmin ? 'USR-1' : `USR-${Date.now().toString().slice(-4)}`,
+        name: isAdmin ? 'المدير العام' : email.split('@')[0],
+        username: email.split('@')[0],
+        email: email,
+        role: isAdmin ? 'مدير عام' : 'موظف مبيعات',
+        status: 'نشط',
+        createdAt: new Date().toISOString().slice(0, 10),
+        permissions: isAdmin 
+          ? ['dashboard', 'sales', 'inventory', 'suppliers', 'customers', 'hr', 'expenses', 'reports', 'users', 'notifications']
+          : ['dashboard', 'sales', 'customers']
+      };
+      App.db.users.push(newRecord);
+      this.pushToCloud(true);
+      App.setCurrentUser(newRecord);
+    } else {
+      // Update email on user record if missing
+      if (!existing.email) {
+        existing.email = email;
+        this.pushToCloud(true);
+      }
+      App.setCurrentUser(existing);
+    }
+  },
+
+  // Firebase Auth Login
+  async loginWithFirebase(email, password) {
+    if (!this.auth) {
+      throw new Error('محرك المصادقة غير مفعل أو غير متصل بالإنترنت');
+    }
+    const userCredential = await this.auth.signInWithEmailAndPassword(email.trim(), password);
+    const fbUser = userCredential.user;
+
+    // Check status in DB
+    const cleanEmail = fbUser.email.toLowerCase();
+    const userInDb = (App.db.users || []).find(u => (u.email && u.email.toLowerCase() === cleanEmail) || (u.username && u.username.toLowerCase() === cleanEmail.split('@')[0]));
+
+    if (userInDb && userInDb.status === 'معطل') {
+      await this.auth.signOut();
+      localStorage.removeItem('eleman_current_user');
+      throw new Error('عفواً، هذا الحساب معطل من قبل إدارة المصنع. يرجى مراجعة المدير العام.');
+    }
+
+    this.ensureUserInDB(fbUser);
+    return fbUser;
+  },
+
+  // Firebase Auth Logout
+  async logoutFromFirebase() {
+    try {
+      if (this.auth) {
+        await this.auth.signOut();
+      }
+    } catch (e) {
+      console.warn('Auth signOut notice:', e);
+    }
+    localStorage.removeItem('eleman_current_user');
+    window.location.href = 'login.html';
+  },
+
+  // Change Password for Currently Logged-in Admin / User
+  async updateCurrentUserPassword(newPassword) {
+    if (!this.auth || !this.auth.currentUser) {
+      throw new Error('يجب تسجيل الدخول بحسابك أولاً لتغيير كلمة المرور');
+    }
+    await this.auth.currentUser.updatePassword(newPassword);
+
+    // Also update in App.db.users
+    const userEmail = this.auth.currentUser.email;
+    const userInDb = (App.db.users || []).find(u => u.email && u.email.toLowerCase() === userEmail.toLowerCase());
+    if (userInDb) {
+      userInDb.password = newPassword;
+      this.pushToCloud(true);
+    }
+  },
+
+  // Admin: Create Employee Account in Firebase Auth without logging out current Admin
+  async createEmployeeInFirebaseAuth(email, password, userProfile) {
+    if (!this.auth) throw new Error('محرك المصادقة غير متاح');
+    
+    // Create using secondary isolated Firebase app instance
+    let secondaryApp;
+    try {
+      secondaryApp = firebase.app('SecondaryAuthApp');
+    } catch (e) {
+      secondaryApp = firebase.initializeApp(firebaseConfig, 'SecondaryAuthApp');
+    }
+
+    const userCred = await secondaryApp.auth().createUserWithEmailAndPassword(email.trim(), password);
+    const newUid = userCred.user.uid;
+    await secondaryApp.auth().signOut();
+
+    // Attach to App.db.users and push immediately to Firestore
+    userProfile.uid = newUid;
+    userProfile.email = email.trim();
+    if (!App.db.users) App.db.users = [];
+    App.db.users.push(userProfile);
+    this.pushToCloud(true);
+
+    return userProfile;
+  },
+
+  // Admin: Send Official Password Reset Email to Employee
+  async sendPasswordResetEmail(email) {
+    if (!this.auth) throw new Error('محرك المصادقة غير متصل');
+    await this.auth.sendPasswordResetEmail(email.trim());
   },
 
   // Listen in real-time to any cloud modifications across all devices
@@ -66,8 +212,8 @@ const FirebaseSync = {
         this.isCloudOnline = true;
         this.updateSyncBadge('online');
 
-        // Merge and update local state if cloud data has valid structure
-        if (cloudData && typeof cloudData === 'object' && Array.isArray(cloudData.users)) {
+        // Merge and update local state if cloud data exists
+        if (cloudData && typeof cloudData === 'object') {
           const isDifferent = JSON.stringify(cloudData) !== JSON.stringify(App.db);
           if (isDifferent) {
             App.db = cloudData;
@@ -118,7 +264,7 @@ const FirebaseSync = {
     if (immediate) {
       doSync();
     } else {
-      this.syncTimeout = setTimeout(doSync, 800);
+      this.syncTimeout = setTimeout(doSync, 500);
     }
   },
 
@@ -127,24 +273,27 @@ const FirebaseSync = {
     try {
       if (typeof loadInvoicesTable === 'function') loadInvoicesTable();
       if (typeof loadProductsTable === 'function') loadProductsTable();
+      if (typeof loadInventoryTable === 'function') loadInventoryTable();
       if (typeof loadCustomersTable === 'function') loadCustomersTable();
       if (typeof loadSuppliersTable === 'function') loadSuppliersTable();
       if (typeof loadEmployeesTable === 'function') loadEmployeesTable();
+      if (typeof loadDailyAttendanceTable === 'function') loadDailyAttendanceTable();
       if (typeof loadExpensesTable === 'function') loadExpensesTable();
       if (typeof loadDeliveryTrucksTable === 'function') loadDeliveryTrucksTable();
       if (typeof loadStocktakingTable === 'function') loadStocktakingTable();
       if (typeof loadUsersTable === 'function') loadUsersTable();
-      if (typeof loadNotificationsTable === 'function') loadNotificationsTable();
-      if (typeof updateStatsCards === 'function') updateStatsCards();
+      if (typeof loadNotificationsPage === 'function') loadNotificationsPage();
+      if (typeof loadDashboardData === 'function') loadDashboardData();
       if (typeof renderPageSummaryCards === 'function') {
         const path = window.location.pathname;
         if (path.includes('sales')) renderPageSummaryCards('sales', 'sales-summary-cards');
         if (path.includes('inventory')) renderPageSummaryCards('inventory', 'inventory-summary-cards');
         if (path.includes('customers')) renderPageSummaryCards('customers', 'customers-summary-cards');
         if (path.includes('suppliers')) renderPageSummaryCards('suppliers', 'suppliers-summary-cards');
-        if (path.includes('hr')) renderPageSummaryCards('hr', 'hr-summary-cards');
+        if (path.includes('hr')) renderPageSummaryCards('hr', 'hr-summary-cards-container');
         if (path.includes('expenses')) renderPageSummaryCards('expenses', 'expenses-summary-cards');
         if (path.includes('reports')) renderPageSummaryCards('reports', 'reports-summary-cards');
+        if (path.includes('users')) renderPageSummaryCards('users', 'users-summary-cards');
       }
       if (typeof App !== 'undefined' && typeof App.updateNotificationBadge === 'function') {
         App.updateNotificationBadge();

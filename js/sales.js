@@ -78,7 +78,7 @@ function initSalesForm() {
   }
 
   // Set default payment type
-  const payType = document.getElementById('inv-paytype');
+  const payType = document.getElementById('inv-payment-type');
   if (payType) payType.value = 'كاش';
 }
 
@@ -111,7 +111,7 @@ function quickAddProductToInvoice(prodId) {
   }
 
   renderCurrentInvoiceItems();
-  App.showToast(`تمت إضافة (1 شكارة) من ${product.name}`, 'success');
+  App.showToast(`تمت إضافة (1 شكارة) من ${prod.name}`, 'success');
 }
 
 function updateInvoiceItemRealtime(index, key, value) {

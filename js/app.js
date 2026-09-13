@@ -121,6 +121,11 @@ const App = {
   },
 
   logout() {
+    if (typeof FirebaseSync !== 'undefined' && FirebaseSync.auth) {
+      try {
+        FirebaseSync.auth.signOut().catch(() => {});
+      } catch (e) {}
+    }
     localStorage.removeItem('eleman_current_user');
     window.location.href = 'login.html';
   },
@@ -128,13 +133,19 @@ const App = {
   hasPermission(permissionKey) {
     const user = this.getCurrentUser();
     if (!user || user.status === 'معطل') return false;
-    // Only the Super Admin (USR-1 or admin with General Manager role) has automatic full access
-    if (user.id === 'USR-1' || (user.username === 'admin' && user.role === 'مدير عام')) {
+    // Only the Super Admin (USR-1 or admin with General Manager role or admin@eleman.com) has automatic full access
+    if (user.id === 'USR-1' || user.email === 'admin@eleman.com' || (user.username === 'admin' && user.role === 'مدير عام')) {
       return true;
     }
     // Any other user ONLY has permissions that are explicitly in their permissions array
     if (!user.permissions || !Array.isArray(user.permissions)) return false;
     return user.permissions.includes(permissionKey);
+  },
+
+  isSuperAdmin(targetUser = null) {
+    const user = targetUser || this.getCurrentUser();
+    if (!user) return false;
+    return user.id === 'USR-1' || user.email === 'admin@eleman.com' || (user.username === 'admin' && user.role === 'مدير عام') || user.role === 'مدير عام';
   },
 
   checkPageAccess(pageKey) {
@@ -549,7 +560,7 @@ const App = {
 
   updateNotificationBadge() {
     const currentUser = this.getCurrentUser();
-    const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+    const isSuperAdmin = this.isSuperAdmin(currentUser);
     
     const countEl = document.getElementById('header-notif-count');
     const badgeWrapper = document.getElementById('header-notif-wrapper');
@@ -1495,7 +1506,7 @@ function renderAppLayout(activePage = 'dashboard') {
 
   const sidebarContainer = document.getElementById('sidebar-container');
   if (sidebarContainer) {
-    const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+    const isSuperAdmin = App.isSuperAdmin(currentUser);
     const showDashboard = !App || App.hasPermission('dashboard');
     const showSales = !App || App.hasPermission('sales');
     const showInventory = !App || App.hasPermission('inventory');
@@ -1671,7 +1682,7 @@ function renderAppLayout(activePage = 'dashboard') {
     const duplicateBtns = topHeaderActions.querySelectorAll('.quick-search-trigger-btn, .search-btn-dup');
     duplicateBtns.forEach(btn => btn.remove());
 
-    const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+    const isSuperAdmin = App.isSuperAdmin(currentUser);
     const existingNotifWrapper = document.getElementById('header-notif-wrapper');
 
     if (!isSuperAdmin && existingNotifWrapper) {
@@ -1730,7 +1741,7 @@ function renderAppLayout(activePage = 'dashboard') {
     document.body.appendChild(bottomNav);
   }
 
-  const isSuperAdmin = currentUser && (currentUser.id === 'USR-1' || (currentUser.username === 'admin' && currentUser.role === 'مدير عام'));
+  const isSuperAdmin = App.isSuperAdmin(currentUser);
   const showDashboard = !App || App.hasPermission('dashboard');
   const showSales = !App || App.hasPermission('sales');
   const showInventory = !App || App.hasPermission('inventory');

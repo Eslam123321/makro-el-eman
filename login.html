@@ -100,10 +100,10 @@
       <p class="text-xs text-muted mt-1">نظام ERP الإداري المتكامل لإدارة الإنتاج والمبيعات والمخازن</p>
     </div>
 
-    <form onsubmit="handleLogin(event)">
+    <form onsubmit="handleLogin(event)" id="login-form">
       <div class="form-group mb-4">
-        <label><i class="fa-regular fa-user ml-1 text-primary-color"></i> اسم المستخدم للدخول (Username)</label>
-        <input type="text" id="username" class="form-control" placeholder="ادخل اسم المستخدم" autocomplete="username" required>
+        <label><i class="fa-regular fa-envelope ml-1 text-primary-color"></i> البريد الإلكتروني أو اسم المستخدم (Email / Username)</label>
+        <input type="text" id="username" class="form-control" placeholder="ادخل البريد الإلكتروني (مثال: admin@eleman.com)" autocomplete="email" required>
       </div>
 
       <div class="form-group mb-6">
@@ -116,7 +116,7 @@
         </div>
       </div>
 
-      <button type="submit" class="btn btn-primary w-full" style="padding: 0.875rem; font-size: 1rem; font-weight: bold;">
+      <button type="submit" id="login-submit-btn" class="btn btn-primary w-full" style="padding: 0.875rem; font-size: 1rem; font-weight: bold;">
         <i class="fa-solid fa-right-to-bracket ml-2"></i> تسجيل الدخول للنظام 🚀
       </button>
     </form>
@@ -129,6 +129,7 @@
   <!-- Firebase Cloud SDK & Sync Engine -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="js/firebase-sync.js"></script>
   <script src="js/logo.js"></script>
   <script src="js/app.js"></script>
@@ -147,44 +148,82 @@
       }
     }
 
-    function handleLogin(e) {
+    async function handleLogin(e) {
       e.preventDefault();
       const uInput = document.getElementById('username').value.trim();
       const pInput = document.getElementById('password').value.trim();
+      const btn = document.getElementById('login-submit-btn');
 
       if (!uInput || !pInput) {
-        App.showToast('رجاء إدخال اسم المستخدم وكلمة المرور', 'warning');
+        App.showToast('رجاء إدخال البريد الإلكتروني وكلمة المرور', 'warning');
         return;
       }
 
-      // Always reload fresh DB from Storage
-      App.db = StorageManager.getDB();
-      const users = App.db.users || [];
-      const foundUser = users.find(u => 
-        (u.username && u.username.toLowerCase() === uInput.toLowerCase())
-      );
-
-      if (!foundUser || foundUser.password !== pInput) {
-        App.showToast('اسم المستخدم أو كلمة المرور غير صحيحة! يرجى التأكد من البيانات والمحاولة مجدداً.', 'danger');
-        return;
+      // Convert username without @ to standard email format if needed
+      let email = uInput;
+      if (!email.includes('@')) {
+        email = `${email.toLowerCase()}@eleman.com`;
       }
 
-      if (foundUser.status === 'معطل') {
-        App.showToast('عفواً، هذا الحساب معطل حالياً من قبل إدارة المصنع. يرجى التواصل مع المدير العام.', 'danger');
-        return;
-      }
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin ml-2"></i> جاري التحقق من السحابة...`;
 
-      // Save User Session
-      App.setCurrentUser(foundUser);
-      if (typeof App.logActivity === 'function') {
-        App.logActivity('تسجيل دخول إلى النظام 🔐', `قام بتسجيل الدخول إلى لوحة التحكم بنجاح`, 'info', foundUser);
-      }
-      App.showToast(`أهلاً بك يا ${foundUser.name}! جاري الدخول للوحة التحكم... ✨`, 'success');
+      try {
+        if (typeof FirebaseSync !== 'undefined' && FirebaseSync.auth) {
+          // 1. Authenticate with Firebase Auth directly
+          const fbUser = await FirebaseSync.loginWithFirebase(email, pInput);
+          const currentUser = App.getCurrentUser();
+          const displayName = (currentUser && currentUser.name) ? currentUser.name : (fbUser.displayName || 'المدير العام');
 
-      setTimeout(() => {
-        // Redirect to dashboard or user's first allowed page
-        window.location.href = 'index.html';
-      }, 500);
+          App.showToast(`تم تسجيل الدخول بنجاح! مرحباً بك يا ${displayName} ✨`, 'success');
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 400);
+        } else {
+          // Offline fallback
+          App.db = StorageManager.getDB();
+          const users = App.db.users || [];
+          const found = users.find(u => 
+            (u.email && u.email.toLowerCase() === email.toLowerCase()) ||
+            (u.username && u.username.toLowerCase() === uInput.toLowerCase())
+          );
+
+          if (!found || found.password !== pInput) {
+            throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة');
+          }
+          if (found.status === 'معطل') {
+            throw new Error('عفواً، هذا الحساب معطل حالياً من قبل إدارة المصنع');
+          }
+
+          App.setCurrentUser(found);
+          App.showToast(`تم تسجيل الدخول محلياً! مرحباً بك يا ${found.name}`, 'success');
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 400);
+        }
+      } catch (err) {
+        console.error('Login error:', err);
+        let errorMsg = 'تعذر تسجيل الدخول';
+        const code = err.code || '';
+
+        if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
+          errorMsg = 'كلمة المرور غير صحيحة أو البريد الإلكتروني غير متطابق!';
+        } else if (code === 'auth/user-not-found') {
+          errorMsg = 'عفواً، لا يوجد حساب مسجل بهذا البريد الإلكتروني في السحابة.';
+        } else if (code === 'auth/invalid-email') {
+          errorMsg = 'صيغة البريد الإلكتروني غير صحيحة.';
+        } else if (code === 'auth/user-disabled') {
+          errorMsg = 'عفواً، تم تعطيل هذا الحساب من قبل إدارة المصنع.';
+        } else if (code === 'auth/too-many-requests') {
+          errorMsg = 'تم حظر المحاولات مؤقتاً بسبب كثرة المحاولات الخاطئة. يرجى الانتظار دقيقة والمحاولة مجدداً.';
+        } else if (err.message) {
+          errorMsg = err.message;
+        }
+
+        App.showToast(errorMsg, 'danger');
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-right-to-bracket ml-2"></i> تسجيل الدخول للنظام 🚀`;
+      }
     }
   </script>
 </body>
