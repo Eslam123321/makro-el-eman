@@ -58,7 +58,33 @@ function loadUsersTable(usersData = null) {
   const tbody = document.getElementById('users-list-tbody');
   if (!tbody) return;
 
-  const users = usersData || (App.db && App.db.users) || [];
+  if (!App.db) App.db = {};
+  if (!App.db.users) App.db.users = [];
+
+  // Ensure Admin user always exists in DB and is active
+  let adminRecord = App.db.users.find(u => u.id === 'USR-1' || u.email === 'admin@eleman.com' || (u.username === 'admin' && u.role === 'مدير عام'));
+  if (!adminRecord) {
+    adminRecord = {
+      id: 'USR-1',
+      username: 'admin',
+      name: 'المدير العام',
+      email: 'admin@eleman.com',
+      role: 'مدير عام',
+      phone: '01000000000',
+      status: 'نشط',
+      permissions: ['dashboard', 'sales', 'inventory', 'suppliers', 'customers', 'hr', 'expenses', 'reports', 'users', 'notifications'],
+      createdAt: '2025-01-01'
+    };
+    App.db.users.unshift(adminRecord);
+    App.save();
+  } else if (!adminRecord.role || adminRecord.role !== 'مدير عام') {
+    adminRecord.role = 'مدير عام';
+    adminRecord.status = 'نشط';
+    adminRecord.permissions = ['dashboard', 'sales', 'inventory', 'suppliers', 'customers', 'hr', 'expenses', 'reports', 'users', 'notifications'];
+    App.save();
+  }
+
+  const users = usersData || App.db.users || [];
   let filtered = users;
 
   if (currentUsersSearch) {
@@ -415,4 +441,68 @@ function deleteUserAccount(userId) {
       App.showToast(`تم حذف حساب المستخدم (${deletedName}) من النظام والسحابة نهائياً 🗑️`, 'danger');
     }
   });
+}
+
+// Open Change My Password Modal (Admin Direct)
+function openChangeMyPasswordModal() {
+  const user = App.getCurrentUser();
+  const emailInput = document.getElementById('my-account-email');
+  if (emailInput) {
+    emailInput.value = (user && user.email) ? user.email : 'admin@eleman.com';
+  }
+  const p1 = document.getElementById('my-new-password');
+  const p2 = document.getElementById('my-new-password-confirm');
+  if (p1) p1.value = '';
+  if (p2) p2.value = '';
+  openModal('change-my-password-modal');
+}
+
+// Save Admin New Password in Firebase Auth & Firestore
+async function saveMyNewPassword() {
+  const p1 = (document.getElementById('my-new-password')?.value || '').trim();
+  const p2 = (document.getElementById('my-new-password-confirm')?.value || '').trim();
+
+  if (!p1) {
+    App.showToast('يرجى إدخال كلمة المرور الجديدة', 'warning');
+    return;
+  }
+  if (p1.length < 6) {
+    App.showToast('يجب ألا تقل كلمة المرور عن 6 أحرف أو أرقام', 'warning');
+    return;
+  }
+  if (p1 !== p2) {
+    App.showToast('كلمتا المرور غير متطابقتين!', 'warning');
+    return;
+  }
+
+  const currentUser = App.getCurrentUser();
+  const userEmail = (currentUser && currentUser.email) ? currentUser.email : 'admin@eleman.com';
+
+  // 1. Update in Firebase Auth directly if supported
+  try {
+    if (typeof FirebaseSync !== 'undefined' && FirebaseSync.updateCurrentUserPassword) {
+      await FirebaseSync.updateCurrentUserPassword(p1);
+    }
+  } catch (err) {
+    console.warn('Direct Firebase Auth update notice:', err);
+  }
+
+  // 2. Update user in App.db.users
+  const userInDb = (App.db.users || []).find(u => u.id === 'USR-1' || u.email === userEmail || u.username === 'admin');
+  if (userInDb) {
+    userInDb.password = p1;
+  }
+  if (currentUser) {
+    currentUser.password = p1;
+    App.setCurrentUser(currentUser);
+  }
+
+  App.save(); // push to firestore
+
+  if (typeof App.logActivity === 'function') {
+    App.logActivity('تغيير كلمة مرور الأدمن 🔐', `قام الأدمن بتغيير كلمة المرور الخاصة بحسابه (${userEmail}) بنجاح`, 'success');
+  }
+
+  closeModal('change-my-password-modal');
+  App.showToast('تم تحديث كلمة المرور بنجاح في سحابة فايربيز والنظام! 🔐✨', 'success');
 }

@@ -230,6 +230,11 @@
         // Set strictly in sessionStorage so closing browser or tab requires logging in again!
         App.setCurrentUser(userInDb);
 
+        // Audit Log to Firebase Cloud Notifications for Admin Only
+        if (typeof App.logActivity === 'function') {
+          App.logActivity('تسجيل دخول للنظام 🚀', `تم تسجيل دخول ناجح للحساب (${userInDb.name}) البريد (${cleanEmail})`, 'success', userInDb);
+        }
+
         App.showToast(`تم تسجيل الدخول بنجاح! مرحباً بك يا ${userInDb.name} ✨`, 'success');
         setTimeout(() => {
           window.location.href = 'index.html';

@@ -108,8 +108,13 @@ const App = {
     }
     try {
       const u = JSON.parse(userStr);
+      // Ensure superadmin has full permissions
+      if (u.id === 'USR-1' || u.email === 'admin@eleman.com') {
+        u.role = 'مدير عام';
+        u.permissions = ['dashboard', 'sales', 'inventory', 'suppliers', 'customers', 'hr', 'expenses', 'reports', 'users', 'notifications'];
+      }
       // Sync fresh data from db
-      const fresh = (this.db.users || []).find(x => x.id === u.id || x.username === u.username);
+      const fresh = (this.db.users || []).find(x => x.id === u.id || x.username === u.username || (x.email && u.email && x.email.toLowerCase() === u.email.toLowerCase()));
       return fresh || u;
     } catch(e) {
       return null;
@@ -123,6 +128,10 @@ const App = {
   },
 
   logout() {
+    const user = this.getCurrentUser();
+    if (user && typeof this.logActivity === 'function') {
+      this.logActivity('تسجيل خروج من النظام 🚪', `قام المستخدم (${user.name}) بالخروج من النظام`, 'warning', user);
+    }
     if (typeof FirebaseSync !== 'undefined' && FirebaseSync.auth) {
       try {
         FirebaseSync.auth.signOut().catch(() => {});
@@ -1447,7 +1456,7 @@ function renderPageSummaryCards(page, containerId) {
     const users = App.db.users || [];
     const activeCount = users.filter(u => u.status === 'نشط').length;
     const disabledCount = users.filter(u => u.status === 'معطل').length;
-    const adminCount = users.filter(u => u.role === 'مدير عام' || u.username === 'admin').length;
+    const adminCount = users.filter(u => App.isSuperAdmin(u)).length;
 
     cardsHTML = `
       <div class="summary-card-item">
@@ -1464,7 +1473,7 @@ function renderPageSummaryCards(page, containerId) {
       </div>
       <div class="summary-card-item">
         <div class="summary-card-icon icon-purple"><i class="fa-solid fa-user-shield"></i></div>
-        <div><span class="text-xs text-muted">مدراء النظام (Super Admins)</span><h4 class="text-primary-color">${adminCount}</h4></div>
+        <div><span class="text-xs text-muted">مدراء النظام (Super Admins)</span><h4 class="text-primary-color">${adminCount} مدير</h4></div>
       </div>
     `;
   }
