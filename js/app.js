@@ -16,7 +16,8 @@ const DEFAULT_DATABASE = {
   attendanceLog: [],
   deliveryTrucks: [],
   treasury: 0,
-  users: []
+  users: [],
+  supplierInvoices: []
 };
 
 // Storage Manager
@@ -72,6 +73,7 @@ class StorageManager {
       if (!Array.isArray(parsed.attendanceLog)) parsed.attendanceLog = [];
       if (!Array.isArray(parsed.deliveryTrucks)) parsed.deliveryTrucks = [];
       if (!Array.isArray(parsed.users)) parsed.users = [];
+      if (!Array.isArray(parsed.supplierInvoices)) parsed.supplierInvoices = [];
       
       // Auto-reconcile live Treasury cash liquidity (Active Net Cash Invoices - Operating Expenses)
       const totalCashInvoices = (parsed.invoices || []).reduce((sum, inv) => {
@@ -209,6 +211,8 @@ const App = {
     if (typeof generateAttendanceReport === 'function') generateAttendanceReport();
     if (typeof loadExpensesTable === 'function') loadExpensesTable();
     if (typeof loadSuppliersTable === 'function') loadSuppliersTable();
+    if (typeof loadSupplierInvoicesTable === 'function') loadSupplierInvoicesTable();
+    if (typeof initSupplierInvoiceForm === 'function') initSupplierInvoiceForm();
     if (typeof generateFinancialAuditReport === 'function') generateFinancialAuditReport();
     if (typeof loadDeliveryTrucksTable === 'function') loadDeliveryTrucksTable();
     if (typeof loadNotificationsPage === 'function') loadNotificationsPage();

@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAppLayout('expenses');
   loadExpensesTable();
 
+  const catSelect = document.getElementById('exp-category');
+  if (catSelect) onExpenseCategoryChange(catSelect.value);
+
   // Handle URL Search query from Quick Search
   const urlParams = new URLSearchParams(window.location.search);
   const searchQuery = urlParams.get('search');
@@ -55,6 +58,13 @@ function loadExpensesTable(expensesData = null) {
       <td><strong>${e.id}</strong></td>
       <td>
         <strong>${e.title}</strong>
+        ${(e.sacksCount && e.sackPrice) ? `
+          <div class="mt-1">
+            <span class="badge badge-emerald text-xs" style="font-size: 0.78rem;">
+              <i class="fa-solid fa-box-open ml-1"></i> ${Number(e.sacksCount).toLocaleString('ar-EG')} شكارة × ${App.formatCurrency(e.sackPrice)}
+            </span>
+          </div>
+        ` : ''}
         <div class="text-xs text-muted">${e.notes || ''}</div>
       </td>
       <td><span class="badge badge-purple">${e.category}</span></td>
@@ -82,11 +92,19 @@ function saveNewExpense() {
     return;
   }
 
+  const sacksCountInput = document.getElementById('exp-sacks-count');
+  const sackPriceInput = document.getElementById('exp-sack-price');
+  const isSacksCategory = (catInput.value || '').includes('شكاير');
+  const sacksCount = (isSacksCategory && sacksCountInput) ? (parseInt(sacksCountInput.value) || null) : null;
+  const sackPrice = (isSacksCategory && sackPriceInput) ? (parseFloat(sackPriceInput.value) || null) : null;
+
   const newExp = {
     id: `EXP-${Date.now().toString().slice(-4)}`,
     title: title,
     category: catInput.value || 'تشغيلي',
     amount: amount,
+    sacksCount: sacksCount,
+    sackPrice: sackPrice,
     date: App.getNowISO(), // Auto-Timestamp
     notes: notesInput.value.trim() || ''
   };
@@ -107,8 +125,71 @@ function saveNewExpense() {
   titleInput.value = '';
   amountInput.value = '';
   notesInput.value = '';
+  if (sacksCountInput) sacksCountInput.value = '';
+  if (sackPriceInput) sackPriceInput.value = '';
+  const summaryBox = document.getElementById('sacks-calc-summary');
+  if (summaryBox) summaryBox.style.display = 'none';
 
   App.showToast(`تم تسجيل المصروف بالختم الزمني الآلي (${newExp.title})`, 'success');
+}
+
+// Category Change Handler for Sacks Calculator
+function onExpenseCategoryChange(categoryVal) {
+  const calcBox = document.getElementById('sacks-calculator-box');
+  if (!calcBox) return;
+
+  const isSacks = (categoryVal || '').includes('شكاير') || (categoryVal || '').includes('شكارة');
+  calcBox.style.display = isSacks ? 'block' : 'none';
+
+  const titleInput = document.getElementById('exp-title');
+  if (isSacks && titleInput && (!titleInput.value.trim() || titleInput.value.trim() === 'شراء شكاير تعبئة وتغليف فارغة')) {
+    titleInput.value = 'شراء شكاير تعبئة وتغليف فارغة';
+  }
+
+  if (isSacks) {
+    calculateSacksExpense();
+  }
+}
+
+// Auto-switch to sacks category if user types sacks in title
+function onExpenseTitleInput(val) {
+  const q = (val || '').toLowerCase();
+  if (q.includes('شكاير') || q.includes('شكارة') || q.includes('شيكارة')) {
+    const catSelect = document.getElementById('exp-category');
+    if (catSelect && !catSelect.value.includes('شكاير')) {
+      catSelect.value = 'شكاير تعبئة وتغليف';
+      onExpenseCategoryChange(catSelect.value);
+    }
+  }
+}
+
+// Sacks Expense Auto-Calculator
+function calculateSacksExpense() {
+  const countInput = document.getElementById('exp-sacks-count');
+  const priceInput = document.getElementById('exp-sack-price');
+  const amountInput = document.getElementById('exp-amount');
+  const summaryBox = document.getElementById('sacks-calc-summary');
+  const textEl = document.getElementById('sacks-calc-text');
+  const totalEl = document.getElementById('sacks-calc-total');
+
+  const count = parseInt(countInput?.value) || 0;
+  const price = parseFloat(priceInput?.value) || 0;
+
+  if (count > 0 && price > 0) {
+    const total = count * price;
+    if (amountInput) amountInput.value = total;
+
+    if (summaryBox) summaryBox.style.display = 'flex';
+    if (textEl) textEl.innerHTML = `<i class="fa-solid fa-calculator ml-1"></i> الحسبة التلقائية: <strong>${count.toLocaleString('ar-EG')} شكارة</strong> × <strong>${price.toFixed(2)} ج.م</strong>`;
+    if (totalEl) totalEl.textContent = `= ${App.formatCurrency(total)}`;
+
+    const titleInput = document.getElementById('exp-title');
+    if (titleInput && (!titleInput.value.trim() || titleInput.value.includes('شكاير') || titleInput.value.includes('شكارة'))) {
+      titleInput.value = `شراء شكاير تعبئة (${count} شكارة × ${price} ج.م)`;
+    }
+  } else {
+    if (summaryBox) summaryBox.style.display = 'none';
+  }
 }
 
 function deleteExpense(expId) {
