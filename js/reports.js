@@ -76,14 +76,13 @@ function renderAuditTable(productsData = null, invoicesData = null) {
   const invoices = invoicesData || App.db.invoices || [];
 
   if (products.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted p-6">لا يوجد أصناف مسجلة بالسجل</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted p-6">لا يوجد أصناف مسجلة بالسجل</td></tr>`;
     return;
   }
 
   tbody.innerHTML = products.map(p => {
     let sacksSold = 0;
     let totalRevenue = 0;
-    let totalCost = 0;
 
     invoices.forEach(inv => {
       if (inv.status === 'مرتجعة بالكامل') return;
@@ -92,34 +91,18 @@ function renderAuditTable(productsData = null, invoicesData = null) {
           const activeQty = Math.max(0, (item.qty || 0) - (item.returnedQty || 0));
           if (activeQty > 0) {
             const itemPrice = item.price || p.sellPrice || p.price || 0;
-            const itemCost = p.costPrice || (itemPrice * 0.8);
             sacksSold += activeQty;
             totalRevenue += (activeQty * itemPrice);
-            totalCost += (activeQty * itemCost);
           }
         }
       });
     });
-
-    const netProfit = totalRevenue - totalCost;
-    const margin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0;
 
     return `
       <tr>
         <td><strong>${p.name}</strong> <span class="badge badge-secondary" style="font-size: 0.75rem; margin-right: 4px;">${p.unit || 'شكارة'}</span></td>
         <td style="text-align: center;"><strong class="text-dark">${sacksSold} شكارة</strong></td>
         <td style="text-align: center;"><strong class="text-success">${App.formatCurrency(totalRevenue)}</strong></td>
-        <td style="text-align: center;"><strong class="text-warning">${App.formatCurrency(totalCost)}</strong></td>
-        <td style="text-align: left;">
-          <strong class="${netProfit >= 0 ? 'text-success' : 'text-danger'}" style="font-size: 1rem;">
-            ${netProfit >= 0 ? '+' : ''}${App.formatCurrency(netProfit)}
-          </strong>
-        </td>
-        <td style="text-align: center;">
-          <span class="badge ${margin >= 25 ? 'badge-success' : (margin > 0 ? 'badge-warning' : 'badge-secondary')}">
-            ${margin}%
-          </span>
-        </td>
       </tr>
     `;
   }).join('');

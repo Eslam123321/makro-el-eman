@@ -982,7 +982,7 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
   if (!container) return;
 
   container.innerHTML = `
-    <div id="printable-invoice-content" style="font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important; direction: rtl !important; text-align: right !important; letter-spacing: 0px !important; word-spacing: 0px !important; color: #1e293b; background: #ffffff; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; width: 100%; position: relative; overflow: hidden;">
+    <div id="printable-invoice-content" style="font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important; direction: rtl !important; text-align: right !important; letter-spacing: 0px !important; word-spacing: 0px !important; color: #1e293b; background: #ffffff; padding: 22px 22px 35px 22px; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; width: 100%; position: relative; overflow: visible;">
       
       <!-- Luxury Realistic Watermark Seal in Background -->
       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg); pointer-events: none; opacity: 0.055; z-index: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 340px; height: 340px; border: 8px double #059669; border-radius: 50%; user-select: none; font-family: 'Cairo', 'Tajawal', Tahoma, sans-serif !important;">

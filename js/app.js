@@ -885,7 +885,7 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
   const cust = App.db.customers ? App.db.customers.find(c => c.name === inv.customerName || c.id === inv.customerId) : null;
 
   container.innerHTML = `
-    <div id="printable-invoice-content" style="font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important; direction: rtl !important; text-align: right !important; letter-spacing: 0px !important; word-spacing: 0px !important; color: #1e293b; background: #ffffff; padding: 18px; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; width: 100%; position: relative; overflow: hidden;">
+    <div id="printable-invoice-content" style="font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important; direction: rtl !important; text-align: right !important; letter-spacing: 0px !important; word-spacing: 0px !important; color: #1e293b; background: #ffffff; padding: 22px 22px 35px 22px; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; width: 100%; position: relative; overflow: visible;">
       
       <!-- Luxury Realistic Watermark Seal in Background -->
       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg); pointer-events: none; opacity: 0.055; z-index: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 340px; height: 340px; border: 8px double #059669; border-radius: 50%; user-select: none; font-family: 'Cairo', 'Tajawal', Tahoma, sans-serif !important;">
@@ -1356,7 +1356,23 @@ async function openWhatsAppShareModal(invoiceOrId = null, type = 'sales') {
   const previewImg = document.getElementById('wa-modal-preview-img');
   if (content && typeof html2canvas !== 'undefined') {
     try {
-      const canvas = await html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const canvas = await html2canvas(content, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        scrollY: 0,
+        scrollX: 0,
+        windowWidth: content.scrollWidth + 50,
+        windowHeight: content.scrollHeight + 100,
+        onclone: (clonedDoc) => {
+          const el = clonedDoc.getElementById(content.id);
+          if (el) {
+            el.style.overflow = 'visible';
+            el.style.paddingBottom = '40px';
+          }
+        }
+      });
       window._currentInvoiceCanvas = canvas;
       if (previewImg) {
         previewImg.src = canvas.toDataURL('image/png');
@@ -1632,7 +1648,16 @@ async function downloadInvoiceAsImage() {
       letterRendering: false,
       logging: false,
       scrollY: 0,
-      scrollX: 0
+      scrollX: 0,
+      windowWidth: content.scrollWidth + 50,
+      windowHeight: content.scrollHeight + 100,
+      onclone: (clonedDoc) => {
+        const el = clonedDoc.getElementById(content.id);
+        if (el) {
+          el.style.overflow = 'visible';
+          el.style.paddingBottom = '40px';
+        }
+      }
     });
 
     if (!canvas || canvas.width === 0) {

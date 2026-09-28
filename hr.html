@@ -428,13 +428,16 @@
         <button class="btn btn-secondary" onclick="closeModal('emp-report-range-modal')">إلغاء</button>
         <button class="btn btn-primary" onclick="confirmAndPrintEmployeeReport()"><i class="fa-solid fa-check"></i> تم ↵</button>
       </div>
-  <!-- Modal Card 8: Edit Employee, Salary & Advance Modal -->
+    </div>
+  </div>
+
+  <!-- Modal Card 8: Edit Employee, Salary, Advance & Deduction Modal -->
   <div class="modal-backdrop" id="edit-employee-modal">
     <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title">
           <i class="fa-solid fa-user-pen text-primary-color"></i>
-          <h3>تعديل بيانات وراتب وسلفة الموظف 👔</h3>
+          <h3>تعديل بيانات وراتب وسلفة وخصومات الموظف 👔</h3>
         </div>
         <button class="modal-close" onclick="closeModal('edit-employee-modal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
@@ -469,20 +472,26 @@
             <input type="number" id="edit-emp-advances" class="form-control" min="0">
           </div>
           <div class="form-group">
-            <label>يوم استحقاق القبض الشهري (رقم اليوم)</label>
-            <input type="number" id="edit-emp-pay-day" class="form-control" min="1" max="31">
+            <label>إجمالي الخصومات والجزاءات (جنيه)</label>
+            <input type="number" id="edit-emp-deductions" class="form-control" min="0">
           </div>
         </div>
 
-        <div class="form-group">
-          <label>تاريخ التعيين بالمصنع</label>
-          <input type="date" id="edit-emp-hire-date" class="form-control">
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="form-group">
+            <label>يوم استحقاق القبض الشهري (رقم اليوم)</label>
+            <input type="number" id="edit-emp-pay-day" class="form-control" min="1" max="31">
+          </div>
+          <div class="form-group">
+            <label>تاريخ التعيين بالمصنع</label>
+            <input type="date" id="edit-emp-hire-date" class="form-control">
+          </div>
         </div>
       </div>
 
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('edit-employee-modal')">إلغاء</button>
-        <button class="btn btn-primary" onclick="saveEditedEmployee()"><i class="fa-solid fa-check ml-1"></i> حفظ تعديلات الموظف والراتب 💾</button>
+        <button class="btn btn-primary" onclick="saveEditedEmployee()"><i class="fa-solid fa-check ml-1"></i> حفظ وتحديث بيانات الموظف والراتب 💾</button>
       </div>
     </div>
   </div>

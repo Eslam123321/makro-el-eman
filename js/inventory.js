@@ -319,25 +319,15 @@ function renderInventoryReportContent() {
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; border: 1px solid #cbd5e1; font-size: 0.8rem;">
         <thead style="background: #f8fafc;">
           <tr>
-            <th style="width: 10%; padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center;">كود الصنف</th>
-            <th style="width: 35%; padding: 8px 10px; border: 1px solid #cbd5e1; text-align: right;">اسم المنتج وتفاصيل العبوة</th>
-            <th style="width: 15%; padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center;">الفئة</th>
-            <th style="width: 15%; padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center;">رصيد المخزون الحالي</th>
+            <th style="width: 15%; padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center;">كود الصنف</th>
+            <th style="width: 50%; padding: 8px 10px; border: 1px solid #cbd5e1; text-align: right;">اسم المنتج وتفاصيل العبوة</th>
+            <th style="width: 20%; padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center;">الفئة</th>
             <th style="width: 15%; padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center;">المبيعات بالفترة</th>
-            <th style="width: 10%; padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center;">حالة الرصيد</th>
           </tr>
         </thead>
         <tbody>
           ${products.map(p => {
             const soldQty = productSoldMap[p.name] || 0;
-            
-            let statusTag = `<span style="color: #15803d; font-weight: bold; background: #dcfce7; padding: 3px 8px; border-radius: 4px;">متوفر 🟢</span>`;
-            if (p.stock <= 0) {
-              statusTag = `<span style="color: #b91c1c; font-weight: bold; background: #fee2e2; padding: 3px 8px; border-radius: 4px;">نفد 🔴</span>`;
-            } else if (p.stock < 150) {
-              statusTag = `<span style="color: #b45309; font-weight: bold; background: #fef3c7; padding: 3px 8px; border-radius: 4px;">منخفض ⚠️</span>`;
-            }
-
             return `
               <tr>
                 <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${p.id}</td>
@@ -345,13 +335,9 @@ function renderInventoryReportContent() {
                   <strong>${p.name}</strong>
                 </td>
                 <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center;">${p.category || 'درجة أولى'}</td>
-                <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; font-size: 0.95rem; color: ${p.stock < 150 ? '#dc2626' : '#059669'};">
-                  ${p.stock} شكارة
-                </td>
                 <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">
                   ${soldQty > 0 ? `<span style="color: #1d4ed8; font-size: 0.9rem;">${soldQty} شكارة</span>` : '<span style="color: #94a3b8;">-</span>'}
                 </td>
-                <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center;">${statusTag}</td>
               </tr>
             `;
           }).join('')}

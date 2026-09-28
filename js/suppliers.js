@@ -1087,7 +1087,7 @@ function renderSupplierInvoicePreview(inv, isDraft = false) {
   const sup = (App.db.suppliers || []).find(s => s.id === inv.supplierId || s.name === inv.supplierName);
 
   container.innerHTML = `
-    <div id="printable-supplier-invoice-content" style="font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important; direction: rtl !important; text-align: right !important; letter-spacing: 0px !important; word-spacing: 0px !important; color: #1e293b; background: #ffffff; padding: 18px; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; width: 100%; position: relative; overflow: hidden;">
+    <div id="printable-supplier-invoice-content" style="font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important; direction: rtl !important; text-align: right !important; letter-spacing: 0px !important; word-spacing: 0px !important; color: #1e293b; background: #ffffff; padding: 22px 22px 35px 22px; border: 1px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; width: 100%; position: relative; overflow: visible;">
       
       <!-- Luxury Realistic Watermark Seal in Background -->
       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg); pointer-events: none; opacity: 0.055; z-index: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 340px; height: 340px; border: 8px double #059669; border-radius: 50%; user-select: none; font-family: 'Cairo', 'Tajawal', Tahoma, sans-serif !important;">
@@ -1214,7 +1214,7 @@ function renderSupplierInvoicePreview(inv, isDraft = false) {
       </div>
 
       <!-- Official Signatures Row -->
-      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #cbd5e1; margin-top: 14px; padding-top: 8px; font-size: 0.75rem; color: #64748b;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #cbd5e1; margin-top: 18px; padding-top: 12px; padding-bottom: 12px; font-size: 0.78rem; color: #475569; font-weight: 600;">
         <span>توقيع أمين مخزن الدقيق: __________________</span>
         <span>توقيع سائق / مندوب المطحن: __________________</span>
         <span>اعتماد الإدارة: __________________</span>
@@ -1294,7 +1294,23 @@ function downloadSupplierInvoiceAsImage(invId) {
   }
 
   App.showToast('جاري استخراج وتنزيل صورة الفاتورة عالية الدقة (PNG)... 🖼️⏳', 'info');
-  html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+  html2canvas(content, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: '#ffffff',
+    scrollY: 0,
+    scrollX: 0,
+    windowWidth: content.scrollWidth + 50,
+    windowHeight: content.scrollHeight + 100,
+    onclone: (clonedDoc) => {
+      const el = clonedDoc.getElementById('printable-supplier-invoice-content');
+      if (el) {
+        el.style.overflow = 'visible';
+        el.style.paddingBottom = '40px';
+      }
+    }
+  }).then(canvas => {
     const link = document.createElement('a');
     link.download = `فاتورة_توريد_دقيق_${invId || 'الإيمان'}.png`;
     link.href = canvas.toDataURL('image/png');

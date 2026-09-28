@@ -518,6 +518,9 @@ function openEditEmployeeModal(empId) {
   document.getElementById('edit-emp-job').value = emp.jobTitle || '';
   document.getElementById('edit-emp-salary').value = emp.baseSalary || 0;
   document.getElementById('edit-emp-advances').value = emp.advances || 0;
+  if (document.getElementById('edit-emp-deductions')) {
+    document.getElementById('edit-emp-deductions').value = emp.deductions || 0;
+  }
   document.getElementById('edit-emp-pay-day').value = emp.payDay || (emp.payDate ? emp.payDate.split('-')[2] : '30');
   document.getElementById('edit-emp-hire-date').value = emp.hireDate || '';
 
@@ -534,6 +537,8 @@ function saveEditedEmployee() {
   const job = document.getElementById('edit-emp-job').value.trim();
   const salary = parseFloat(document.getElementById('edit-emp-salary').value) || 0;
   const advances = Math.max(0, parseFloat(document.getElementById('edit-emp-advances').value) || 0);
+  const deductionsInput = document.getElementById('edit-emp-deductions');
+  const deductions = deductionsInput ? Math.max(0, parseFloat(deductionsInput.value) || 0) : (emp.deductions || 0);
   const payDay = document.getElementById('edit-emp-pay-day').value.trim();
   const hireDate = document.getElementById('edit-emp-hire-date').value;
 
@@ -547,6 +552,7 @@ function saveEditedEmployee() {
   emp.jobTitle = job || emp.jobTitle;
   emp.baseSalary = salary;
   emp.advances = advances;
+  emp.deductions = deductions;
   if (payDay) emp.payDay = payDay;
   if (hireDate) emp.hireDate = hireDate;
 
@@ -555,7 +561,24 @@ function saveEditedEmployee() {
   loadDailyAttendanceTable();
   if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('hr', 'hr-summary-cards-container');
   closeModal('edit-employee-modal');
-  App.showToast(`تم حفظ وتحديث بيانات وراتب الموظف (${emp.name}) بنجاح 👔💾`, 'success');
+  App.showToast(`تم حفظ وتحديث بيانات وراتب وسلفة الموظف (${emp.name}) بنجاح 👔💾`, 'success');
+}
+
+function deleteDeduction(empId, dedId) {
+  const emp = (App.db.employees || []).find(e => e.id === empId);
+  if (!emp || !emp.deductionsList) return;
+
+  const dedIndex = emp.deductionsList.findIndex(d => d.id === dedId);
+  if (dedIndex === -1) return;
+
+  const removedDed = emp.deductionsList.splice(dedIndex, 1)[0];
+  emp.deductions = Math.max(0, (emp.deductions || 0) - (removedDed.amount || 0));
+
+  App.save();
+  loadEmployeesTable();
+  if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('hr', 'hr-summary-cards-container');
+  renderEmployeeStatementContent();
+  App.showToast(`تم حذف وإلغاء الخصم بقيمة (${App.formatCurrency(removedDed.amount)}) بنجاح 🗑️`, 'success');
 }
 
 // Disburse Monthly Salary
@@ -947,6 +970,7 @@ function renderEmployeeStatementContent() {
             <th style="padding: 6px 8px; border: 1px solid #fecaca; text-align: right;">تاريخ الخصم</th>
             <th style="padding: 6px 8px; border: 1px solid #fecaca; text-align: center;">قيمة الخصم</th>
             <th style="padding: 6px 8px; border: 1px solid #fecaca; text-align: right;">سبب وتفاصيل الخصم المالي</th>
+            <th class="no-print" style="padding: 6px 8px; border: 1px solid #fecaca; text-align: center;">إجراء</th>
           </tr>
         </thead>
         <tbody>
@@ -956,8 +980,11 @@ function renderEmployeeStatementContent() {
               <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">${App.formatTimestamp(d.date)}</td>
               <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center;"><strong style="color: #dc2626;">-${App.formatCurrency(d.amount)}</strong></td>
               <td style="padding: 6px 8px; border: 1px solid #e2e8f0; font-weight: 600; color: #1e293b;">${d.reason || 'خصم مالي إداري مباشر'}</td>
+              <td class="no-print" style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center;">
+                <button class="btn btn-danger btn-sm" onclick="deleteDeduction('${emp.id}', '${d.id}')" title="حذف وإلغاء الخصم"><i class="fa-solid fa-trash"></i></button>
+              </td>
             </tr>
-          `).join('') : `<tr><td colspan="4" style="padding: 10px; text-align: center; color: #94a3b8;">لا توجد خصومات مالية مسجلة على الموظف</td></tr>`}
+          `).join('') : `<tr><td colspan="5" style="padding: 10px; text-align: center; color: #94a3b8;">لا توجد خصومات مالية مسجلة على الموظف</td></tr>`}
         </tbody>
       </table>
 
