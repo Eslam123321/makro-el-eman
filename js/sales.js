@@ -49,17 +49,17 @@ function initSalesForm() {
         <div class="pos-product-card ${isOutOfStock ? 'out-of-stock-card' : ''}" onclick="${isOutOfStock ? `App.showToast('عفواً، صنف (${p.name}) نفد من المخزن ولا يمكن إضافته للبيع 🚫', 'danger')` : `quickAddProductToInvoice('${p.id}')`}">
           <div>
             <div class="pos-card-header">
-              <span class="badge badge-blue">${p.unit}</span>
+              <span class="badge badge-blue">${p.unit || 'شكارة'}</span>
               <span class="badge ${isOutOfStock ? 'badge-danger' : 'badge-emerald'} text-xs">
                 ${isOutOfStock ? 'غير متوفر 🚫' : 'متاح بالمخزن 🟢'}
               </span>
             </div>
             <div class="pos-card-title" style="${isOutOfStock ? 'color: var(--text-muted);' : ''}">${p.name}</div>
-            <div class="pos-card-category">فئة: ${p.category}</div>
+            <div class="pos-card-category">فئة: ${p.category || 'درجة أولى'}</div>
           </div>
           <div class="pos-card-footer">
             <div>
-              <div class="pos-card-price ${isOutOfStock ? 'text-muted' : ''}">${App.formatCurrency(p.sellPrice)}</div>
+              <div class="pos-card-price" style="color: #059669; font-weight: 700; font-size: 0.85rem;"><i class="fa-solid fa-pen-to-square ml-1"></i> تسعير حر بالفاتورة</div>
               <div class="pos-card-stock ${isOutOfStock ? 'text-danger font-bold' : (p.stock < 150 ? 'text-warning font-bold' : 'text-muted')}">
                 ${isOutOfStock ? 'نفدت الكمية (0 شكارة)' : 'المتاح: ' + p.stock + ' شكارة'}
               </div>
@@ -98,20 +98,21 @@ function quickAddProductToInvoice(prodId) {
       return;
     }
     existingItem.qty += 1;
-    existingItem.total = existingItem.qty * existingItem.price;
+    existingItem.total = existingItem.qty * (existingItem.price || 0);
   } else {
+    const itemPrice = parseFloat(prod.sellPrice) || 0;
     currentInvoiceItems.push({
       id: prod.id,
       name: prod.name,
-      unit: prod.unit,
-      price: prod.sellPrice,
+      unit: prod.unit || 'شكارة',
+      price: itemPrice,
       qty: 1,
-      total: prod.sellPrice
+      total: itemPrice * 1
     });
   }
 
   renderCurrentInvoiceItems();
-  App.showToast(`تمت إضافة (1 شكارة) من ${prod.name}`, 'success');
+  App.showToast(`تمت إضافة (1 شكارة) من ${prod.name} - حدد سعر الشكارة بالفاتورة`, 'success');
 }
 
 function updateInvoiceItemRealtime(index, key, value) {
@@ -121,6 +122,20 @@ function updateInvoiceItemRealtime(index, key, value) {
   currentInvoiceItems[index].total = (currentInvoiceItems[index].qty || 0) * (currentInvoiceItems[index].price || 0);
 
   // Update total cell in row in real-time
+  const totalCell = document.getElementById(`item-total-val-${index}`);
+  if (totalCell) {
+    totalCell.textContent = App.formatCurrency(currentInvoiceItems[index].total);
+  }
+
+  calculateTotals();
+}
+
+function updateInvoiceItemPrice(index, value) {
+  if (!currentInvoiceItems[index]) return;
+  const val = parseFloat(value) || 0;
+  currentInvoiceItems[index].price = val;
+  currentInvoiceItems[index].total = (currentInvoiceItems[index].qty || 0) * val;
+
   const totalCell = document.getElementById(`item-total-val-${index}`);
   if (totalCell) {
     totalCell.textContent = App.formatCurrency(currentInvoiceItems[index].total);
@@ -171,7 +186,7 @@ function renderCurrentInvoiceItems() {
   tbody.innerHTML = currentInvoiceItems.map((item, idx) => `
     <tr>
       <td><strong>${item.name}</strong></td>
-      <td><span class="badge badge-blue">${item.unit}</span></td>
+      <td><span class="badge badge-blue">${item.unit || 'شكارة'}</span></td>
       <td>
         <div class="flex items-center justify-center gap-1" style="min-width: 125px;">
           <button type="button" class="btn btn-secondary btn-sm" style="width: 28px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; border-radius: 6px;" onclick="changeItemQty(${idx}, -1)" title="تقليل شكارة">-</button>
@@ -180,7 +195,7 @@ function renderCurrentInvoiceItems() {
         </div>
       </td>
       <td>
-        <input type="text" value="${App.formatCurrency(item.price)}" class="form-control text-center font-bold" style="width: 100px; height: 32px; padding: 2px; background: var(--bg-main);" disabled readonly title="سعر الشكارة ثابت ومحدد مسبقاً في المخزن">
+        <input type="number" id="item-price-input-${idx}" min="0" step="any" value="${item.price > 0 ? item.price : ''}" placeholder="أدخل السعر" class="form-control text-center font-bold" style="width: 110px; height: 32px; padding: 2px; border: 1.5px solid #059669;" onclick="this.select()" oninput="updateInvoiceItemPrice(${idx}, this.value)" title="أدخل سعر بيع الشكارة للفاتورة الحالية">
       </td>
       <td><strong class="text-success" id="item-total-val-${idx}">${App.formatCurrency(item.total)}</strong></td>
       <td>

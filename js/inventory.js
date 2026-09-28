@@ -37,7 +37,7 @@ function loadInventoryTable(productsData = null) {
 
   const products = productsData || App.db.products;
   if (products.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted p-6">لا يوجد منتجات بالمخزن مطبقة عليها الفلترة</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted p-6">لا يوجد منتجات بالمخزن مطبقة عليها الفلترة</td></tr>`;
     return;
   }
 
@@ -48,17 +48,15 @@ function loadInventoryTable(productsData = null) {
         <strong>${p.name}</strong>
         <div class="text-xs text-muted">فئة: ${p.category}</div>
       </td>
-      <td><span class="badge badge-blue">${p.unit}</span></td>
+      <td><span class="badge badge-blue">${p.unit || 'شكارة'}</span></td>
       <td>
         <strong style="font-size: 1.05rem;" class="${p.stock < 150 ? 'text-danger' : 'text-primary-color'}">
           ${p.stock} شكارة
         </strong>
       </td>
-      <td>${App.formatCurrency(p.costPrice)} / شكارة</td>
-      <td><strong class="text-success">${App.formatCurrency(p.sellPrice)} / شكارة</strong></td>
       <td>
         <div class="flex gap-2">
-          <button class="btn btn-secondary btn-sm" onclick="openAddBatchModal('${p.id}')" title="إضافة شحنة/وارد"><i class="fa-solid fa-plus"></i> توريد جديد</button>
+          <button class="btn btn-secondary btn-sm" onclick="openAddBatchModal('${p.id}')" title="إضافة شحنة/وارد"><i class="fa-solid fa-plus"></i> توريد شكاير</button>
           <button class="btn btn-secondary btn-sm" onclick="openEditProductModal('${p.id}')" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
           <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')" title="حذف"><i class="fa-solid fa-trash"></i></button>
         </div>
@@ -67,13 +65,11 @@ function loadInventoryTable(productsData = null) {
   `).join('');
 }
 
-// Modal Card: Create New Product (NO SKU FIELD)
+// Modal Card: Create New Product (NO PRICES IN WAREHOUSE)
 function saveNewProduct() {
   const nameInput = document.getElementById('prod-name');
   const catInput = document.getElementById('prod-category');
   const stockInput = document.getElementById('prod-stock');
-  const costInput = document.getElementById('prod-cost');
-  const sellInput = document.getElementById('prod-sell');
 
   const name = nameInput.value.trim();
   if (!name) {
@@ -82,17 +78,15 @@ function saveNewProduct() {
   }
 
   const stock = parseInt(stockInput.value) || 0;
-  const cost = parseFloat(costInput.value) || 0;
-  const sell = parseFloat(sellInput.value) || 0;
 
   const newProd = {
     id: `PRD-${100 + App.db.products.length + 1}`,
     name: name.includes('شكارة') ? name : `${name} (شكارة)`, // Ensure Sack in name
     unit: 'شكارة', // STRICTLY ONLY SACKS
     stock: stock,
-    costPrice: cost,
-    sellPrice: sell,
-    category: catInput.value || 'درجة أولى'
+    costPrice: 0,
+    sellPrice: 0,
+    category: catInput ? catInput.value : 'درجة أولى'
   };
 
   App.db.products.push(newProd);
@@ -103,21 +97,18 @@ function saveNewProduct() {
   // Reset form
   nameInput.value = '';
   stockInput.value = '';
-  costInput.value = '';
-  sellInput.value = '';
 
-  App.showToast(`تمت إضافة صنف المكرونة الجديد (${newProd.name})`, 'success');
+  App.showToast(`تمت إضافة صنف المكرونة الجديد (${newProd.name}) بنجاح`, 'success');
 }
 
-// Dynamic Average Costing Logic for New Batches
+// Logic for Adding New Batches (Sacks count only)
 function openAddBatchModal(prodId) {
   const prod = App.db.products.find(p => p.id === prodId);
   if (!prod) return;
 
   document.getElementById('batch-prod-id').value = prod.id;
-  document.getElementById('batch-prod-title').textContent = `${prod.name} (المخزون الحالي: ${prod.stock} شكارة | التكلفة الحالية: ${prod.costPrice} ج.م)`;
+  document.getElementById('batch-prod-title').textContent = `${prod.name} (المخزون الحالي: ${prod.stock} شكارة)`;
   document.getElementById('batch-qty').value = '';
-  document.getElementById('batch-cost').value = prod.costPrice;
 
   openModal('add-batch-modal');
 }
@@ -125,34 +116,24 @@ function openAddBatchModal(prodId) {
 function processNewBatchSupply() {
   const prodId = document.getElementById('batch-prod-id').value;
   const qtyInput = document.getElementById('batch-qty');
-  const costInput = document.getElementById('batch-cost');
 
   const addedQty = parseInt(qtyInput.value) || 0;
-  const newBatchCost = parseFloat(costInput.value) || 0;
 
   if (addedQty <= 0) {
-    App.showToast('رجاء ادخل كمية الشحنة الموردة الجديدة', 'warning');
+    App.showToast('رجاء ادخل كمية الشكاير الموردة الجديدة', 'warning');
     return;
   }
 
   const prod = App.db.products.find(p => p.id === prodId);
   if (!prod) return;
 
-  // DYNAMIC AVERAGE COST FORMULA:
-  // Weighted Average Cost = ((OldStock * OldCost) + (AddedQty * AddedCost)) / (OldStock + AddedQty)
-  const oldTotalCost = prod.stock * prod.costPrice;
-  const newBatchTotalCost = addedQty * newBatchCost;
-  const updatedStock = prod.stock + addedQty;
-  const updatedAverageCost = Math.round((oldTotalCost + newBatchTotalCost) / updatedStock);
-
-  prod.stock = updatedStock;
-  prod.costPrice = updatedAverageCost;
+  prod.stock = (prod.stock || 0) + addedQty;
 
   App.save();
   loadInventoryTable();
   closeModal('add-batch-modal');
 
-  App.showToast(`تم توريد ${addedQty} شكارة وتحديث متوسط سعر التكلفة الآلي إلى (${updatedAverageCost} ج.م)`, 'success');
+  App.showToast(`تم توريد ${addedQty} شكارة بنجاح وإضافتها لرصيد الصنف بالمخزن`, 'success');
 }
 
 // Modal Card: Edit Product
@@ -163,9 +144,9 @@ function openEditProductModal(prodId) {
   document.getElementById('edit-prod-id').value = prod.id;
   document.getElementById('edit-prod-name').value = prod.name;
   document.getElementById('edit-prod-stock').value = prod.stock;
-  document.getElementById('edit-prod-cost').value = prod.costPrice;
-  document.getElementById('edit-prod-sell').value = prod.sellPrice;
-  document.getElementById('edit-prod-category').value = prod.category;
+  if (document.getElementById('edit-prod-category')) {
+    document.getElementById('edit-prod-category').value = prod.category;
+  }
 
   openModal('edit-product-modal');
 }
@@ -177,9 +158,9 @@ function updateProduct() {
 
   prod.name = document.getElementById('edit-prod-name').value;
   prod.stock = parseInt(document.getElementById('edit-prod-stock').value) || 0;
-  prod.costPrice = parseFloat(document.getElementById('edit-prod-cost').value) || 0;
-  prod.sellPrice = parseFloat(document.getElementById('edit-prod-sell').value) || 0;
-  prod.category = document.getElementById('edit-prod-category').value;
+  if (document.getElementById('edit-prod-category')) {
+    prod.category = document.getElementById('edit-prod-category').value;
+  }
 
   App.save();
   loadInventoryTable();
@@ -316,10 +297,9 @@ function renderInventoryReportContent() {
 
   // Calculate totals
   const totalSacks = products.reduce((sum, p) => sum + (p.stock || 0), 0);
-  const totalCostVal = products.reduce((sum, p) => sum + ((p.stock || 0) * (p.costPrice || 0)), 0);
-  const totalSellVal = products.reduce((sum, p) => sum + ((p.stock || 0) * (p.sellPrice || 0)), 0);
-  const totalProfitMargin = totalSellVal - totalCostVal;
   const totalSoldInPeriod = Object.values(productSoldMap).reduce((a, b) => a + b, 0);
+  const lowStockCount = products.filter(p => p.stock > 0 && p.stock < 150).length;
+  const outOfStockCount = products.filter(p => (p.stock || 0) <= 0).length;
 
   const logoSrc = (typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png';
 
@@ -332,7 +312,7 @@ function renderInventoryReportContent() {
           <img src="${logoSrc}" alt="شعار مصنع الإيمان" style="height: 60px; width: 60px; object-fit: contain;">
           <div>
             <h2 style="color: #059669; font-weight: 700; font-size: 1.4rem; margin: 0 0 2px 0;">مصنع الإيمان للمكرونة</h2>
-            <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 2px 0;">إدارة المخازن ومراقبة المخزون وتكلفة الإنتاج</p>
+            <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 2px 0;">إدارة المخازن ومراقبة حركة أرصدة الشكاير</p>
             <p style="font-size: 0.8rem; color: #94a3b8; margin: 0;">تقرير الجرد الدوري وحركة الأصناف المعتمد</p>
           </div>
         </div>
@@ -343,86 +323,70 @@ function renderInventoryReportContent() {
         </div>
       </div>
 
-      <!-- Inventory Valuation Summary KPI Cards -->
-      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px;">
-        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 4px; text-align: center;">
-          <span style="font-size: 0.68rem; color: #166534; font-weight: bold; display: block;">إجمالي الشكاير</span>
-          <strong style="font-size: 1rem; color: #059669; display: block; margin-top: 1px;">${totalSacks} شكارة</strong>
-          <span style="font-size: 0.6rem; color: #166534;">(${products.length} أصناف)</span>
+      <!-- Inventory Summary KPI Cards -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;">
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 8px; text-align: center;">
+          <span style="font-size: 0.75rem; color: #166534; font-weight: bold; display: block;">إجمالي الشكاير المتوفرة</span>
+          <strong style="font-size: 1.25rem; color: #059669; display: block; margin-top: 3px;">${totalSacks} شكارة</strong>
+          <span style="font-size: 0.7rem; color: #166534;">(${products.length} أصناف مكرونة)</span>
         </div>
 
-        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 6px 4px; text-align: center;">
-          <span style="font-size: 0.68rem; color: #1e40af; font-weight: bold; display: block;">المخزون بالتكلفة</span>
-          <strong style="font-size: 0.95rem; color: #1d4ed8; display: block; margin-top: 1px;">${App.formatCurrency(totalCostVal)}</strong>
-          <span style="font-size: 0.6rem; color: #1e40af;">رأس المال</span>
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 8px; text-align: center;">
+          <span style="font-size: 0.75rem; color: #1e40af; font-weight: bold; display: block;">منصرف المبيعات بالفترة</span>
+          <strong style="font-size: 1.25rem; color: #1d4ed8; display: block; margin-top: 3px;">${totalSoldInPeriod} شكارة</strong>
+          <span style="font-size: 0.7rem; color: #1e40af;">(${periodInvoices.length} فاتورة بيع)</span>
         </div>
 
-        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 6px 4px; text-align: center;">
-          <span style="font-size: 0.68rem; color: #065f46; font-weight: bold; display: block;">القيمة البيعية</span>
-          <strong style="font-size: 0.95rem; color: #047857; display: block; margin-top: 1px;">${App.formatCurrency(totalSellVal)}</strong>
-          <span style="font-size: 0.6rem; color: #065f46;">الإيراد المتوقع</span>
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 8px; text-align: center;">
+          <span style="font-size: 0.75rem; color: #92400e; font-weight: bold; display: block;">أصناف مخزونها منخفض</span>
+          <strong style="font-size: 1.25rem; color: #b45309; display: block; margin-top: 3px;">${lowStockCount} أصناف</strong>
+          <span style="font-size: 0.7rem; color: #92400e;">(أقل من 150 شكارة)</span>
         </div>
 
-        <div style="background: #fdf4ff; border: 1px solid #f0abfc; border-radius: 6px; padding: 6px 4px; text-align: center;">
-          <span style="font-size: 0.68rem; color: #86198f; font-weight: bold; display: block;">هامش الأرباح</span>
-          <strong style="font-size: 0.95rem; color: #a21caf; display: block; margin-top: 1px;">+${App.formatCurrency(totalProfitMargin)}</strong>
-          <span style="font-size: 0.6rem; color: #86198f;">الربح المتوقع</span>
-        </div>
-
-        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px 4px; text-align: center;">
-          <span style="font-size: 0.68rem; color: #92400e; font-weight: bold; display: block;">منصرف المبيعات</span>
-          <strong style="font-size: 0.95rem; color: #b45309; display: block; margin-top: 1px;">${totalSoldInPeriod} شكارة</strong>
-          <span style="font-size: 0.6rem; color: #92400e;">(${periodInvoices.length} فاتورة)</span>
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 8px; text-align: center;">
+          <span style="font-size: 0.75rem; color: #991b1b; font-weight: bold; display: block;">أصناف نفدت تماماً</span>
+          <strong style="font-size: 1.25rem; color: #dc2626; display: block; margin-top: 3px;">${outOfStockCount} أصناف</strong>
+          <span style="font-size: 0.7rem; color: #991b1b;">(رصيد صفر)</span>
         </div>
       </div>
 
-      <!-- Inventory Breakdown Table (100% Fit without truncation) -->
-      <table style="width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 14px; border: 1px solid #cbd5e1; font-size: 0.72rem;">
+      <!-- Inventory Breakdown Table -->
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; border: 1px solid #cbd5e1; font-size: 0.8rem;">
         <thead style="background: #f8fafc;">
           <tr>
-            <th style="width: 8%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">كود الصنف</th>
-            <th style="width: 16%; padding: 4px 4px; border: 1px solid #cbd5e1; text-align: right;">اسم المنتج والعبوة</th>
-            <th style="width: 9%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">الفئة</th>
-            <th style="width: 10%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">المخزون</th>
-            <th style="width: 10%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">سعر التكلفة</th>
-            <th style="width: 11%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">إجمالي التكلفة</th>
-            <th style="width: 10%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">سعر البيع</th>
-            <th style="width: 11%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">إجمالي البيع</th>
-            <th style="width: 8%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">المبيعات</th>
-            <th style="width: 7%; padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">الحالة</th>
+            <th style="width: 10%; padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center;">كود الصنف</th>
+            <th style="width: 35%; padding: 8px 10px; border: 1px solid #cbd5e1; text-align: right;">اسم المنتج وتفاصيل العبوة</th>
+            <th style="width: 15%; padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center;">الفئة</th>
+            <th style="width: 15%; padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center;">رصيد المخزون الحالي</th>
+            <th style="width: 15%; padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center;">المبيعات بالفترة</th>
+            <th style="width: 10%; padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center;">حالة الرصيد</th>
           </tr>
         </thead>
         <tbody>
           ${products.map(p => {
-            const costTotal = (p.stock || 0) * (p.costPrice || 0);
-            const sellTotal = (p.stock || 0) * (p.sellPrice || 0);
             const soldQty = productSoldMap[p.name] || 0;
             
-            let statusTag = `<span style="color: #15803d; font-weight: bold;">متوفر 🟢</span>`;
+            let statusTag = `<span style="color: #15803d; font-weight: bold; background: #dcfce7; padding: 3px 8px; border-radius: 4px;">متوفر 🟢</span>`;
             if (p.stock <= 0) {
-              statusTag = `<span style="color: #b91c1c; font-weight: bold;">نفد 🔴</span>`;
+              statusTag = `<span style="color: #b91c1c; font-weight: bold; background: #fee2e2; padding: 3px 8px; border-radius: 4px;">نفد 🔴</span>`;
             } else if (p.stock < 150) {
-              statusTag = `<span style="color: #b45309; font-weight: bold;">منخفض ⚠️</span>`;
+              statusTag = `<span style="color: #b45309; font-weight: bold; background: #fef3c7; padding: 3px 8px; border-radius: 4px;">منخفض ⚠️</span>`;
             }
 
             return `
               <tr>
-                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${p.id}</td>
-                <td style="padding: 4px 4px; border: 1px solid #cbd5e1; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${p.id}</td>
+                <td style="padding: 7px 10px; border: 1px solid #cbd5e1; text-align: right;">
                   <strong>${p.name}</strong>
                 </td>
-                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">${p.category}</td>
-                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: ${p.stock < 150 ? '#dc2626' : '#059669'};">
-                  ${p.stock} ش
+                <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center;">${p.category || 'درجة أولى'}</td>
+                <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; font-size: 0.95rem; color: ${p.stock < 150 ? '#dc2626' : '#059669'};">
+                  ${p.stock} شكارة
                 </td>
-                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">${App.formatCurrency(p.costPrice)}</td>
-                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #1d4ed8;">${App.formatCurrency(costTotal)}</td>
-                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center;">${App.formatCurrency(p.sellPrice)}</td>
-                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; color: #059669;">${App.formatCurrency(sellTotal)}</td>
-                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">
-                  ${soldQty > 0 ? `<span style="color: #b45309;">${soldQty} ش</span>` : '<span style="color: #94a3b8;">-</span>'}
+                <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">
+                  ${soldQty > 0 ? `<span style="color: #1d4ed8; font-size: 0.9rem;">${soldQty} شكارة</span>` : '<span style="color: #94a3b8;">-</span>'}
                 </td>
-                <td style="padding: 4px 2px; border: 1px solid #cbd5e1; text-align: center; font-size: 0.65rem;">${statusTag}</td>
+                <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center;">${statusTag}</td>
               </tr>
             `;
           }).join('')}

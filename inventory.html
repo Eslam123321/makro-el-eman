@@ -57,12 +57,12 @@
             </div>
             <div>
               <h3 class="font-bold text-lg">إضافة صنف مكرونة جديد (بالشكارة)</h3>
-              <p class="text-xs text-muted">أدخل اسم المنتج، درجة الفئة، الكمية والمكسب المحدد للتخزين بالمخزن</p>
+              <p class="text-xs text-muted">تسجيل أصناف المكرونة وتحديد الكميات بالشكارة ومتابعة رصيد المخزن بدقة</p>
             </div>
           </div>
 
           <div class="form-group mb-4">
-            <label>اسم المنتج وتفاصيل العبوة</label>
+            <label>اسم المنتج وتفاصيل العبوة <span class="text-danger">*</span></label>
             <input type="text" id="prod-name" class="form-control" placeholder="مثال: مكرونة اسباجيتي (شكارة 10 كجم)">
           </div>
 
@@ -76,23 +76,8 @@
               </select>
             </div>
             <div class="form-group">
-              <label>وحدة القياس والتعبئة</label>
-              <input type="text" class="form-control" value="شكارة (مغلقة)" disabled readonly style="background: var(--bg-main);">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-3 gap-4 mb-4">
-            <div class="form-group">
-              <label>الكمية المتاحة (عدد الشكاير)</label>
-              <input type="number" id="prod-stock" class="form-control" placeholder="100" min="0">
-            </div>
-            <div class="form-group">
-              <label>سعر التكلفة للشكارة (جنيه)</label>
-              <input type="number" id="prod-cost" class="form-control" placeholder="180" min="0">
-            </div>
-            <div class="form-group">
-              <label>سعر البيع للشكارة (جنيه)</label>
-              <input type="number" id="prod-sell" class="form-control" placeholder="220" min="0">
+              <label>الكمية المتاحة بالمخزن (عدد الشكاير) <span class="text-danger">*</span></label>
+              <input type="number" id="prod-stock" class="form-control" placeholder="مثال: 100 شكارة" min="0">
             </div>
           </div>
 
@@ -106,7 +91,7 @@
           <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
             <div>
               <h3>قائمة أصناف المكرونة التابعة للمصنع</h3>
-              <p class="text-sm text-muted">جميع الأصناف بالشكارة فقط مع حساب التكلفة المرجحة التلقائية</p>
+              <p class="text-sm text-muted">جميع الأصناف بالشكارة ومتابعة الأرصدة المتوفرة (التسعير يتم حراً بالفواتير)</p>
             </div>
             <div class="search-box">
               <i class="fa-solid fa-magnifying-glass"></i>
@@ -121,9 +106,7 @@
                   <th>كود الصنف</th>
                   <th>اسم المنتج والفئة</th>
                   <th>وحدة التعبئة</th>
-                  <th>المخزون الحالي</th>
-                  <th>متوسط سعر التكلفة</th>
-                  <th>سعر البيع للشكارة</th>
+                  <th>رصيد المخزون الحالي</th>
                   <th>إجراءات الإدارة</th>
                 </tr>
               </thead>
@@ -156,27 +139,23 @@
         <p class="text-sm font-semibold mb-4 text-primary-color" id="batch-prod-title"></p>
         
         <div class="form-group">
-          <label>كمية الشكارة الموردة الجديدة</label>
+          <label>كمية الشكاير الموردة الجديدة</label>
           <input type="number" id="batch-qty" class="form-control" placeholder="ادخل عدد الشكاير الموردة" min="1">
         </div>
-        <div class="form-group">
-          <label>سعر تكلفة الشكارة في الشحنة الجديدة (جنيه)</label>
-          <input type="number" id="batch-cost" class="form-control" placeholder="سعر التكلفة الجديد">
-        </div>
 
-        <p class="text-xs text-muted mt-2">* يقوم النظام بحساب متوسط سعر التكلفة المرجح تلقائياً عند تأكيد التوريد.</p>
+        <p class="text-xs text-muted mt-2">* يتم إضافة هذه الشكاير فوراً إلى رصيد الصنف المتاح بالمخزن.</p>
       </div>
 
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('add-batch-modal')">إلغاء</button>
-        <button class="btn btn-primary" onclick="processNewBatchSupply()"><i class="fa-solid fa-calculator"></i> تحديث المخزون والتكلفة</button>
+        <button class="btn btn-primary" onclick="processNewBatchSupply()"><i class="fa-solid fa-plus"></i> تأكيد إضافة الشكاير للمخزن</button>
       </div>
     </div>
   </div>
 
   <!-- Modal Card 3: Edit Product Modal -->
   <div class="modal-backdrop" id="edit-product-modal">
-    <div class="modal-card modal-card-lg">
+    <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title">
           <i class="fa-solid fa-pen-to-square"></i>
@@ -188,7 +167,7 @@
       <div class="modal-body">
         <input type="hidden" id="edit-prod-id">
         <div class="form-group mb-4">
-          <label>اسم المنتج</label>
+          <label>اسم المنتج وتفاصيل العبوة</label>
           <input type="text" id="edit-prod-name" class="form-control">
         </div>
 
@@ -202,19 +181,8 @@
             </select>
           </div>
           <div class="form-group">
-            <label>الكمية المتاحة بالشكارة</label>
-            <input type="number" id="edit-prod-stock" class="form-control">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div class="form-group">
-            <label>سعر التكلفة للشكارة</label>
-            <input type="number" id="edit-prod-cost" class="form-control">
-          </div>
-          <div class="form-group">
-            <label>سعر البيع للشكارة</label>
-            <input type="number" id="edit-prod-sell" class="form-control">
+            <label>رصيد المخزون (عدد الشكاير)</label>
+            <input type="number" id="edit-prod-stock" class="form-control" min="0">
           </div>
         </div>
       </div>

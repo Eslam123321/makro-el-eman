@@ -1142,10 +1142,13 @@ function downloadSupplierInvoiceAsImage(invId) {
   });
 }
 
-// Send Invoice via WhatsApp
-function sendSupplierInvoiceWhatsApp(invId) {
-  let inv = (App.db.supplierInvoices || []).find(i => i.id === invId);
-  if (!inv && currentSupplierDraftInvoice) {
+// Send Supplier Invoice via WhatsApp (Image copy + Auto Download PNG)
+async function sendSupplierInvoiceWhatsApp(invId = null) {
+  let inv = null;
+  if (invId) {
+    inv = (App.db.supplierInvoices || []).find(i => i.id === invId);
+  }
+  if (!inv && typeof currentSupplierDraftInvoice !== 'undefined' && currentSupplierDraftInvoice) {
     inv = currentSupplierDraftInvoice;
   }
   if (!inv) {
@@ -1171,24 +1174,43 @@ function sendSupplierInvoiceWhatsApp(invId) {
     `_شكراً لتعاملكم الراقي مع مصنع الإيمان للمكرونة_ 🌾`
   );
 
-  if (phone.startsWith('01')) phone = '2' + phone;
-  const waUrl = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+  let waUrl = 'https://web.whatsapp.com/';
+  if (phone) {
+    if (phone.startsWith('01') && phone.length === 11) {
+      phone = '2' + phone;
+    }
+    // Only direct to phone chat if it is a valid full number
+    if (phone.length >= 10) {
+      waUrl = `https://wa.me/${phone}?text=${msg}`;
+    }
+  }
 
-  // Auto-copy high-res image to clipboard for instant Ctrl+V paste in WhatsApp
+  // Auto-download PNG + Auto-copy high-res image to clipboard for instant Ctrl+V paste in WhatsApp
   const content = document.getElementById('printable-supplier-invoice-content');
   if (content && typeof html2canvas !== 'undefined') {
-    html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+    try {
+      const canvas = await html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      
+      // Auto-copy to clipboard
       if (canvas.toBlob && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
         canvas.toBlob(blob => {
           if (!blob) return;
           try {
-            navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(() => {
-              App.showToast('تم نسخ صورة الفاتورة! يمكنك لصقها فوراً في شات الواتساب (Ctrl + V) 📋🖼️', 'success');
-            }).catch(() => {});
+            navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).catch(() => {});
           } catch(e) {}
         }, 'image/png');
       }
-    }).catch(() => {});
+
+      // Auto-download PNG
+      const link = document.createElement('a');
+      link.download = `فاتورة_توريد_${inv.id || 'معتمدة'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      App.showToast('تم حفظ صورة الفاتورة ونسخها بالحافظة! يمكنك لصقها فوراً في شات الواتساب (Ctrl + V) 📋🖼️', 'success');
+    } catch(err) {
+      console.warn('Supplier canvas export error:', err);
+    }
   }
 
   window.open(waUrl, '_blank');

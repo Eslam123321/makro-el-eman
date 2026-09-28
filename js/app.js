@@ -1134,9 +1134,12 @@ async function downloadInvoicePdf(invId) {
   App.showToast('تم تنزيل ملف الفاتورة PDF بنجاح! 📄✨', 'success');
 }
 
-async function sendInvoiceWhatsApp(invId) {
-  let inv = App.db.invoices ? App.db.invoices.find(i => i.id === invId) : null;
-  if (!inv && typeof currentDraftInvoice !== 'undefined' && currentDraftInvoice && currentDraftInvoice.id === invId) {
+async function sendInvoiceWhatsApp(invoiceId = null) {
+  let inv = null;
+  if (invoiceId) {
+    inv = (App.db.invoices || []).find(i => i.id === invoiceId);
+  }
+  if (!inv && typeof currentDraftInvoice !== 'undefined' && currentDraftInvoice) {
     inv = currentDraftInvoice;
   }
   if (!inv && App.db.invoices && App.db.invoices.length > 0) {
@@ -1165,24 +1168,43 @@ async function sendInvoiceWhatsApp(invId) {
     `_شكراً لتعاملكم الراقي مع مصنع الإيمان للمكرونة_ 🌾`
   );
 
-  if (phone.startsWith('01')) phone = '2' + phone;
-  const waUrl = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+  let waUrl = 'https://web.whatsapp.com/';
+  if (phone) {
+    if (phone.startsWith('01') && phone.length === 11) {
+      phone = '2' + phone;
+    }
+    // Only direct to phone chat if it is a valid full number
+    if (phone.length >= 10) {
+      waUrl = `https://wa.me/${phone}?text=${msg}`;
+    }
+  }
 
-  // Auto-copy high-res invoice image to clipboard for instant Ctrl+V in WhatsApp
+  // Auto-download PNG image + Auto-copy high-res image to clipboard for instant Ctrl+V in WhatsApp
   const content = document.getElementById('printable-invoice-content');
   if (content && typeof html2canvas !== 'undefined') {
-    html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+    try {
+      const canvas = await html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      
+      // Auto-copy to clipboard
       if (canvas.toBlob && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
         canvas.toBlob(blob => {
           if (!blob) return;
           try {
-            navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(() => {
-              App.showToast('تم نسخ صورة الفاتورة! يمكنك لصقها فوراً في شات الواتساب (Ctrl + V) 📋🖼️', 'success');
-            }).catch(() => {});
+            navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).catch(() => {});
           } catch(e) {}
         }, 'image/png');
       }
-    }).catch(() => {});
+
+      // Auto-download PNG
+      const link = document.createElement('a');
+      link.download = `فاتورة_مبيعات_${inv.id || 'معتمدة'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      App.showToast('تم حفظ صورة الفاتورة ونسخها بالحافظة! يمكنك لصقها فوراً في شات الواتساب (Ctrl + V) 📋🖼️', 'success');
+    } catch(err) {
+      console.warn('Canvas export error:', err);
+    }
   }
 
   window.open(waUrl, '_blank');
@@ -1380,10 +1402,12 @@ function renderPageSummaryCards(page, containerId) {
       </div>
     `;
   } else if (page === 'inventory') {
-    const products = App.db.products;
-    const totalSacks = products.reduce((a, b) => a + b.stock, 0);
-    const totalVal = products.reduce((a, b) => a + (b.stock * b.costPrice), 0);
-    const lowCount = products.filter(p => p.stock < 150).length;
+    const products = App.db.products || [];
+    const totalSacks = products.reduce((a, b) => a + (b.stock || 0), 0);
+    const lowCount = products.filter(p => (p.stock || 0) < 150).length;
+    const totalSacksSold = (App.db.invoices || []).reduce((sum, inv) => {
+      return sum + (inv.items || []).reduce((iSum, item) => iSum + (item.qty || 0), 0);
+    }, 0);
 
     cardsHTML = `
       <div class="summary-card-item">
@@ -1392,15 +1416,15 @@ function renderPageSummaryCards(page, containerId) {
       </div>
       <div class="summary-card-item">
         <div class="summary-card-icon icon-blue"><i class="fa-solid fa-boxes-packing"></i></div>
-        <div><span class="text-xs text-muted">عدد الأصناف المسجلة</span><h4>${products.length} أصناف</h4></div>
+        <div><span class="text-xs text-muted">عدد أصناف المكرونة</span><h4>${products.length} أصناف</h4></div>
       </div>
       <div class="summary-card-item">
-        <div class="summary-card-icon icon-amber"><i class="fa-solid fa-calculator"></i></div>
-        <div><span class="text-xs text-muted">تقييم المخزون بالتكلفة</span><h4 class="text-success">${App.formatCurrency(totalVal)}</h4></div>
+        <div class="summary-card-icon icon-purple"><i class="fa-solid fa-truck-ramp-box"></i></div>
+        <div><span class="text-xs text-muted">إجمالي الشكاير المباعة</span><h4 class="text-success">${totalSacksSold} شكارة</h4></div>
       </div>
       <div class="summary-card-item">
         <div class="summary-card-icon icon-rose"><i class="fa-solid fa-triangle-exclamation"></i></div>
-        <div><span class="text-xs text-muted">أصناف اقتربت من النفاد</span><h4 class="text-danger">${lowCount} صنف</h4></div>
+        <div><span class="text-xs text-muted">أصناف أوشكت على النفاد</span><h4 class="text-danger">${lowCount} صنف</h4></div>
       </div>
     `;
   } else if (page === 'customers') {
