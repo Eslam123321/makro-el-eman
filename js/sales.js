@@ -41,36 +41,28 @@ function initSalesForm() {
     if (currentVal) customerSelect.value = currentVal;
   }
 
-  // POS Interactive Product Cards Grid (STRICT OUT OF STOCK PROTECTION)
+  // POS Interactive Product Cards Grid
   if (productCardsGrid) {
     productCardsGrid.innerHTML = App.db.products.map(p => {
-      const isOutOfStock = p.stock <= 0;
       return `
-        <div class="pos-product-card ${isOutOfStock ? 'out-of-stock-card' : ''}" onclick="${isOutOfStock ? `App.showToast('عفواً، صنف (${p.name}) نفد من المخزن ولا يمكن إضافته للبيع 🚫', 'danger')` : `quickAddProductToInvoice('${p.id}')`}">
+        <div class="pos-product-card" onclick="quickAddProductToInvoice('${p.id}')">
           <div>
             <div class="pos-card-header">
               <span class="badge badge-blue">${p.unit || 'شكارة'}</span>
-              <span class="badge ${isOutOfStock ? 'badge-danger' : 'badge-emerald'} text-xs">
-                ${isOutOfStock ? 'غير متوفر 🚫' : 'متاح بالمخزن 🟢'}
+              <span class="badge badge-emerald text-xs">
+                متاح للبيع 🟢
               </span>
             </div>
-            <div class="pos-card-title" style="${isOutOfStock ? 'color: var(--text-muted);' : ''}">${p.name}</div>
+            <div class="pos-card-title">${p.name}</div>
             <div class="pos-card-category">فئة: ${p.category || 'درجة أولى'}</div>
           </div>
           <div class="pos-card-footer">
             <div>
               <div class="pos-card-price" style="color: #059669; font-weight: 700; font-size: 0.85rem;"><i class="fa-solid fa-pen-to-square ml-1"></i> تسعير حر بالفاتورة</div>
-              <div class="pos-card-stock ${isOutOfStock ? 'text-danger font-bold' : (p.stock < 150 ? 'text-warning font-bold' : 'text-muted')}">
-                ${isOutOfStock ? 'نفدت الكمية (0 شكارة)' : 'المتاح: ' + p.stock + ' شكارة'}
-              </div>
             </div>
-            ${isOutOfStock ? `
-              <span class="badge badge-danger text-xs">ممنوع البيع 🚫</span>
-            ` : `
-              <button class="btn-add-pos-item" onclick="event.stopPropagation(); quickAddProductToInvoice('${p.id}')">
-                <i class="fa-solid fa-plus"></i> إضافة للفاتورة
-              </button>
-            `}
+            <button class="btn-add-pos-item" onclick="event.stopPropagation(); quickAddProductToInvoice('${p.id}')">
+              <i class="fa-solid fa-plus"></i> إضافة للفاتورة
+            </button>
           </div>
         </div>
       `;
@@ -86,17 +78,8 @@ function quickAddProductToInvoice(prodId) {
   const prod = App.db.products.find(p => p.id === prodId);
   if (!prod) return;
 
-  if (prod.stock <= 0) {
-    App.showToast(`عفواً، صنف (${prod.name}) نفدت كميته بالكامل بالمخزن ولا يمكن بيعه!`, 'danger');
-    return;
-  }
-
   const existingItem = currentInvoiceItems.find(i => i.id === prod.id);
   if (existingItem) {
-    if (existingItem.qty + 1 > prod.stock) {
-      App.showToast(`تنبيه: لا يمكن إضافة أكثر من الرصيد المتوفر بالمخزن (${prod.stock} شكارة)`, 'warning');
-      return;
-    }
     existingItem.qty += 1;
     existingItem.total = existingItem.qty * (existingItem.price || 0);
   } else {
@@ -277,14 +260,7 @@ function confirmAndCommitDraftInvoice() {
     return;
   }
 
-  // Stock availability check
-  for (const item of currentDraftInvoice.items) {
-    const prd = App.db.products.find(p => p.id === item.id);
-    if (!prd || prd.stock < item.qty) {
-      App.showToast(`عفواً، الكمية المطلوبة من (${item.name}) تتجاوز رصيد المخزن المتاح`, 'danger');
-      return;
-    }
-  }
+
 
   // Deduct stock
   currentDraftInvoice.items.forEach(item => {

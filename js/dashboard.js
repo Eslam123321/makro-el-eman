@@ -140,23 +140,6 @@ function loadDashboardData() {
     netFinEl.className = netFinancial < 0 ? 'text-danger font-bold' : 'text-success font-bold';
   }
 
-  // Check low stock products
-  const lowStockProds = products.filter(p => p.stock < 150);
-  const lowStockBanner = document.getElementById('low-stock-banner');
-  if (lowStockBanner) {
-    if (lowStockProds.length > 0) {
-      lowStockBanner.style.display = 'flex';
-      lowStockBanner.innerHTML = `
-        <div class="flex items-center gap-3">
-          <i class="fa-solid fa-triangle-exclamation text-warning" style="font-size: 1.25rem;"></i>
-          <span>تنبيه مخزون: يوجد <strong>${lowStockProds.length} أصناف مكرونة</strong> اقترب رصيدها من النفاد بالمخزن (${lowStockProds.map(p => p.name + ': ' + p.stock + ' شكارة').join(' | ')})</span>
-        </div>
-        <a href="inventory.html" class="btn btn-warning btn-sm">توريد مخزون جديد 📦</a>
-      `;
-    } else {
-      lowStockBanner.style.display = 'none';
-    }
-  }
 
   renderDashboardBarChart(currentSales, currentCOGS + currentExp, currentNetProfit);
   renderSalesDonutChart(filteredInvoices, products);

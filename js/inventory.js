@@ -289,29 +289,17 @@ function renderInventoryReportContent() {
       </div>
 
       <!-- Inventory Summary KPI Cards -->
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;">
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px;">
         <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 8px; text-align: center;">
-          <span style="font-size: 0.75rem; color: #166534; font-weight: bold; display: block;">إجمالي الشكاير المتوفرة</span>
-          <strong style="font-size: 1.25rem; color: #059669; display: block; margin-top: 3px;">${totalSacks} شكارة</strong>
-          <span style="font-size: 0.7rem; color: #166534;">(${products.length} أصناف مكرونة)</span>
+          <span style="font-size: 0.8rem; color: #166534; font-weight: bold; display: block;">أصناف المكرونة المسجلة بالمصنع</span>
+          <strong style="font-size: 1.3rem; color: #059669; display: block; margin-top: 3px;">${products.length} صنف مكرونة</strong>
+          <span style="font-size: 0.75rem; color: #166534;">(جاهزة للتوريد والبيع)</span>
         </div>
 
         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 8px; text-align: center;">
-          <span style="font-size: 0.75rem; color: #1e40af; font-weight: bold; display: block;">منصرف المبيعات بالفترة</span>
-          <strong style="font-size: 1.25rem; color: #1d4ed8; display: block; margin-top: 3px;">${totalSoldInPeriod} شكارة</strong>
-          <span style="font-size: 0.7rem; color: #1e40af;">(${periodInvoices.length} فاتورة بيع)</span>
-        </div>
-
-        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 8px; text-align: center;">
-          <span style="font-size: 0.75rem; color: #92400e; font-weight: bold; display: block;">أصناف مخزونها منخفض</span>
-          <strong style="font-size: 1.25rem; color: #b45309; display: block; margin-top: 3px;">${lowStockCount} أصناف</strong>
-          <span style="font-size: 0.7rem; color: #92400e;">(أقل من 150 شكارة)</span>
-        </div>
-
-        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 8px; text-align: center;">
-          <span style="font-size: 0.75rem; color: #991b1b; font-weight: bold; display: block;">أصناف نفدت تماماً</span>
-          <strong style="font-size: 1.25rem; color: #dc2626; display: block; margin-top: 3px;">${outOfStockCount} أصناف</strong>
-          <span style="font-size: 0.7rem; color: #991b1b;">(رصيد صفر)</span>
+          <span style="font-size: 0.8rem; color: #1e40af; font-weight: bold; display: block;">منصرف المبيعات بالفترة</span>
+          <strong style="font-size: 1.3rem; color: #1d4ed8; display: block; margin-top: 3px;">${totalSoldInPeriod} شكارة</strong>
+          <span style="font-size: 0.75rem; color: #1e40af;">(${periodInvoices.length} فاتورة بيع صادرة)</span>
         </div>
       </div>
 
