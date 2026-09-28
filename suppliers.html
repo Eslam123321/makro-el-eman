@@ -382,13 +382,13 @@
     </div>
   </div>
 
-  <!-- Modal 5: Edit Supplier / Mill -->
+  <!-- Modal 5: Edit Supplier / Mill (4 fields only) -->
   <div class="modal-backdrop" id="edit-supplier-modal">
-    <div class="modal-card modal-card-lg">
+    <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title">
           <i class="fa-solid fa-pen-to-square"></i>
-          <h3>تعديل بيانات المطحن / المورد والسعر المخصص</h3>
+          <h3>تعديل بيانات المطحن / المورد</h3>
         </div>
         <button class="modal-close" onclick="closeModal('edit-supplier-modal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
@@ -397,11 +397,11 @@
         <input type="hidden" id="edit-sup-id">
         <div class="grid grid-cols-2 gap-4 mb-4">
           <div class="form-group">
-            <label>اسم المطحن / المورد</label>
+            <label>اسم المطحن / المورد <span class="text-danger">*</span></label>
             <input type="text" id="edit-sup-name" class="form-control">
           </div>
           <div class="form-group">
-            <label>رقم الهاتف للتواصل</label>
+            <label>رقم الهاتف للتواصل <span class="text-danger">*</span></label>
             <input type="text" id="edit-sup-phone" class="form-control">
           </div>
         </div>
@@ -416,25 +416,37 @@
             </select>
           </div>
           <div class="form-group">
-            <label>سعر التوريد المحدد للمطحن (جنيه / طن)</label>
-            <input type="number" id="edit-sup-price" class="form-control" min="0">
+            <label>عنوان المطحن / الفرع</label>
+            <input type="text" id="edit-sup-address" class="form-control">
           </div>
-        </div>
-
-        <div class="form-group mb-4">
-          <label>عنوان المطحن / الفرع</label>
-          <input type="text" id="edit-sup-address" class="form-control">
-        </div>
-
-        <div class="form-group">
-          <label>ملاحظات وشروط التعامل</label>
-          <input type="text" id="edit-sup-notes" class="form-control">
         </div>
       </div>
 
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('edit-supplier-modal')">إلغاء</button>
         <button class="btn btn-primary" onclick="updateSupplier()"><i class="fa-solid fa-save"></i> حفظ التعديلات</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 7: Edit Supplier Invoice Modal -->
+  <div class="modal-backdrop" id="edit-supplier-invoice-modal">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-file-pen text-primary-color"></i>
+          <h3>تعديل بيانات فاتورة توريد الدقيق الخام 🌾</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('edit-supplier-invoice-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" id="edit-supplier-invoice-body">
+        <!-- Injected dynamically via JS -->
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('edit-supplier-invoice-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveEditedSupplierInvoice()"><i class="fa-solid fa-save ml-1"></i> حفظ تعديلات الفاتورة وتحديث الحسابات 💾</button>
       </div>
     </div>
   </div>

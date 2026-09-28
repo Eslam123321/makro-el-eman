@@ -1205,10 +1205,13 @@ function ensureWhatsAppModalExists() {
         </div>
       </div>
 
-      <div class="modal-footer" style="padding: 1rem 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+      <div class="modal-footer" style="padding: 1rem 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
         <button class="btn btn-secondary" onclick="closeModal('whatsapp-recipient-modal')">إلغاء</button>
-        <button class="btn btn-whatsapp" id="btn-wa-do-send" style="padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 800; border-radius: 8px; flex: 1; justify-content: center; box-shadow: 0 4px 12px rgba(37,211,102,0.35);" onclick="executeWhatsAppSendAction()">
-          <i class="fa-brands fa-whatsapp ml-2" style="font-size: 1.25rem;"></i> إرسال الصورة للمستلم الآن 🚀
+        <button class="btn btn-primary" style="padding: 0.75rem 1.25rem; font-size: 0.95rem; font-weight: 700; border-radius: 8px;" onclick="executeWhatsAppPdfSendAction()">
+          <i class="fa-solid fa-file-pdf ml-1"></i> إرسال وتنزيل كـ PDF 📄
+        </button>
+        <button class="btn btn-whatsapp" id="btn-wa-do-send" style="padding: 0.75rem 1.25rem; font-size: 0.95rem; font-weight: 800; border-radius: 8px; box-shadow: 0 4px 12px rgba(37,211,102,0.35);" onclick="executeWhatsAppSendAction()">
+          <i class="fa-brands fa-whatsapp ml-1" style="font-size: 1.15rem;"></i> إرسال كصورة 🖼️
         </button>
       </div>
     </div>
@@ -1496,6 +1499,91 @@ async function executeWhatsAppSendAction() {
   }
 }
 
+async function executeWhatsAppPdfSendAction() {
+  const inv = activeWhatsAppInvoice;
+  if (!inv) {
+    App.showToast('عفواً، لا توجد فاتورة محددة للإرسال', 'warning');
+    return;
+  }
+
+  const phoneInput = document.getElementById('wa-phone-input');
+  let rawPhone = phoneInput ? phoneInput.value.trim() : '';
+  let phone = rawPhone.replace(/[^0-9]/g, '');
+
+  const isSales = (activeWhatsAppType === 'sales');
+  let msgText = '';
+
+  if (isSales) {
+    const totalSacks = (inv.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+    msgText = (
+      `🌾 *مصنع الإيمان للمكرونة* 🌾\n` +
+      `*فاتورة مبيعات معتمدة*\n\n` +
+      `📄 رقم الفاتورة: ${inv.id}\n` +
+      `👤 العميل: ${inv.customerName}\n` +
+      `📦 الكمية الإجمالية: ${totalSacks} شكارة\n` +
+      `💵 إجمالي الفاتورة الصافي: ${App.formatCurrency(inv.grandTotal)}\n` +
+      `✅ المسدد كاش: ${App.formatCurrency(inv.paidAmount || 0)}\n` +
+      `⏳ المتبقي آجل: ${App.formatCurrency(inv.remainingAmount || 0)}\n` +
+      `📅 التاريخ: ${App.formatTimestamp(inv.date)}\n\n` +
+      `_تم إرفاق نسخة PDF رسمية معتمدة_ 🌾`
+    );
+  } else {
+    msgText = (
+      `🌾 *مصنع الإيمان للمكرونة* 🌾\n` +
+      `*فاتورة توريد دقيق خام معتمدة*\n\n` +
+      `📄 رقم الفاتورة: ${inv.id}\n` +
+      `🏢 المطحن / المورد: ${inv.supplierName}\n` +
+      `📦 الكمية المستلمة: ${inv.tons} طن (${inv.flourType || 'دقيق'})\n` +
+      `💰 سعر الطن: ${App.formatCurrency(inv.unitPrice)}\n` +
+      `💵 إجمالي الفاتورة الصافي: ${App.formatCurrency(inv.grandTotal)}\n` +
+      `✅ المسدد كاش: ${App.formatCurrency(inv.paidAmount || 0)}\n` +
+      `⏳ المتبقي آجل: ${App.formatCurrency(inv.remainingAmount || 0)}\n` +
+      `📅 التاريخ: ${App.formatTimestamp(inv.date)}\n\n` +
+      `_تم إرفاق نسخة PDF رسمية معتمدة_ 🌾`
+    );
+  }
+
+  let fullPhone = phone;
+  if (fullPhone.startsWith('01') && fullPhone.length === 11) {
+    fullPhone = '2' + fullPhone;
+  }
+
+  App.showToast('جاري استخراج وتنزيل ملف الـ PDF... 📄', 'info');
+
+  const content = document.getElementById(isSales ? 'printable-invoice-content' : 'printable-supplier-invoice-content')
+               || document.getElementById('printable-invoice-content')
+               || document.getElementById('printable-supplier-invoice-content');
+
+  if (content && typeof html2pdf !== 'undefined') {
+    try {
+      const opt = {
+        margin: [5, 5, 5, 5],
+        filename: `فاتورة_${inv.id}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      await html2pdf().set(opt).from(content).save();
+    } catch (e) {
+      console.warn('html2pdf generation error:', e);
+    }
+  }
+
+  let waUrl = 'https://web.whatsapp.com/';
+  if (fullPhone && fullPhone.length >= 10) {
+    waUrl = `https://web.whatsapp.com/send?phone=${fullPhone}&text=${encodeURIComponent(msgText)}`;
+  }
+
+  closeModal('whatsapp-recipient-modal');
+  window.open(waUrl, '_blank');
+
+  if (fullPhone && fullPhone.length >= 10) {
+    App.showToast(`تم تنزيل الـ PDF وفتح محادثة (${fullPhone})! أرفق ملف الـ PDF داخل الشات لإرساله فوراً 📄🚀`, 'success');
+  } else {
+    App.showToast('تم تنزيل الـ PDF وفتح الواتساب! حدد المحادثة وأرفق ملف الـ PDF 📄🚀', 'info');
+  }
+}
+
 function sendInvoiceWhatsApp(invOrId = null) {
   openWhatsAppShareModal(invOrId, 'sales');
 }
@@ -1692,17 +1780,15 @@ function renderPageSummaryCards(page, containerId) {
     `;
   } else if (page === 'inventory') {
     const products = App.db.products || [];
-    const totalSacks = products.reduce((a, b) => a + (b.stock || 0), 0);
-    const lowCount = products.filter(p => (p.stock || 0) < 150).length;
     const totalSacksSold = (App.db.invoices || []).reduce((sum, inv) => {
       return sum + (inv.items || []).reduce((iSum, item) => iSum + (item.qty || 0), 0);
     }, 0);
 
+    if (container) {
+      container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(280px, 1fr))';
+    }
+
     cardsHTML = `
-      <div class="summary-card-item">
-        <div class="summary-card-icon icon-emerald"><i class="fa-solid fa-cubes-stacked"></i></div>
-        <div><span class="text-xs text-muted">إجمالي الشكاير بالمخزن</span><h4 class="text-primary-color">${totalSacks} شكارة</h4></div>
-      </div>
       <div class="summary-card-item">
         <div class="summary-card-icon icon-blue"><i class="fa-solid fa-boxes-packing"></i></div>
         <div><span class="text-xs text-muted">عدد أصناف المكرونة</span><h4>${products.length} أصناف</h4></div>
@@ -1710,10 +1796,6 @@ function renderPageSummaryCards(page, containerId) {
       <div class="summary-card-item">
         <div class="summary-card-icon icon-purple"><i class="fa-solid fa-truck-ramp-box"></i></div>
         <div><span class="text-xs text-muted">إجمالي الشكاير المباعة</span><h4 class="text-success">${totalSacksSold} شكارة</h4></div>
-      </div>
-      <div class="summary-card-item">
-        <div class="summary-card-icon icon-rose"><i class="fa-solid fa-triangle-exclamation"></i></div>
-        <div><span class="text-xs text-muted">أصناف أوشكت على النفاد</span><h4 class="text-danger">${lowCount} صنف</h4></div>
       </div>
     `;
   } else if (page === 'customers') {

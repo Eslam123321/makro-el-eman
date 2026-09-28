@@ -83,14 +83,9 @@
               <input type="text" id="cust-address" class="form-control" placeholder="المحافظة - المركز">
             </div>
             <div class="form-group">
-              <label>الحد الائتماني الأقصى (جنيه)</label>
-              <input type="number" id="cust-limit" class="form-control" value="0" min="0" placeholder="0">
+              <label>تاريخ استحقاق الدفعات (اختياري)</label>
+              <input type="date" id="cust-duedate" class="form-control">
             </div>
-          </div>
-
-          <div class="form-group mb-4">
-            <label>تاريخ استحقاق الدفعات (اختياري)</label>
-            <input type="date" id="cust-duedate" class="form-control">
           </div>
 
           <div class="flex justify-end pt-2 border-t">
@@ -119,7 +114,6 @@
                   <th>اسم العميل والعنوان</th>
                   <th>رقم الهاتف</th>
                   <th>تصنيف العميل</th>
-                  <th>المديونية والحد الائتماني</th>
                   <th>ميعاد الاستحقاق</th>
                   <th>إجراءات الحساب</th>
                 </tr>
@@ -249,13 +243,9 @@
             <input type="text" id="edit-cust-address" class="form-control">
           </div>
           <div class="form-group">
-            <label>الحد الائتماني الأقصى (جنيه)</label>
-            <input type="number" id="edit-cust-limit" class="form-control" min="0" placeholder="0">
+            <label>تاريخ استحقاق الدفعات</label>
+            <input type="date" id="edit-cust-duedate" class="form-control">
           </div>
-        </div>
-        <div class="form-group mb-3">
-          <label>تاريخ استحقاق الدفعات</label>
-          <input type="date" id="edit-cust-duedate" class="form-control">
         </div>
       </div>
       <div class="modal-footer">

@@ -37,7 +37,7 @@ function loadInventoryTable(productsData = null) {
 
   const products = productsData || App.db.products;
   if (products.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted p-6">لا يوجد منتجات بالمخزن مطبقة عليها الفلترة</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted p-6">لا يوجد منتجات بالسجل مطبقة عليها الفلترة</td></tr>`;
     return;
   }
 
@@ -50,26 +50,19 @@ function loadInventoryTable(productsData = null) {
       </td>
       <td><span class="badge badge-blue">${p.unit || 'شكارة'}</span></td>
       <td>
-        <strong style="font-size: 1.05rem;" class="${p.stock < 150 ? 'text-danger' : 'text-primary-color'}">
-          ${p.stock} شكارة
-        </strong>
-      </td>
-      <td>
         <div class="flex gap-2">
-          <button class="btn btn-secondary btn-sm" onclick="openAddBatchModal('${p.id}')" title="إضافة شحنة/وارد"><i class="fa-solid fa-plus"></i> توريد شكاير</button>
-          <button class="btn btn-secondary btn-sm" onclick="openEditProductModal('${p.id}')" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></button>
-          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')" title="حذف"><i class="fa-solid fa-trash"></i></button>
+          <button class="btn btn-secondary btn-sm" onclick="openEditProductModal('${p.id}')" title="تعديل بيانات الصنف"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')" title="حذف الصنف"><i class="fa-solid fa-trash"></i></button>
         </div>
       </td>
     </tr>
   `).join('');
 }
 
-// Modal Card: Create New Product (NO PRICES IN WAREHOUSE)
+// Modal Card: Create New Product (NO PRICES IN WAREHOUSE, DYNAMIC PER INVOICE)
 function saveNewProduct() {
   const nameInput = document.getElementById('prod-name');
   const catInput = document.getElementById('prod-category');
-  const stockInput = document.getElementById('prod-stock');
 
   const name = nameInput.value.trim();
   if (!name) {
@@ -77,13 +70,11 @@ function saveNewProduct() {
     return;
   }
 
-  const stock = parseInt(stockInput.value) || 0;
-
   const newProd = {
     id: `PRD-${100 + App.db.products.length + 1}`,
     name: name.includes('شكارة') ? name : `${name} (شكارة)`, // Ensure Sack in name
     unit: 'شكارة', // STRICTLY ONLY SACKS
-    stock: stock,
+    stock: 0,
     costPrice: 0,
     sellPrice: 0,
     category: catInput ? catInput.value : 'درجة أولى'
@@ -92,48 +83,15 @@ function saveNewProduct() {
   App.db.products.push(newProd);
   App.save();
   loadInventoryTable();
+  if (typeof renderPageSummaryCards === 'function') {
+    renderPageSummaryCards('inventory', 'inventory-summary-cards');
+  }
   if (document.getElementById('new-product-modal')) closeModal('new-product-modal');
 
   // Reset form
   nameInput.value = '';
-  stockInput.value = '';
 
   App.showToast(`تمت إضافة صنف المكرونة الجديد (${newProd.name}) بنجاح`, 'success');
-}
-
-// Logic for Adding New Batches (Sacks count only)
-function openAddBatchModal(prodId) {
-  const prod = App.db.products.find(p => p.id === prodId);
-  if (!prod) return;
-
-  document.getElementById('batch-prod-id').value = prod.id;
-  document.getElementById('batch-prod-title').textContent = `${prod.name} (المخزون الحالي: ${prod.stock} شكارة)`;
-  document.getElementById('batch-qty').value = '';
-
-  openModal('add-batch-modal');
-}
-
-function processNewBatchSupply() {
-  const prodId = document.getElementById('batch-prod-id').value;
-  const qtyInput = document.getElementById('batch-qty');
-
-  const addedQty = parseInt(qtyInput.value) || 0;
-
-  if (addedQty <= 0) {
-    App.showToast('رجاء ادخل كمية الشكاير الموردة الجديدة', 'warning');
-    return;
-  }
-
-  const prod = App.db.products.find(p => p.id === prodId);
-  if (!prod) return;
-
-  prod.stock = (prod.stock || 0) + addedQty;
-
-  App.save();
-  loadInventoryTable();
-  closeModal('add-batch-modal');
-
-  App.showToast(`تم توريد ${addedQty} شكارة بنجاح وإضافتها لرصيد الصنف بالمخزن`, 'success');
 }
 
 // Modal Card: Edit Product
@@ -143,7 +101,6 @@ function openEditProductModal(prodId) {
 
   document.getElementById('edit-prod-id').value = prod.id;
   document.getElementById('edit-prod-name').value = prod.name;
-  document.getElementById('edit-prod-stock').value = prod.stock;
   if (document.getElementById('edit-prod-category')) {
     document.getElementById('edit-prod-category').value = prod.category;
   }
@@ -156,16 +113,24 @@ function updateProduct() {
   const prod = App.db.products.find(p => p.id === prodId);
   if (!prod) return;
 
-  prod.name = document.getElementById('edit-prod-name').value;
-  prod.stock = parseInt(document.getElementById('edit-prod-stock').value) || 0;
+  const newName = document.getElementById('edit-prod-name').value.trim();
+  if (!newName) {
+    App.showToast('يرجى إدخال اسم المنتج', 'warning');
+    return;
+  }
+
+  prod.name = newName;
   if (document.getElementById('edit-prod-category')) {
     prod.category = document.getElementById('edit-prod-category').value;
   }
 
   App.save();
   loadInventoryTable();
+  if (typeof renderPageSummaryCards === 'function') {
+    renderPageSummaryCards('inventory', 'inventory-summary-cards');
+  }
   closeModal('edit-product-modal');
-  App.showToast('تم تحديث بيانات الصنف بنجاح', 'success');
+  App.showToast('تم حفظ تعديل الصنف بنجاح', 'success');
 }
 
 function deleteProduct(prodId) {

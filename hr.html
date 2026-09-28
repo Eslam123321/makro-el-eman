@@ -428,6 +428,62 @@
         <button class="btn btn-secondary" onclick="closeModal('emp-report-range-modal')">إلغاء</button>
         <button class="btn btn-primary" onclick="confirmAndPrintEmployeeReport()"><i class="fa-solid fa-check"></i> تم ↵</button>
       </div>
+  <!-- Modal Card 8: Edit Employee, Salary & Advance Modal -->
+  <div class="modal-backdrop" id="edit-employee-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-user-pen text-primary-color"></i>
+          <h3>تعديل بيانات وراتب وسلفة الموظف 👔</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('edit-employee-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="edit-emp-id">
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="form-group">
+            <label>اسم الموظف ثلاثي <span class="text-danger">*</span></label>
+            <input type="text" id="edit-emp-name" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>رقم هاتف / كود الموظف</label>
+            <input type="text" id="edit-emp-phone" class="form-control">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="form-group">
+            <label>المسمى الوظيفي / القسم <span class="text-danger">*</span></label>
+            <input type="text" id="edit-emp-job" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>الراتب الشهري الأساسي (جنيه) <span class="text-danger">*</span></label>
+            <input type="number" id="edit-emp-salary" class="form-control" min="1">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="form-group">
+            <label>إجمالي السلف المعلقة / المتبقية (جنيه)</label>
+            <input type="number" id="edit-emp-advances" class="form-control" min="0">
+          </div>
+          <div class="form-group">
+            <label>يوم استحقاق القبض الشهري (رقم اليوم)</label>
+            <input type="number" id="edit-emp-pay-day" class="form-control" min="1" max="31">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>تاريخ التعيين بالمصنع</label>
+          <input type="date" id="edit-emp-hire-date" class="form-control">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('edit-employee-modal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveEditedEmployee()"><i class="fa-solid fa-check ml-1"></i> حفظ تعديلات الموظف والراتب 💾</button>
+      </div>
     </div>
   </div>
 

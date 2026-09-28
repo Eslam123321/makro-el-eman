@@ -72,52 +72,36 @@ function loadCustomersTable(customersData = null) {
 
   const customers = customersData || App.db.customers;
   if (customers.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted p-6">لا يوجد عملاء مطبق عليهم شرط البحث</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted p-6">لا يوجد عملاء مطبق عليهم شرط البحث</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = customers.map(c => {
-    const limit = typeof c.creditLimit === 'number' ? c.creditLimit : (parseFloat(c.creditLimit) || 0);
-    const usedPercent = limit > 0 ? Math.min(100, Math.round((c.totalDebt / limit) * 100)) : (c.totalDebt > 0 ? 100 : 0);
-
-    return `
-      <tr>
-        <td><strong>${c.id}</strong></td>
-        <td>
-          <strong>${c.name}</strong>
-          <div class="text-xs text-muted">${c.address}</div>
-        </td>
-        <td>${c.phone}</td>
-        <td>
-          <span class="badge ${c.rating && c.rating.includes('VIP') ? 'badge-warning' : 'badge-blue'}">
-            <i class="fa-solid fa-crown ml-1"></i> ${c.rating || 'عميل عادي'}
-          </span>
-        </td>
-        <td>
-          <div class="flex flex-col gap-1">
-            <strong class="${c.totalDebt > 0 ? 'text-danger' : 'text-success'}">
-              ${App.formatCurrency(c.totalDebt)}
-            </strong>
-            <div class="text-xs text-muted">الحد: ${App.formatCurrency(limit)} ${limit > 0 ? `(${usedPercent}%)` : '(نقدي فقط)'}</div>
-            <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-              <div style="width: ${usedPercent}%; height: 100%; background: ${usedPercent > 80 ? '#e11d48' : '#059669'};"></div>
-            </div>
-          </div>
-        </td>
-        <td>${c.dueDate ? `<span class="badge badge-warning">${c.dueDate}</span>` : '<span class="text-muted text-xs">لا يوجد مستحقات</span>'}</td>
-        <td>
-          <div class="flex gap-1 flex-wrap">
-            <button class="btn btn-primary btn-sm" onclick="openReceivePaymentModal('${c.id}')"><i class="fa-solid fa-hand-holding-dollar"></i> تحصيل دفعة</button>
-            <button class="btn btn-secondary btn-sm" onclick="openStatementModal('${c.id}')"><i class="fa-solid fa-file-lines"></i> كشف حساب</button>
-            <button class="btn btn-secondary btn-sm" onclick="openEditCustomerModal('${c.id}')" title="تعديل بيانات العميل"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
-            ${(typeof App !== 'undefined' && App.getCurrentUser() && (App.getCurrentUser().id === 'USR-1' || App.getCurrentUser().role === 'مدير عام')) ? `
-              <button class="btn btn-danger btn-sm" onclick="deleteCustomer('${c.id}')" title="حذف العميل نهائياً"><i class="fa-solid fa-trash"></i> حذف</button>
-            ` : ''}
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join('');
+  tbody.innerHTML = customers.map(c => `
+    <tr>
+      <td><strong>${c.id}</strong></td>
+      <td>
+        <strong>${c.name}</strong>
+        <div class="text-xs text-muted">${c.address}</div>
+      </td>
+      <td>${c.phone}</td>
+      <td>
+        <span class="badge ${c.rating && c.rating.includes('VIP') ? 'badge-warning' : 'badge-blue'}">
+          <i class="fa-solid fa-crown ml-1"></i> ${c.rating || 'عميل عادي'}
+        </span>
+      </td>
+      <td>${c.dueDate ? `<span class="badge badge-warning">${c.dueDate}</span>` : '<span class="text-muted text-xs">لا يوجد مستحقات</span>'}</td>
+      <td>
+        <div class="flex gap-1 flex-wrap">
+          <button class="btn btn-primary btn-sm" onclick="openReceivePaymentModal('${c.id}')"><i class="fa-solid fa-hand-holding-dollar"></i> تحصيل دفعة</button>
+          <button class="btn btn-secondary btn-sm" onclick="openStatementModal('${c.id}')"><i class="fa-solid fa-file-lines"></i> كشف حساب</button>
+          <button class="btn btn-secondary btn-sm" onclick="openEditCustomerModal('${c.id}')" title="تعديل بيانات العميل"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+          ${(typeof App !== 'undefined' && App.getCurrentUser() && (App.getCurrentUser().id === 'USR-1' || App.getCurrentUser().role === 'مدير عام')) ? `
+            <button class="btn btn-danger btn-sm" onclick="deleteCustomer('${c.id}')" title="حذف العميل نهائياً"><i class="fa-solid fa-trash"></i> حذف</button>
+          ` : ''}
+        </div>
+      </td>
+    </tr>
+  `).join('');
 }
 
 // Delete Customer (Super Admin Only)
@@ -161,17 +145,11 @@ function saveNewCustomer() {
   const nameEl = document.getElementById('cust-name');
   const phoneEl = document.getElementById('cust-phone');
   const addressEl = document.getElementById('cust-address');
-  const limitEl = document.getElementById('cust-limit');
   const dueDateEl = document.getElementById('cust-duedate');
 
   const name = nameEl ? nameEl.value.trim() : '';
   const phone = phoneEl ? phoneEl.value.trim() : '';
   const address = addressEl ? addressEl.value.trim() : '';
-  
-  // Exact credit limit parsing (preserves 0 if entered by user)
-  const limitRaw = limitEl ? limitEl.value.trim() : '';
-  const limit = limitRaw === '' ? 0 : Math.max(0, parseFloat(limitRaw) || 0);
-  
   const rating = document.getElementById('cust-rating') ? document.getElementById('cust-rating').value : 'عميل عادي';
   const dueDate = dueDateEl ? dueDateEl.value : '';
 
@@ -186,7 +164,7 @@ function saveNewCustomer() {
     phone: phone,
     address: address || 'غير محدد',
     totalDebt: 0,
-    creditLimit: limit,
+    creditLimit: 0,
     rating: rating,
     dueDate: dueDate || '',
     notes: 'عميل جديد'
@@ -201,10 +179,9 @@ function saveNewCustomer() {
   if (nameEl) nameEl.value = '';
   if (phoneEl) phoneEl.value = '';
   if (addressEl) addressEl.value = '';
-  if (limitEl) limitEl.value = '0';
   if (dueDateEl) dueDateEl.value = '';
 
-  App.showToast(`تم تسجيل العميل الجديد (${newCust.name}) بحد ائتماني (${App.formatCurrency(limit)}) بنجاح 👤`, 'success');
+  App.showToast(`تم تسجيل العميل الجديد (${newCust.name}) بنجاح 👤`, 'success');
 }
 
 function openEditCustomerModal(custId) {
@@ -215,7 +192,6 @@ function openEditCustomerModal(custId) {
   document.getElementById('edit-cust-name').value = cust.name || '';
   document.getElementById('edit-cust-phone').value = cust.phone || '';
   document.getElementById('edit-cust-address').value = cust.address || '';
-  document.getElementById('edit-cust-limit').value = typeof cust.creditLimit === 'number' ? cust.creditLimit : (parseFloat(cust.creditLimit) || 0);
   document.getElementById('edit-cust-rating').value = cust.rating || 'عميل عادي';
   document.getElementById('edit-cust-duedate').value = cust.dueDate || '';
 
@@ -230,8 +206,6 @@ function saveEditedCustomer() {
   const name = document.getElementById('edit-cust-name').value.trim();
   const phone = document.getElementById('edit-cust-phone').value.trim();
   const address = document.getElementById('edit-cust-address').value.trim();
-  const limitRaw = document.getElementById('edit-cust-limit').value.trim();
-  const limit = limitRaw === '' ? 0 : Math.max(0, parseFloat(limitRaw) || 0);
   const rating = document.getElementById('edit-cust-rating').value;
   const dueDate = document.getElementById('edit-cust-duedate').value;
 
@@ -243,7 +217,6 @@ function saveEditedCustomer() {
   cust.name = name;
   cust.phone = phone;
   cust.address = address || 'غير محدد';
-  cust.creditLimit = limit;
   cust.rating = rating;
   cust.dueDate = dueDate || '';
 

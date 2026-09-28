@@ -464,9 +464,7 @@ function openEditSupplierModal(supId) {
   document.getElementById('edit-sup-name').value = sup.name;
   document.getElementById('edit-sup-phone').value = sup.phone;
   document.getElementById('edit-sup-flour-type').value = sup.flourType;
-  document.getElementById('edit-sup-price').value = sup.unitPrice;
   document.getElementById('edit-sup-address').value = sup.address || '';
-  document.getElementById('edit-sup-notes').value = sup.notes || '';
 
   openModal('edit-supplier-modal');
 }
@@ -479,24 +477,21 @@ function updateSupplier() {
   const name = document.getElementById('edit-sup-name').value.trim();
   const phone = document.getElementById('edit-sup-phone').value.trim();
   const flourType = document.getElementById('edit-sup-flour-type').value;
-  const price = parseFloat(document.getElementById('edit-sup-price').value) || 0;
   const address = document.getElementById('edit-sup-address').value.trim();
-  const notes = document.getElementById('edit-sup-notes').value.trim();
 
-  if (!name || !phone || price <= 0) {
-    App.showToast('رجاء ادخل اسم المطحن، الهاتف، وسعر التوريد المحدد', 'warning');
+  if (!name || !phone) {
+    App.showToast('رجاء ادخل اسم المطحن ورقم الهاتف للتواصل', 'warning');
     return;
   }
 
   sup.name = name;
   sup.phone = phone;
   sup.flourType = flourType;
-  sup.unitPrice = price;
   sup.address = address;
-  sup.notes = notes;
 
   App.save();
   loadSuppliersTable();
+  initSupplierInvoiceForm();
   renderPageSummaryCards('suppliers', 'suppliers-summary-cards');
   closeModal('edit-supplier-modal');
   App.showToast(`تم تحديث بيانات المطحن/المورد (${sup.name}) بنجاح 🌾`, 'success');
@@ -863,12 +858,181 @@ function loadSupplierInvoicesTable(customInvoices = null) {
       <td>
         <div class="flex gap-2 flex-wrap">
           <button class="btn btn-secondary btn-sm" onclick="previewSupplierInvoice('${inv.id}')" title="معاينة الفاتورة الرسمية"><i class="fa-solid fa-eye text-primary-color"></i> معاينة</button>
+          <button class="btn btn-secondary btn-sm" onclick="openEditSupplierInvoiceModal('${inv.id}')" title="تعديل بيانات الفاتورة"><i class="fa-solid fa-pen-to-square text-primary-color"></i> تعديل</button>
           <button class="btn btn-secondary btn-sm" onclick="printSupplierInvoiceDirect('${inv.id}')" title="طباعة الفاتورة A4"><i class="fa-solid fa-print"></i></button>
           <button class="btn btn-danger btn-sm" onclick="deleteSupplierInvoice('${inv.id}')" title="حذف الفاتورة"><i class="fa-solid fa-trash"></i></button>
         </div>
       </td>
     </tr>
   `).join('');
+}
+
+let activeEditSupplierInvoiceId = null;
+
+function openEditSupplierInvoiceModal(invId) {
+  const inv = (App.db.supplierInvoices || []).find(i => i.id === invId);
+  if (!inv) return;
+
+  activeEditSupplierInvoiceId = invId;
+  const container = document.getElementById('edit-supplier-invoice-body');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div class="form-group">
+        <label>رقم الفاتورة</label>
+        <input type="text" class="form-control" value="${inv.id}" readonly disabled style="background: #f8fafc; font-weight: bold;">
+      </div>
+      <div class="form-group">
+        <label>المطحن / المورد</label>
+        <select id="edit-sup-inv-supplier" class="form-control">
+          ${(App.db.suppliers || []).map(s => `
+            <option value="${s.id}" ${s.id === inv.supplierId || s.name === inv.supplierName ? 'selected' : ''}>${s.name} (${s.phone})</option>
+          `).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 mb-4">
+      <div class="form-group">
+        <label>الكمية الموردة (بالطن) <span class="text-danger">*</span></label>
+        <input type="number" id="edit-sup-inv-tons" class="form-control" value="${inv.tons || 1}" min="0.1" step="0.1" oninput="recalcEditSupplierInvoiceTotals()">
+      </div>
+      <div class="form-group">
+        <label>سعر الطن (جنيه) <span class="text-danger">*</span></label>
+        <input type="number" id="edit-sup-inv-price" class="form-control" value="${inv.unitPrice || 0}" min="0" oninput="recalcEditSupplierInvoiceTotals()">
+      </div>
+      <div class="form-group">
+        <label>درجة نوع الدقيق</label>
+        <select id="edit-sup-inv-flour" class="form-control">
+          <option value="دقيق فاخر استخراج 72%" ${inv.flourType === 'دقيق فاخر استخراج 72%' ? 'selected' : ''}>دقيق فاخر استخراج 72%</option>
+          <option value="دقيق قمح استخراج 80%" ${inv.flourType === 'دقيق قمح استخراج 80%' ? 'selected' : ''}>دقيق قمح استخراج 80%</option>
+          <option value="دقيق صلب ممتاز للمكرونة" ${inv.flourType === 'دقيق صلب ممتاز للمكرونة' ? 'selected' : ''}>دقيق صلب ممتاز للمكرونة</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>الخصم المباشر (جنيه)</label>
+        <input type="number" id="edit-sup-inv-discount" class="form-control" value="${inv.discount || 0}" min="0" oninput="recalcEditSupplierInvoiceTotals()">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4 mb-4">
+      <div class="form-group">
+        <label>طريقة السداد</label>
+        <select id="edit-sup-inv-paytype" class="form-control">
+          <option value="آجل" ${inv.paymentType === 'آجل' ? 'selected' : ''}>دفع آجل (إضافة لمستحقات المطحن)</option>
+          <option value="كاش" ${inv.paymentType === 'كاش' ? 'selected' : ''}>دفع كاش (نقداً من الخزينة)</option>
+          <option value="جزئي" ${inv.paymentType === 'جزئي' ? 'selected' : ''}>دفع جزئي (مقدم كاش + متبقي آجل)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>المسدد كاش (جنيه)</label>
+        <input type="number" id="edit-sup-inv-paid" class="form-control" value="${inv.paidAmount || 0}" min="0" oninput="recalcEditSupplierInvoiceTotals()">
+      </div>
+      <div class="form-group">
+        <label>رقم إذن الاستلام</label>
+        <input type="text" id="edit-sup-inv-ref" class="form-control" value="${inv.refNum || ''}">
+      </div>
+    </div>
+
+    <div class="p-3 bg-slate-50 rounded-lg border mb-3 flex justify-between items-center flex-wrap">
+      <div>إجمالي الفاتورة الجديد: <strong class="text-primary-color text-base" id="edit-sup-inv-grand-display">${App.formatCurrency(inv.grandTotal)}</strong></div>
+      <div>المتبقي آجل للمطحن: <strong class="text-danger text-base" id="edit-sup-inv-rem-display">${App.formatCurrency(inv.remainingAmount || 0)}</strong></div>
+    </div>
+  `;
+
+  openModal('edit-supplier-invoice-modal');
+}
+
+function recalcEditSupplierInvoiceTotals() {
+  const tons = parseFloat(document.getElementById('edit-sup-inv-tons')?.value) || 0;
+  const price = parseFloat(document.getElementById('edit-sup-inv-price')?.value) || 0;
+  const discount = parseFloat(document.getElementById('edit-sup-inv-discount')?.value) || 0;
+  const paid = parseFloat(document.getElementById('edit-sup-inv-paid')?.value) || 0;
+
+  const subtotal = tons * price;
+  const grandTotal = Math.max(0, subtotal - discount);
+  const remaining = Math.max(0, grandTotal - paid);
+
+  const grandEl = document.getElementById('edit-sup-inv-grand-display');
+  const remEl = document.getElementById('edit-sup-inv-rem-display');
+  if (grandEl) grandEl.textContent = App.formatCurrency(grandTotal);
+  if (remEl) remEl.textContent = App.formatCurrency(remaining);
+}
+
+function saveEditedSupplierInvoice() {
+  const inv = (App.db.supplierInvoices || []).find(i => i.id === activeEditSupplierInvoiceId);
+  if (!inv) return;
+
+  const tons = parseFloat(document.getElementById('edit-sup-inv-tons')?.value) || 0;
+  const price = parseFloat(document.getElementById('edit-sup-inv-price')?.value) || 0;
+  const discount = parseFloat(document.getElementById('edit-sup-inv-discount')?.value) || 0;
+  const paid = parseFloat(document.getElementById('edit-sup-inv-paid')?.value) || 0;
+  const payType = document.getElementById('edit-sup-inv-paytype')?.value || 'آجل';
+  const flourType = document.getElementById('edit-sup-inv-flour')?.value || inv.flourType;
+  const refNum = (document.getElementById('edit-sup-inv-ref')?.value || '').trim();
+  const selectedSupId = document.getElementById('edit-sup-inv-supplier')?.value;
+
+  if (tons <= 0 || price <= 0) {
+    App.showToast('يرجى إدخال كمية وسعر صحيحين', 'warning');
+    return;
+  }
+
+  const subtotal = tons * price;
+  const grandTotal = Math.max(0, subtotal - discount);
+  const remaining = Math.max(0, grandTotal - paid);
+
+  // Supplier balance difference adjustment
+  const oldRemaining = inv.remainingAmount || 0;
+  const remDiff = remaining - oldRemaining;
+
+  const oldPaid = inv.paidAmount || 0;
+  const paidDiff = paid - oldPaid;
+
+  const sup = (App.db.suppliers || []).find(s => s.id === (selectedSupId || inv.supplierId));
+  if (sup) {
+    sup.totalBalance = Math.max(0, (sup.totalBalance || 0) + remDiff);
+    // Update batch record inside sup.batches
+    if (sup.batches) {
+      const b = sup.batches.find(x => x.invoiceId === inv.id);
+      if (b) {
+        b.qtyTons = tons;
+        b.unitPrice = price;
+        b.totalCost = grandTotal;
+        b.flourType = flourType;
+        b.refNum = refNum;
+      }
+    }
+  }
+
+  // Treasury adjustment if paid cash changed
+  if (paidDiff !== 0) {
+    App.db.treasuryBalance = (App.db.treasuryBalance || 0) - paidDiff;
+  }
+
+  inv.tons = tons;
+  inv.unitPrice = price;
+  inv.subtotal = subtotal;
+  inv.discount = discount;
+  inv.grandTotal = grandTotal;
+  inv.paidAmount = paid;
+  inv.remainingAmount = remaining;
+  inv.paymentType = payType;
+  inv.flourType = flourType;
+  inv.refNum = refNum;
+  if (sup) {
+    inv.supplierId = sup.id;
+    inv.supplierName = sup.name;
+    inv.supplierPhone = sup.phone;
+  }
+
+  App.save();
+  loadSupplierInvoicesTable();
+  loadSuppliersTable();
+  initSupplierInvoiceForm();
+  renderPageSummaryCards('suppliers', 'suppliers-summary-cards');
+  closeModal('edit-supplier-invoice-modal');
+  App.showToast(`تم حفظ تعديلات الفاتورة (${inv.id}) وتحديث الأرصدة بنجاح 🌾💾`, 'success');
 }
 
 // Filter Supplier Invoices

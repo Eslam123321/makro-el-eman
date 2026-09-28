@@ -66,23 +66,17 @@
             <input type="text" id="prod-name" class="form-control" placeholder="مثال: مكرونة اسباجيتي (شكارة 10 كجم)">
           </div>
 
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <div class="form-group">
-              <label>درجة الفئة</label>
-              <select id="prod-category" class="form-control">
-                <option value="درجة أولى">درجة أولى (فاخر)</option>
-                <option value="درجة ثانية">درجة ثانية</option>
-                <option value="جامبو">شكاير جامبو 50 كجم</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>الكمية المتاحة بالمخزن (عدد الشكاير) <span class="text-danger">*</span></label>
-              <input type="number" id="prod-stock" class="form-control" placeholder="مثال: 100 شكارة" min="0">
-            </div>
+          <div class="form-group mb-4">
+            <label>درجة الفئة ونوع المنتج</label>
+            <select id="prod-category" class="form-control">
+              <option value="درجة أولى">درجة أولى (فاخر)</option>
+              <option value="درجة ثانية">درجة ثانية</option>
+              <option value="جامبو">شكاير جامبو 50 كجم</option>
+            </select>
           </div>
 
           <div class="flex justify-end pt-2 border-t">
-            <button class="btn btn-primary" onclick="saveNewProduct()"><i class="fa-solid fa-check ml-1"></i> حفظ الصنف بالمخزن 📦</button>
+            <button class="btn btn-primary" onclick="saveNewProduct()"><i class="fa-solid fa-check ml-1"></i> حفظ الصنف بالسجل 📦</button>
           </div>
         </div>
 
@@ -91,7 +85,7 @@
           <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
             <div>
               <h3>قائمة أصناف المكرونة التابعة للمصنع</h3>
-              <p class="text-sm text-muted">جميع الأصناف بالشكارة ومتابعة الأرصدة المتوفرة (التسعير يتم حراً بالفواتير)</p>
+              <p class="text-sm text-muted">جميع الأصناف بالشكارة ومتابعة المبيعات (التسعير يتم حراً بالفواتير)</p>
             </div>
             <div class="search-box">
               <i class="fa-solid fa-magnifying-glass"></i>
@@ -106,7 +100,6 @@
                   <th>كود الصنف</th>
                   <th>اسم المنتج والفئة</th>
                   <th>وحدة التعبئة</th>
-                  <th>رصيد المخزون الحالي</th>
                   <th>إجراءات الإدارة</th>
                 </tr>
               </thead>
@@ -171,19 +164,13 @@
           <input type="text" id="edit-prod-name" class="form-control">
         </div>
 
-        <div class="grid grid-cols-2 gap-4 mb-4">
-          <div class="form-group">
-            <label>درجة الفئة</label>
-            <select id="edit-prod-category" class="form-control">
-              <option value="درجة أولى">درجة أولى (فاخر)</option>
-              <option value="درجة ثانية">درجة ثانية</option>
-              <option value="جامبو">شكاير جامبو 50 كجم</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>رصيد المخزون (عدد الشكاير)</label>
-            <input type="number" id="edit-prod-stock" class="form-control" min="0">
-          </div>
+        <div class="form-group mb-4">
+          <label>درجة الفئة ونوع المنتج</label>
+          <select id="edit-prod-category" class="form-control">
+            <option value="درجة أولى">درجة أولى (فاخر)</option>
+            <option value="درجة ثانية">درجة ثانية</option>
+            <option value="جامبو">شكاير جامبو 50 كجم</option>
+          </select>
         </div>
       </div>
 

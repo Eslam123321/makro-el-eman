@@ -76,7 +76,7 @@ function renderAuditTable(productsData = null, invoicesData = null) {
   const invoices = invoicesData || App.db.invoices || [];
 
   if (products.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted p-6">لا يوجد أصناف مسجلة بالمخزن</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted p-6">لا يوجد أصناف مسجلة بالسجل</td></tr>`;
     return;
   }
 
@@ -84,7 +84,6 @@ function renderAuditTable(productsData = null, invoicesData = null) {
     let sacksSold = 0;
     let totalRevenue = 0;
     let totalCost = 0;
-    let resolvedSellPrice = p.sellPrice || p.price || 0;
 
     invoices.forEach(inv => {
       if (inv.status === 'مرتجعة بالكامل') return;
@@ -97,7 +96,6 @@ function renderAuditTable(productsData = null, invoicesData = null) {
             sacksSold += activeQty;
             totalRevenue += (activeQty * itemPrice);
             totalCost += (activeQty * itemCost);
-            if (item.price) resolvedSellPrice = item.price;
           }
         }
       });
@@ -109,10 +107,7 @@ function renderAuditTable(productsData = null, invoicesData = null) {
     return `
       <tr>
         <td><strong>${p.name}</strong> <span class="badge badge-secondary" style="font-size: 0.75rem; margin-right: 4px;">${p.unit || 'شكارة'}</span></td>
-        <td style="text-align: center;"><strong class="${p.stock < 150 ? 'text-danger' : 'text-primary-color'}">${p.stock} شكارة</strong></td>
         <td style="text-align: center;"><strong class="text-dark">${sacksSold} شكارة</strong></td>
-        <td style="text-align: center;"><span class="text-muted font-bold">${App.formatCurrency(p.costPrice || 0)}</span></td>
-        <td style="text-align: center;"><strong class="text-primary-color">${App.formatCurrency(resolvedSellPrice)}</strong></td>
         <td style="text-align: center;"><strong class="text-success">${App.formatCurrency(totalRevenue)}</strong></td>
         <td style="text-align: center;"><strong class="text-warning">${App.formatCurrency(totalCost)}</strong></td>
         <td style="text-align: left;">

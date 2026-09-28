@@ -142,6 +142,7 @@ function loadEmployeesTable() {
         <td>
           <div class="flex gap-2 flex-wrap">
             <button class="btn btn-secondary btn-sm" onclick="openEmployeeStatementModal('${emp.id}')" title="كشف الحساب وسجل الحضور"><i class="fa-solid fa-file-lines text-primary-color"></i> كشف الحساب 📄</button>
+            <button class="btn btn-secondary btn-sm" onclick="openEditEmployeeModal('${emp.id}')" title="تعديل بيانات وراتب وسلفة الموظف"><i class="fa-solid fa-user-pen text-primary-color"></i> تعديل</button>
             <button class="btn btn-secondary btn-sm" onclick="openAddAdvanceModal('${emp.id}')" title="صرف سلفة"><i class="fa-solid fa-hand-holding-hand text-warning"></i> سلفة</button>
             <button class="btn btn-primary btn-sm" onclick="disburseSalary('${emp.id}')" title="صرف الراتب"><i class="fa-solid fa-money-check-dollar"></i> صرف الراتب 💰</button>
             <button class="btn btn-secondary btn-sm" onclick="openDeductionModal('${emp.id}')" title="خصم مالي إداري"><i class="fa-solid fa-minus text-danger"></i> خصم</button>
@@ -505,6 +506,56 @@ function processFinancialDeduction() {
   renderPageSummaryCards('hr', 'hr-summary-cards-container');
   closeModal('deduction-modal');
   App.showToast(`تم تطبيق خصم مالي بقيمة (${App.formatCurrency(amount)}) على الموظف (${emp.name}) 💰`, 'warning');
+}
+
+function openEditEmployeeModal(empId) {
+  const emp = (App.db.employees || []).find(e => e.id === empId);
+  if (!emp) return;
+
+  document.getElementById('edit-emp-id').value = emp.id;
+  document.getElementById('edit-emp-name').value = emp.name || '';
+  document.getElementById('edit-emp-phone').value = emp.phone || '';
+  document.getElementById('edit-emp-job').value = emp.jobTitle || '';
+  document.getElementById('edit-emp-salary').value = emp.baseSalary || 0;
+  document.getElementById('edit-emp-advances').value = emp.advances || 0;
+  document.getElementById('edit-emp-pay-day').value = emp.payDay || (emp.payDate ? emp.payDate.split('-')[2] : '30');
+  document.getElementById('edit-emp-hire-date').value = emp.hireDate || '';
+
+  openModal('edit-employee-modal');
+}
+
+function saveEditedEmployee() {
+  const empId = document.getElementById('edit-emp-id').value;
+  const emp = (App.db.employees || []).find(e => e.id === empId);
+  if (!emp) return;
+
+  const name = document.getElementById('edit-emp-name').value.trim();
+  const phone = document.getElementById('edit-emp-phone').value.trim();
+  const job = document.getElementById('edit-emp-job').value.trim();
+  const salary = parseFloat(document.getElementById('edit-emp-salary').value) || 0;
+  const advances = Math.max(0, parseFloat(document.getElementById('edit-emp-advances').value) || 0);
+  const payDay = document.getElementById('edit-emp-pay-day').value.trim();
+  const hireDate = document.getElementById('edit-emp-hire-date').value;
+
+  if (!name || salary <= 0) {
+    App.showToast('رجاء إدخال اسم الموظف والراتب الأساسي بشكل صحيح', 'warning');
+    return;
+  }
+
+  emp.name = name;
+  emp.phone = phone;
+  emp.jobTitle = job || emp.jobTitle;
+  emp.baseSalary = salary;
+  emp.advances = advances;
+  if (payDay) emp.payDay = payDay;
+  if (hireDate) emp.hireDate = hireDate;
+
+  App.save();
+  loadEmployeesTable();
+  loadDailyAttendanceTable();
+  if (typeof renderPageSummaryCards === 'function') renderPageSummaryCards('hr', 'hr-summary-cards-container');
+  closeModal('edit-employee-modal');
+  App.showToast(`تم حفظ وتحديث بيانات وراتب الموظف (${emp.name}) بنجاح 👔💾`, 'success');
 }
 
 // Disburse Monthly Salary
@@ -882,6 +933,31 @@ function renderEmployeeStatementContent() {
               <td style="padding: 6px 8px; border: 1px solid #e2e8f0; color: #64748b;">${a.notes || '-'}</td>
             </tr>
           `).join('') : `<tr><td colspan="6" style="padding: 10px; text-align: center; color: #94a3b8;">لا توجد حركات مسجلة للموظف في هذه الفترة المحددة</td></tr>`}
+        </tbody>
+      </table>
+
+      <!-- Detailed Financial Deductions & Reasons Log Table -->
+      <h4 style="font-size: 0.95rem; font-weight: 700; margin: 14px 0 6px 0; color: #dc2626; border-bottom: 2px solid #dc2626; display: inline-block; padding-bottom: 2px;">
+        <i class="fa-solid fa-file-invoice-dollar ml-1"></i> سجل الخصومات والجزاءات المالية وتفاصيل الأسباب
+      </h4>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; border: 1px solid #e2e8f0; font-size: 0.8rem;">
+        <thead style="background: #fef2f2;">
+          <tr>
+            <th style="padding: 6px 8px; border: 1px solid #fecaca; text-align: right;">كود الخصم</th>
+            <th style="padding: 6px 8px; border: 1px solid #fecaca; text-align: right;">تاريخ الخصم</th>
+            <th style="padding: 6px 8px; border: 1px solid #fecaca; text-align: center;">قيمة الخصم</th>
+            <th style="padding: 6px 8px; border: 1px solid #fecaca; text-align: right;">سبب وتفاصيل الخصم المالي</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(emp.deductionsList && emp.deductionsList.length > 0) ? emp.deductionsList.map(d => `
+            <tr>
+              <td style="padding: 6px 8px; border: 1px solid #e2e8f0; font-weight: bold;">${d.id}</td>
+              <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">${App.formatTimestamp(d.date)}</td>
+              <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center;"><strong style="color: #dc2626;">-${App.formatCurrency(d.amount)}</strong></td>
+              <td style="padding: 6px 8px; border: 1px solid #e2e8f0; font-weight: 600; color: #1e293b;">${d.reason || 'خصم مالي إداري مباشر'}</td>
+            </tr>
+          `).join('') : `<tr><td colspan="4" style="padding: 10px; text-align: center; color: #94a3b8;">لا توجد خصومات مالية مسجلة على الموظف</td></tr>`}
         </tbody>
       </table>
 
