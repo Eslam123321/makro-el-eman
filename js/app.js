@@ -1045,7 +1045,7 @@ function previewInvoice(invId) {
   if (btnImg) btnImg.onclick = () => downloadInvoiceAsImage();
 
   const btnWa = document.getElementById('btn-wa-inv');
-  if (btnWa) btnWa.onclick = () => sendInvoiceWhatsApp(inv.id);
+  if (btnWa) btnWa.onclick = () => sendInvoiceWhatsApp(inv);
 
   openModal('preview-invoice-modal');
 }
@@ -1137,34 +1137,50 @@ async function downloadInvoicePdf(invId) {
 /* ==========================================================================
    Advanced WhatsApp Invoice Sharing Engine (Modal Contact Picker + Native Share + Auto PNG)
    ========================================================================== */
+/* ==========================================================================
+   Advanced WhatsApp Invoice Sharing Engine (Modal Contact Picker + Native Share + Auto PNG)
+   ========================================================================== */
 let activeWhatsAppInvoice = null;
 let activeWhatsAppType = 'sales';
+window._currentInvoiceCanvas = null;
 
 function ensureWhatsAppModalExists() {
   if (document.getElementById('whatsapp-recipient-modal')) return;
 
   const modalHtml = `
   <div class="modal-backdrop" id="whatsapp-recipient-modal" style="z-index: 10050;">
-    <div class="modal-card" style="max-width: 520px; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+    <div class="modal-card" style="max-width: 540px; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
       <div class="modal-header" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff; padding: 1.1rem 1.5rem;">
         <div class="modal-title" style="color: #ffffff; display: flex; align-items: center; gap: 10px;">
           <i class="fa-brands fa-whatsapp" style="font-size: 1.8rem; color: #25D366; background: #ffffff; border-radius: 50%; padding: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);"></i>
           <div>
-            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #ffffff;">إرسال الفاتورة عبر الواتساب</h3>
-            <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: rgba(255,255,255,0.92);">حدد الشخص المستلم لإرسال صورة الفاتورة له فوراً</p>
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #ffffff;">إرسال صورة الفاتورة عبر الواتساب</h3>
+            <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: rgba(255,255,255,0.92);">حدد الشخص المستلم لإرسال صورة الفاتورة له فوراً كصورة معتمدة</p>
           </div>
         </div>
         <button class="modal-close" style="color: #ffffff;" onclick="closeModal('whatsapp-recipient-modal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <div class="modal-body" style="padding: 1.5rem;">
+      <div class="modal-body" style="padding: 1.25rem 1.5rem;">
         <!-- Invoice Summary Badge -->
-        <div id="wa-modal-inv-summary" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;">
+        <div id="wa-modal-inv-summary" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px;">
+        </div>
+
+        <!-- Invoice Image Preview Box -->
+        <div style="text-align: center; margin-bottom: 14px; background: #f8fafc; border: 1.5px dashed #10b981; border-radius: 12px; padding: 10px;">
+          <span style="font-size: 0.8rem; font-weight: bold; color: #059669; display: block; margin-bottom: 6px;">
+            <i class="fa-solid fa-file-image ml-1"></i> صورة الفاتورة المعتمدة الجاهزة للإرسال:
+          </span>
+          <img id="wa-modal-preview-img" style="max-height: 160px; max-width: 100%; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid #cbd5e1; object-fit: contain; margin: 0 auto; display: block;" src="" alt="صورة الفاتورة">
+          <div style="display: flex; justify-content: center; gap: 8px; margin-top: 8px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="copyInvoiceImageBlobToClipboard()"><i class="fa-solid fa-copy ml-1"></i> نسخ الصورة للحافظة 📋</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="downloadActiveInvoicePng()"><i class="fa-solid fa-download ml-1"></i> تنزيل الصورة لجهازك 💾</button>
+          </div>
         </div>
 
         <!-- Target Selection: Dropdown -->
-        <div class="form-group mb-4">
-          <label style="font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; display: block;">
+        <div class="form-group mb-3">
+          <label style="font-weight: 700; font-size: 0.88rem; margin-bottom: 5px; display: block;">
             <i class="fa-solid fa-user-check text-primary-color ml-1"></i> اختر الشخص المستلم:
           </label>
           <select id="wa-target-select" class="form-control" style="font-size: 0.95rem; font-weight: 600;" onchange="onWhatsAppTargetSelectChange()">
@@ -1172,20 +1188,20 @@ function ensureWhatsAppModalExists() {
         </div>
 
         <!-- Phone Number Input -->
-        <div class="form-group mb-4">
-          <label style="font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; display: block;">
+        <div class="form-group mb-3">
+          <label style="font-weight: 700; font-size: 0.88rem; margin-bottom: 5px; display: block;">
             <i class="fa-solid fa-phone text-success ml-1"></i> رقم هاتف الواتساب:
           </label>
           <div style="position: relative;">
-            <input type="tel" id="wa-phone-input" class="form-control" placeholder="مثال: 01012345678" dir="ltr" style="font-size: 1.2rem; font-weight: 800; text-align: center; letter-spacing: 1.5px; padding: 8px; border: 2px solid #10b981; border-radius: 8px;">
+            <input type="tel" id="wa-phone-input" class="form-control" placeholder="مثال: 01012345678" dir="ltr" style="font-size: 1.15rem; font-weight: 800; text-align: center; letter-spacing: 1.5px; padding: 7px; border: 2px solid #10b981; border-radius: 8px;">
             <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: #64748b; font-weight: bold;">واتساب 📱</span>
           </div>
           <p class="text-xs text-muted mt-1">* يمكنك اختيار اسم العميل/المورد من القائمة أعلاه أو كتابة أي رقم واتساب آخر هنا مباشرة.</p>
         </div>
 
         <!-- Guidance Banner -->
-        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 12px; font-size: 0.8rem; color: #1e40af; line-height: 1.6;">
-          <i class="fa-solid fa-circle-info ml-1"></i> <strong>طريقة الإرسال:</strong> سيتم تجهيز صورة الفاتورة الأصلية (PNG) وتنزيلها وفتح محادثة الشخص المختار مباشرة، مع نسخ الصورة لتلصقها وتُرسل فوراً.
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; font-size: 0.78rem; color: #1e40af; line-height: 1.6;">
+          <i class="fa-solid fa-circle-info ml-1"></i> <strong>طريقة إرسال الصورة:</strong> سيتم فتح محادثة الشخص المختار مباشرة، والصورة منسوخة تلقائياً، فقط اضغط <strong>(Ctrl + V)</strong> داخل الشات لتُرسل صورة الفاتورة فوراً.
         </div>
       </div>
 
@@ -1201,34 +1217,62 @@ function ensureWhatsAppModalExists() {
   document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
-function openWhatsAppShareModal(invoiceId = null, type = 'sales') {
+function copyInvoiceImageBlobToClipboard() {
+  if (window._currentInvoiceCanvas && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+    window._currentInvoiceCanvas.toBlob(blob => {
+      if (!blob) return;
+      try {
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(() => {
+          App.showToast('تم نسخ صورة الفاتورة بنجاح! يمكنك لصقها الآن (Ctrl + V) في أي شات 📋🖼️', 'success');
+        }).catch(() => {
+          App.showToast('الصورة تم حفظها، يمكنك إرسالها من الملفات المحفوظة', 'info');
+        });
+      } catch (e) {
+        App.showToast('الصورة جاهزة، اضغط على تنزيل لحفظها مباشرة', 'info');
+      }
+    }, 'image/png');
+  } else {
+    App.showToast('اضغط على تنزيل لحفظ صورة الفاتورة على جهازك 💾', 'info');
+  }
+}
+
+function downloadActiveInvoicePng() {
+  if (window._currentInvoiceCanvas && activeWhatsAppInvoice) {
+    const a = document.createElement('a');
+    a.download = `فاتورة_${activeWhatsAppInvoice.id || 'معتمدة'}.png`;
+    a.href = window._currentInvoiceCanvas.toDataURL('image/png');
+    a.click();
+    App.showToast('تم تنزيل صورة الفاتورة بنجاح على جهازك 💾✨', 'success');
+  }
+}
+
+async function openWhatsAppShareModal(invoiceOrId = null, type = 'sales') {
   ensureWhatsAppModalExists();
 
   let inv = null;
-  if (type === 'sales') {
-    if (invoiceId) {
-      inv = (App.db.invoices || []).find(i => i.id === invoiceId);
+  if (invoiceOrId && typeof invoiceOrId === 'object') {
+    inv = invoiceOrId;
+  } else if (typeof invoiceOrId === 'string' && invoiceOrId) {
+    if (type === 'sales') {
+      inv = (App.db.invoices || []).find(i => i.id === invoiceOrId);
+    } else {
+      inv = (App.db.supplierInvoices || []).find(i => i.id === invoiceOrId);
     }
-    if (!inv && typeof currentDraftInvoice !== 'undefined' && currentDraftInvoice) {
-      inv = currentDraftInvoice;
-    }
-    if (!inv && App.db.invoices && App.db.invoices.length > 0) {
-      inv = App.db.invoices[0];
-    }
-  } else {
-    if (invoiceId) {
-      inv = (App.db.supplierInvoices || []).find(i => i.id === invoiceId);
-    }
-    if (!inv && typeof currentSupplierDraftInvoice !== 'undefined' && currentSupplierDraftInvoice) {
-      inv = currentSupplierDraftInvoice;
-    }
-    if (!inv && App.db.supplierInvoices && App.db.supplierInvoices.length > 0) {
-      inv = App.db.supplierInvoices[0];
+  }
+
+  // Fallbacks for draft invoices or default records
+  if (!inv) {
+    if (type === 'sales') {
+      inv = window.currentDraftInvoice || (typeof currentDraftInvoice !== 'undefined' ? currentDraftInvoice : null);
+      if (!inv && App.db.invoices && App.db.invoices.length > 0) inv = App.db.invoices[0];
+    } else {
+      inv = window.currentSupplierDraftInvoice || (typeof currentSupplierDraftInvoice !== 'undefined' ? currentSupplierDraftInvoice : null);
+      if (!inv && App.db.supplierInvoices && App.db.supplierInvoices.length > 0) inv = App.db.supplierInvoices[0];
     }
   }
 
   if (!inv) {
-    App.showToast('عفواً، لا توجد فاتورة محددة للمشاركة', 'warning');
+    App.showToast('عفواً، لا توجد فاتورة محددة للمشاركة عبر الواتساب', 'warning');
     return;
   }
 
@@ -1301,6 +1345,25 @@ function openWhatsAppShareModal(invoiceId = null, type = 'sales') {
     phoneInput.value = defaultPhone;
   }
 
+  // Generate Image Preview for the modal
+  const content = document.getElementById(isSales ? 'printable-invoice-content' : 'printable-supplier-invoice-content') 
+               || document.getElementById('printable-invoice-content') 
+               || document.getElementById('printable-supplier-invoice-content');
+
+  const previewImg = document.getElementById('wa-modal-preview-img');
+  if (content && typeof html2canvas !== 'undefined') {
+    try {
+      const canvas = await html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      window._currentInvoiceCanvas = canvas;
+      if (previewImg) {
+        previewImg.src = canvas.toDataURL('image/png');
+        previewImg.style.display = 'block';
+      }
+    } catch (e) {
+      console.warn('Canvas preview error:', e);
+    }
+  }
+
   openModal('whatsapp-recipient-modal');
 }
 
@@ -1362,7 +1425,7 @@ async function executeWhatsAppSendAction() {
     );
   }
 
-  // Format clean phone number
+  // Format clean phone number (Egyptian or International)
   let fullPhone = phone;
   if (fullPhone.startsWith('01') && fullPhone.length === 11) {
     fullPhone = '2' + fullPhone;
@@ -1370,17 +1433,12 @@ async function executeWhatsAppSendAction() {
 
   App.showToast('جاري تجهيز صورة الفاتورة للمستلم... ⏳', 'info');
 
-  // Capture invoice container to image
-  const content = document.getElementById(isSales ? 'printable-invoice-content' : 'printable-supplier-invoice-content') 
-               || document.getElementById('printable-invoice-content') 
-               || document.getElementById('printable-supplier-invoice-content');
-
   let imageBlob = null;
   let imageFile = null;
 
-  if (content && typeof html2canvas !== 'undefined') {
+  if (window._currentInvoiceCanvas) {
     try {
-      const canvas = await html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const canvas = window._currentInvoiceCanvas;
       
       // Auto-copy to clipboard
       if (canvas.toBlob) {
@@ -1432,14 +1490,14 @@ async function executeWhatsAppSendAction() {
   window.open(waUrl, '_blank');
 
   if (fullPhone && fullPhone.length >= 10) {
-    App.showToast(`تم فتح محادثة (${fullPhone}) مباشرة! اضغط (Ctrl + V) داخل الشات لإرسال صورة الفاتورة فوراً 📋🖼️`, 'success');
+    App.showToast(`تم فتح محادثة (${fullPhone}) ونسخ صورة الفاتورة! اضغط (Ctrl + V) داخل الشات لإرسال الصورة فوراً 📋🖼️`, 'success');
   } else {
     App.showToast('تم فتح الواتساب بنجاح! حدد المحادثة واضغط (Ctrl + V) داخل الشات لإرسال صورة الفاتورة فوراً 📋🖼️', 'info');
   }
 }
 
-function sendInvoiceWhatsApp(invoiceId = null) {
-  openWhatsAppShareModal(invoiceId, 'sales');
+function sendInvoiceWhatsApp(invOrId = null) {
+  openWhatsAppShareModal(invOrId, 'sales');
 }
 
 // Multi-Tab Realtime Reactivity Listener

@@ -706,6 +706,8 @@ function previewCurrentSupplierInvoiceDraft() {
     isDraft: true
   };
 
+  window.currentSupplierDraftInvoice = currentSupplierDraftInvoice;
+
   renderSupplierInvoicePreview(currentSupplierDraftInvoice, true);
   bindSupplierInvoiceActions(currentSupplierDraftInvoice);
   openModal('preview-supplier-invoice-modal');
@@ -895,7 +897,7 @@ function bindSupplierInvoiceActions(inv) {
   if (btnImg) btnImg.onclick = () => downloadSupplierInvoiceAsImage(inv.id);
 
   const btnWa = document.getElementById('btn-wa-sup-inv');
-  if (btnWa) btnWa.onclick = () => sendSupplierInvoiceWhatsApp(inv.id);
+  if (btnWa) btnWa.onclick = () => sendSupplierInvoiceWhatsApp(inv);
 }
 
 // Preview Supplier Invoice (Confirmed or Draft)
@@ -1143,9 +1145,12 @@ function downloadSupplierInvoiceAsImage(invId) {
 }
 
 // Send Supplier Invoice via WhatsApp (Modal Contact Picker + Native Share + Auto PNG)
-function sendSupplierInvoiceWhatsApp(invId = null) {
+function sendSupplierInvoiceWhatsApp(invOrId = null) {
+  const targetInv = (typeof invOrId === 'object' && invOrId !== null) 
+    ? invOrId 
+    : (window.currentSupplierDraftInvoice || currentSupplierDraftInvoice || invOrId);
   if (typeof openWhatsAppShareModal === 'function') {
-    openWhatsAppShareModal(invId, 'supplier');
+    openWhatsAppShareModal(targetInv, 'supplier');
   } else {
     window.open('https://web.whatsapp.com/', '_blank');
   }

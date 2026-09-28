@@ -264,6 +264,8 @@ function openInvoicePreviewFromBuilder() {
     isDraft: true
   };
 
+  window.currentDraftInvoice = currentDraftInvoice;
+
   renderInvoicePreviewContent(currentDraftInvoice, true);
   openModal('preview-invoice-modal');
 }
@@ -1142,7 +1144,7 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
   if (btnPrint) btnPrint.onclick = () => window.print();
   if (btnPdf) btnPdf.onclick = () => downloadInvoicePdf(inv.id);
   if (btnImg) btnImg.onclick = () => downloadInvoiceAsImage();
-  if (btnWa) btnWa.onclick = () => sendInvoiceWhatsApp(inv.id);
+  if (btnWa) btnWa.onclick = () => sendInvoiceWhatsApp(inv);
 
   if (confirmContainer) {
     if (isDraft) {
