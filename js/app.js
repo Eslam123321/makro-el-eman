@@ -1134,81 +1134,312 @@ async function downloadInvoicePdf(invId) {
   App.showToast('تم تنزيل ملف الفاتورة PDF بنجاح! 📄✨', 'success');
 }
 
-async function sendInvoiceWhatsApp(invoiceId = null) {
+/* ==========================================================================
+   Advanced WhatsApp Invoice Sharing Engine (Modal Contact Picker + Native Share + Auto PNG)
+   ========================================================================== */
+let activeWhatsAppInvoice = null;
+let activeWhatsAppType = 'sales';
+
+function ensureWhatsAppModalExists() {
+  if (document.getElementById('whatsapp-recipient-modal')) return;
+
+  const modalHtml = `
+  <div class="modal-backdrop" id="whatsapp-recipient-modal" style="z-index: 10050;">
+    <div class="modal-card" style="max-width: 520px; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff; padding: 1.1rem 1.5rem;">
+        <div class="modal-title" style="color: #ffffff; display: flex; align-items: center; gap: 10px;">
+          <i class="fa-brands fa-whatsapp" style="font-size: 1.8rem; color: #25D366; background: #ffffff; border-radius: 50%; padding: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);"></i>
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #ffffff;">إرسال الفاتورة عبر الواتساب</h3>
+            <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: rgba(255,255,255,0.92);">حدد الشخص المستلم لإرسال صورة الفاتورة له فوراً</p>
+          </div>
+        </div>
+        <button class="modal-close" style="color: #ffffff;" onclick="closeModal('whatsapp-recipient-modal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem;">
+        <!-- Invoice Summary Badge -->
+        <div id="wa-modal-inv-summary" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;">
+        </div>
+
+        <!-- Target Selection: Dropdown -->
+        <div class="form-group mb-4">
+          <label style="font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; display: block;">
+            <i class="fa-solid fa-user-check text-primary-color ml-1"></i> اختر الشخص المستلم:
+          </label>
+          <select id="wa-target-select" class="form-control" style="font-size: 0.95rem; font-weight: 600;" onchange="onWhatsAppTargetSelectChange()">
+          </select>
+        </div>
+
+        <!-- Phone Number Input -->
+        <div class="form-group mb-4">
+          <label style="font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; display: block;">
+            <i class="fa-solid fa-phone text-success ml-1"></i> رقم هاتف الواتساب:
+          </label>
+          <div style="position: relative;">
+            <input type="tel" id="wa-phone-input" class="form-control" placeholder="مثال: 01012345678" dir="ltr" style="font-size: 1.2rem; font-weight: 800; text-align: center; letter-spacing: 1.5px; padding: 8px; border: 2px solid #10b981; border-radius: 8px;">
+            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: #64748b; font-weight: bold;">واتساب 📱</span>
+          </div>
+          <p class="text-xs text-muted mt-1">* يمكنك اختيار اسم العميل/المورد من القائمة أعلاه أو كتابة أي رقم واتساب آخر هنا مباشرة.</p>
+        </div>
+
+        <!-- Guidance Banner -->
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 12px; font-size: 0.8rem; color: #1e40af; line-height: 1.6;">
+          <i class="fa-solid fa-circle-info ml-1"></i> <strong>طريقة الإرسال:</strong> سيتم تجهيز صورة الفاتورة الأصلية (PNG) وتنزيلها وفتح محادثة الشخص المختار مباشرة، مع نسخ الصورة لتلصقها وتُرسل فوراً.
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 1rem 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+        <button class="btn btn-secondary" onclick="closeModal('whatsapp-recipient-modal')">إلغاء</button>
+        <button class="btn btn-whatsapp" id="btn-wa-do-send" style="padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 800; border-radius: 8px; flex: 1; justify-content: center; box-shadow: 0 4px 12px rgba(37,211,102,0.35);" onclick="executeWhatsAppSendAction()">
+          <i class="fa-brands fa-whatsapp ml-2" style="font-size: 1.25rem;"></i> إرسال الصورة للمستلم الآن 🚀
+        </button>
+      </div>
+    </div>
+  </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function openWhatsAppShareModal(invoiceId = null, type = 'sales') {
+  ensureWhatsAppModalExists();
+
   let inv = null;
-  if (invoiceId) {
-    inv = (App.db.invoices || []).find(i => i.id === invoiceId);
+  if (type === 'sales') {
+    if (invoiceId) {
+      inv = (App.db.invoices || []).find(i => i.id === invoiceId);
+    }
+    if (!inv && typeof currentDraftInvoice !== 'undefined' && currentDraftInvoice) {
+      inv = currentDraftInvoice;
+    }
+    if (!inv && App.db.invoices && App.db.invoices.length > 0) {
+      inv = App.db.invoices[0];
+    }
+  } else {
+    if (invoiceId) {
+      inv = (App.db.supplierInvoices || []).find(i => i.id === invoiceId);
+    }
+    if (!inv && typeof currentSupplierDraftInvoice !== 'undefined' && currentSupplierDraftInvoice) {
+      inv = currentSupplierDraftInvoice;
+    }
+    if (!inv && App.db.supplierInvoices && App.db.supplierInvoices.length > 0) {
+      inv = App.db.supplierInvoices[0];
+    }
   }
-  if (!inv && typeof currentDraftInvoice !== 'undefined' && currentDraftInvoice) {
-    inv = currentDraftInvoice;
-  }
-  if (!inv && App.db.invoices && App.db.invoices.length > 0) {
-    inv = App.db.invoices[0];
-  }
+
   if (!inv) {
-    App.showToast('عفواً، لا يوجد فاتورة محددة للمشاركة', 'warning');
+    App.showToast('عفواً، لا توجد فاتورة محددة للمشاركة', 'warning');
     return;
   }
 
-  const cust = (App.db.customers || []).find(c => c.id === inv.customerId || c.name === inv.customerName);
-  const rawPhone = inv.customerPhone || (cust ? cust.phone : '') || '';
-  let phone = rawPhone.replace(/[^0-9]/g, '');
+  activeWhatsAppInvoice = inv;
+  activeWhatsAppType = type;
 
-  const totalSacks = (inv.items || []).reduce((s, i) => s + (i.qty || 0), 0);
-  const msg = encodeURIComponent(
-    `🌾 *مصنع الإيمان للمكرونة* 🌾\n` +
-    `*فاتورة مبيعات معتمدة*\n\n` +
-    `📄 رقم الفاتورة: ${inv.id}\n` +
-    `👤 العميل: ${inv.customerName}\n` +
-    `📦 الكمية الإجمالية: ${totalSacks} شكارة\n` +
-    `💵 إجمالي الفاتورة الصافي: ${App.formatCurrency(inv.grandTotal)}\n` +
-    `✅ المسدد كاش: ${App.formatCurrency(inv.paidAmount || 0)}\n` +
-    `⏳ المتبقي آجل: ${App.formatCurrency(inv.remainingAmount || 0)}\n` +
-    `📅 التاريخ: ${App.formatTimestamp(inv.date)}\n\n` +
-    `_شكراً لتعاملكم الراقي مع مصنع الإيمان للمكرونة_ 🌾`
-  );
-
-  let waUrl = 'https://web.whatsapp.com/';
-  if (phone) {
-    if (phone.startsWith('01') && phone.length === 11) {
-      phone = '2' + phone;
-    }
-    // Only direct to phone chat if it is a valid full number
-    if (phone.length >= 10) {
-      waUrl = `https://wa.me/${phone}?text=${msg}`;
-    }
+  const isSales = (type === 'sales');
+  const partyName = isSales ? (inv.customerName || 'عميل نقدي') : (inv.supplierName || 'مطحن');
+  
+  // Find party phone
+  let defaultPhone = '';
+  if (isSales) {
+    const cust = (App.db.customers || []).find(c => c.id === inv.customerId || c.name === inv.customerName);
+    defaultPhone = inv.customerPhone || (cust ? cust.phone : '') || '';
+  } else {
+    const sup = (App.db.suppliers || []).find(s => s.id === inv.supplierId || s.name === inv.supplierName);
+    defaultPhone = inv.supplierPhone || (sup ? sup.phone : '') || '';
   }
 
-  // Auto-download PNG image + Auto-copy high-res image to clipboard for instant Ctrl+V in WhatsApp
-  const content = document.getElementById('printable-invoice-content');
+  // Populate Summary
+  const summaryEl = document.getElementById('wa-modal-inv-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+        <div>
+          <span style="font-size: 0.8rem; color: #166534; font-weight: bold; display: block;">رقم الفاتورة: <strong>${inv.id}</strong></span>
+          <span style="font-size: 0.85rem; color: #1e293b; font-weight: 700;">المستلم بالفاتورة: <strong>${partyName}</strong></span>
+        </div>
+        <div style="text-align: left;">
+          <span style="font-size: 0.75rem; color: #64748b; display: block;">الإجمالي الصافي:</span>
+          <strong style="font-size: 1.05rem; color: #059669;">${App.formatCurrency(inv.grandTotal)}</strong>
+        </div>
+      </div>
+    `;
+  }
+
+  // Populate Target Dropdown
+  const selectEl = document.getElementById('wa-target-select');
+  if (selectEl) {
+    let options = '';
+    options += `<option value="${defaultPhone}">⭐ ${partyName} (المحدد بالفاتورة ${defaultPhone ? '- ' + defaultPhone : ''})</option>`;
+
+    // Customers group
+    const customers = (App.db.customers || []).filter(c => c.phone);
+    if (customers.length > 0) {
+      options += `<optgroup label="قائمة العملاء المسجلين">`;
+      customers.forEach(c => {
+        options += `<option value="${c.phone}">عميل: ${c.name} (${c.phone})</option>`;
+      });
+      options += `</optgroup>`;
+    }
+
+    // Suppliers group
+    const suppliers = (App.db.suppliers || []).filter(s => s.phone);
+    if (suppliers.length > 0) {
+      options += `<optgroup label="قائمة المطاحن والموردين">`;
+      suppliers.forEach(s => {
+        options += `<option value="${s.phone}">مطحن: ${s.name} (${s.phone})</option>`;
+      });
+      options += `</optgroup>`;
+    }
+
+    options += `<option value="custom">✏️ إدخال رقم هاتف آخر يدوياً...</option>`;
+    selectEl.innerHTML = options;
+  }
+
+  // Populate Phone Input
+  const phoneInput = document.getElementById('wa-phone-input');
+  if (phoneInput) {
+    phoneInput.value = defaultPhone;
+  }
+
+  openModal('whatsapp-recipient-modal');
+}
+
+function onWhatsAppTargetSelectChange() {
+  const selectEl = document.getElementById('wa-target-select');
+  const phoneInput = document.getElementById('wa-phone-input');
+  if (!selectEl || !phoneInput) return;
+
+  const val = selectEl.value;
+  if (val === 'custom') {
+    phoneInput.value = '';
+    phoneInput.focus();
+  } else {
+    phoneInput.value = val;
+  }
+}
+
+async function executeWhatsAppSendAction() {
+  const inv = activeWhatsAppInvoice;
+  if (!inv) {
+    App.showToast('عفواً، لا توجد فاتورة محددة للإرسال', 'warning');
+    return;
+  }
+
+  const phoneInput = document.getElementById('wa-phone-input');
+  let rawPhone = phoneInput ? phoneInput.value.trim() : '';
+  let phone = rawPhone.replace(/[^0-9]/g, '');
+
+  const isSales = (activeWhatsAppType === 'sales');
+  let msgText = '';
+
+  if (isSales) {
+    const totalSacks = (inv.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+    msgText = (
+      `🌾 *مصنع الإيمان للمكرونة* 🌾\n` +
+      `*فاتورة مبيعات معتمدة*\n\n` +
+      `📄 رقم الفاتورة: ${inv.id}\n` +
+      `👤 العميل: ${inv.customerName}\n` +
+      `📦 الكمية الإجمالية: ${totalSacks} شكارة\n` +
+      `💵 إجمالي الفاتورة الصافي: ${App.formatCurrency(inv.grandTotal)}\n` +
+      `✅ المسدد كاش: ${App.formatCurrency(inv.paidAmount || 0)}\n` +
+      `⏳ المتبقي آجل: ${App.formatCurrency(inv.remainingAmount || 0)}\n` +
+      `📅 التاريخ: ${App.formatTimestamp(inv.date)}\n\n` +
+      `_شكراً لتعاملكم الراقي مع مصنع الإيمان للمكرونة_ 🌾`
+    );
+  } else {
+    msgText = (
+      `🌾 *مصنع الإيمان للمكرونة* 🌾\n` +
+      `*فاتورة توريد دقيق خام معتمدة*\n\n` +
+      `📄 رقم الفاتورة: ${inv.id}\n` +
+      `🏢 المطحن / المورد: ${inv.supplierName}\n` +
+      `📦 الكمية المستلمة: ${inv.tons} طن (${inv.flourType || 'دقيق'})\n` +
+      `💰 سعر الطن: ${App.formatCurrency(inv.unitPrice)}\n` +
+      `💵 إجمالي الفاتورة الصافي: ${App.formatCurrency(inv.grandTotal)}\n` +
+      `✅ المسدد كاش: ${App.formatCurrency(inv.paidAmount || 0)}\n` +
+      `⏳ المتبقي آجل: ${App.formatCurrency(inv.remainingAmount || 0)}\n` +
+      `📅 التاريخ: ${App.formatTimestamp(inv.date)}\n\n` +
+      `_شكراً لتعاملكم الراقي مع مصنع الإيمان للمكرونة_ 🌾`
+    );
+  }
+
+  // Format clean phone number
+  let fullPhone = phone;
+  if (fullPhone.startsWith('01') && fullPhone.length === 11) {
+    fullPhone = '2' + fullPhone;
+  }
+
+  App.showToast('جاري تجهيز صورة الفاتورة للمستلم... ⏳', 'info');
+
+  // Capture invoice container to image
+  const content = document.getElementById(isSales ? 'printable-invoice-content' : 'printable-supplier-invoice-content') 
+               || document.getElementById('printable-invoice-content') 
+               || document.getElementById('printable-supplier-invoice-content');
+
+  let imageBlob = null;
+  let imageFile = null;
+
   if (content && typeof html2canvas !== 'undefined') {
     try {
       const canvas = await html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       
       // Auto-copy to clipboard
-      if (canvas.toBlob && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-        canvas.toBlob(blob => {
-          if (!blob) return;
-          try {
-            navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).catch(() => {});
-          } catch(e) {}
-        }, 'image/png');
+      if (canvas.toBlob) {
+        imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (imageBlob) {
+          imageFile = new File([imageBlob], `فاتورة_${inv.id}.png`, { type: 'image/png' });
+          if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+            try {
+              await navigator.clipboard.write([new ClipboardItem({ 'image/png': imageBlob })]);
+            } catch (e) {}
+          }
+        }
       }
 
-      // Auto-download PNG
-      const link = document.createElement('a');
-      link.download = `فاتورة_مبيعات_${inv.id || 'معتمدة'}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      // Auto-download PNG image
+      const dlLink = document.createElement('a');
+      dlLink.download = `فاتورة_${inv.id}.png`;
+      dlLink.href = canvas.toDataURL('image/png');
+      dlLink.click();
 
-      App.showToast('تم حفظ صورة الفاتورة ونسخها بالحافظة! يمكنك لصقها فوراً في شات الواتساب (Ctrl + V) 📋🖼️', 'success');
-    } catch(err) {
+    } catch (err) {
       console.warn('Canvas export error:', err);
     }
   }
 
+  // 1. Check if browser can share files directly via Web Share API
+  if (imageFile && navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+    try {
+      closeModal('whatsapp-recipient-modal');
+      await navigator.share({
+        title: `فاتورة ${inv.id}`,
+        text: msgText,
+        files: [imageFile]
+      });
+      App.showToast('تمت مشاركة صورة الفاتورة بنجاح عبر الواتساب! 🌾', 'success');
+      return;
+    } catch (shareErr) {
+      console.log('Web share skipped or cancelled:', shareErr);
+    }
+  }
+
+  // 2. Open WhatsApp Web for the specific phone number
+  let waUrl = 'https://web.whatsapp.com/';
+  if (fullPhone && fullPhone.length >= 10) {
+    waUrl = `https://web.whatsapp.com/send?phone=${fullPhone}&text=${encodeURIComponent(msgText)}`;
+  }
+
+  closeModal('whatsapp-recipient-modal');
   window.open(waUrl, '_blank');
-  App.showToast('تم فتح محادثة الواتساب بنجاح 💬', 'info');
+
+  if (fullPhone && fullPhone.length >= 10) {
+    App.showToast(`تم فتح محادثة (${fullPhone}) مباشرة! اضغط (Ctrl + V) داخل الشات لإرسال صورة الفاتورة فوراً 📋🖼️`, 'success');
+  } else {
+    App.showToast('تم فتح الواتساب بنجاح! حدد المحادثة واضغط (Ctrl + V) داخل الشات لإرسال صورة الفاتورة فوراً 📋🖼️', 'info');
+  }
+}
+
+function sendInvoiceWhatsApp(invoiceId = null) {
+  openWhatsAppShareModal(invoiceId, 'sales');
 }
 
 // Multi-Tab Realtime Reactivity Listener

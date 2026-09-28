@@ -251,6 +251,7 @@ function openInvoicePreviewFromBuilder() {
     date: App.getNowISO(),
     customerName: customer ? customer.name : (customerId ? 'عميل' : 'عميل نقدي'),
     customerId: customerId || '',
+    customerPhone: customer ? (customer.phone || '') : '',
     items: JSON.parse(JSON.stringify(currentInvoiceItems)),
     subtotal: subtotal,
     discount: discount,

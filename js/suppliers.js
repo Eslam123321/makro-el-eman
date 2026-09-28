@@ -1142,79 +1142,13 @@ function downloadSupplierInvoiceAsImage(invId) {
   });
 }
 
-// Send Supplier Invoice via WhatsApp (Image copy + Auto Download PNG)
-async function sendSupplierInvoiceWhatsApp(invId = null) {
-  let inv = null;
-  if (invId) {
-    inv = (App.db.supplierInvoices || []).find(i => i.id === invId);
+// Send Supplier Invoice via WhatsApp (Modal Contact Picker + Native Share + Auto PNG)
+function sendSupplierInvoiceWhatsApp(invId = null) {
+  if (typeof openWhatsAppShareModal === 'function') {
+    openWhatsAppShareModal(invId, 'supplier');
+  } else {
+    window.open('https://web.whatsapp.com/', '_blank');
   }
-  if (!inv && typeof currentSupplierDraftInvoice !== 'undefined' && currentSupplierDraftInvoice) {
-    inv = currentSupplierDraftInvoice;
-  }
-  if (!inv) {
-    App.showToast('عفواً، لا توجد فاتورة محددة للإرسال', 'warning');
-    return;
-  }
-
-  const sup = (App.db.suppliers || []).find(s => s.id === inv.supplierId || s.name === inv.supplierName);
-  const rawPhone = inv.supplierPhone || (sup ? sup.phone : '') || '';
-  let phone = rawPhone.replace(/[^0-9]/g, '');
-
-  const msg = encodeURIComponent(
-    `🌾 *مصنع الإيمان للمكرونة* 🌾\n` +
-    `*فاتورة توريد دقيق خام معتمدة*\n\n` +
-    `📄 رقم الفاتورة: ${inv.id}\n` +
-    `🏢 المطحن / المورد: ${inv.supplierName}\n` +
-    `📦 الكمية المستلمة: ${inv.tons} طن (${inv.flourType || 'دقيق'})\n` +
-    `💰 سعر الطن: ${App.formatCurrency(inv.unitPrice)}\n` +
-    `💵 إجمالي الفاتورة الصافي: ${App.formatCurrency(inv.grandTotal)}\n` +
-    `✅ المسدد كاش: ${App.formatCurrency(inv.paidAmount || 0)}\n` +
-    `⏳ المتبقي آجل: ${App.formatCurrency(inv.remainingAmount || 0)}\n` +
-    `📅 التاريخ: ${App.formatTimestamp(inv.date)}\n\n` +
-    `_شكراً لتعاملكم الراقي مع مصنع الإيمان للمكرونة_ 🌾`
-  );
-
-  let waUrl = 'https://web.whatsapp.com/';
-  if (phone) {
-    if (phone.startsWith('01') && phone.length === 11) {
-      phone = '2' + phone;
-    }
-    // Only direct to phone chat if it is a valid full number
-    if (phone.length >= 10) {
-      waUrl = `https://wa.me/${phone}?text=${msg}`;
-    }
-  }
-
-  // Auto-download PNG + Auto-copy high-res image to clipboard for instant Ctrl+V paste in WhatsApp
-  const content = document.getElementById('printable-supplier-invoice-content');
-  if (content && typeof html2canvas !== 'undefined') {
-    try {
-      const canvas = await html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-      
-      // Auto-copy to clipboard
-      if (canvas.toBlob && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-        canvas.toBlob(blob => {
-          if (!blob) return;
-          try {
-            navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).catch(() => {});
-          } catch(e) {}
-        }, 'image/png');
-      }
-
-      // Auto-download PNG
-      const link = document.createElement('a');
-      link.download = `فاتورة_توريد_${inv.id || 'معتمدة'}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-
-      App.showToast('تم حفظ صورة الفاتورة ونسخها بالحافظة! يمكنك لصقها فوراً في شات الواتساب (Ctrl + V) 📋🖼️', 'success');
-    } catch(err) {
-      console.warn('Supplier canvas export error:', err);
-    }
-  }
-
-  window.open(waUrl, '_blank');
-  App.showToast('تم فتح محادثة الواتساب بنجاح 💬', 'info');
 }
 
 // Delete Supplier Invoice (Super Admin Only)
