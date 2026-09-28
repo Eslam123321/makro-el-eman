@@ -266,18 +266,22 @@ function openSupplierStatementModal(supId) {
         </div>
       </div>
 
-      <div class="grid grid-cols-3 gap-4 mb-6">
-        <div class="card bg-light p-4">
-          <span class="text-xs text-muted">سعر الطن المعتمد</span>
-          <h3 class="text-primary-color mt-1">${App.formatCurrency(sup.unitPrice)}</h3>
+      <div class="grid grid-cols-4 gap-3 mb-6">
+        <div class="card bg-light p-3">
+          <span class="text-xs text-muted block">إجمالي قيمة التوريدات</span>
+          <h3 class="text-primary-color mt-1">${App.formatCurrency(batches.reduce((sum, b) => sum + (b.totalCost || 0), 0))}</h3>
         </div>
-        <div class="card bg-light p-4">
-          <span class="text-xs text-muted">نوع الخامة الموردة</span>
-          <h4 class="text-secondary mt-1">${sup.flourType}</h4>
+        <div class="card bg-light p-3" style="background: #f0fdf4; border-color: #bbf7d0;">
+          <span class="text-xs text-muted font-bold text-success block">إجمالي المسدد كاش ودفوعات</span>
+          <h3 class="text-success font-bold mt-1">${App.formatCurrency(payments.reduce((sum, p) => sum + (p.amount || 0), 0))}</h3>
         </div>
-        <div class="card bg-light p-4" style="background: #fee2e2; border-color: #fca5a5;">
-          <span class="text-xs text-muted font-bold text-danger">صافي المستحقات المتبقية للمطحن</span>
-          <h2 class="text-danger font-bold mt-1">${App.formatCurrency(sup.totalBalance)}</h2>
+        <div class="card bg-light p-3" style="background: #fee2e2; border-color: #fca5a5;">
+          <span class="text-xs text-muted font-bold text-danger block">صافي المستحقات المتبقية</span>
+          <h3 class="text-danger font-bold mt-1">${App.formatCurrency(sup.totalBalance || 0)}</h3>
+        </div>
+        <div class="card bg-light p-3">
+          <span class="text-xs text-muted block">نوع وسعر الخامة المعتمد</span>
+          <h4 class="text-secondary mt-1">${sup.flourType || 'دقيق فاخر'} ${sup.unitPrice > 0 ? `(${App.formatCurrency(sup.unitPrice)}/طن)` : ''}</h4>
         </div>
       </div>
 
@@ -727,12 +731,6 @@ function submitSupplierInvoice() {
     return;
   }
 
-  // Check Treasury liquidity if paying in cash
-  if (totals.paid > 0 && App.db.treasury < totals.paid) {
-    App.showToast(`عفواً، رصيد الخزينة الحالي (${App.formatCurrency(App.db.treasury)}) لا يكفي لسداد دفعة كاش بقيمة (${App.formatCurrency(totals.paid)})`, 'danger');
-    return;
-  }
-
   const flourType = document.getElementById('inv-sup-flour-type')?.value || sup.flourType || 'دقيق فاخر استخراج 72%';
   const refNum = (document.getElementById('inv-sup-ref')?.value || '').trim() || `REC-${Math.floor(1000 + Math.random() * 9000)}`;
   const notes = (document.getElementById('inv-sup-notes')?.value || '').trim();
@@ -1175,8 +1173,26 @@ function sendSupplierInvoiceWhatsApp(invId) {
 
   if (phone.startsWith('01')) phone = '2' + phone;
   const waUrl = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+
+  // Auto-copy high-res image to clipboard for instant Ctrl+V paste in WhatsApp
+  const content = document.getElementById('printable-supplier-invoice-content');
+  if (content && typeof html2canvas !== 'undefined') {
+    html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+      if (canvas.toBlob && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+        canvas.toBlob(blob => {
+          if (!blob) return;
+          try {
+            navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(() => {
+              App.showToast('تم نسخ صورة الفاتورة! يمكنك لصقها فوراً في شات الواتساب (Ctrl + V) 📋🖼️', 'success');
+            }).catch(() => {});
+          } catch(e) {}
+        }, 'image/png');
+      }
+    }).catch(() => {});
+  }
+
   window.open(waUrl, '_blank');
-  App.showToast('تم فتح محادثة الواتساب بنجاح 💬', 'success');
+  App.showToast('تم فتح محادثة الواتساب بنجاح 💬', 'info');
 }
 
 // Delete Supplier Invoice (Super Admin Only)

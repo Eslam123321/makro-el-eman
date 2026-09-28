@@ -1167,8 +1167,26 @@ async function sendInvoiceWhatsApp(invId) {
 
   if (phone.startsWith('01')) phone = '2' + phone;
   const waUrl = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+
+  // Auto-copy high-res invoice image to clipboard for instant Ctrl+V in WhatsApp
+  const content = document.getElementById('printable-invoice-content');
+  if (content && typeof html2canvas !== 'undefined') {
+    html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+      if (canvas.toBlob && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+        canvas.toBlob(blob => {
+          if (!blob) return;
+          try {
+            navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(() => {
+              App.showToast('تم نسخ صورة الفاتورة! يمكنك لصقها فوراً في شات الواتساب (Ctrl + V) 📋🖼️', 'success');
+            }).catch(() => {});
+          } catch(e) {}
+        }, 'image/png');
+      }
+    }).catch(() => {});
+  }
+
   window.open(waUrl, '_blank');
-  App.showToast('تم فتح محادثة الواتساب بنجاح 💬', 'success');
+  App.showToast('تم فتح محادثة الواتساب بنجاح 💬', 'info');
 }
 
 // Multi-Tab Realtime Reactivity Listener
@@ -1457,22 +1475,24 @@ function renderPageSummaryCards(page, containerId) {
   } else if (page === 'suppliers') {
     const suppliers = App.db.suppliers || [];
     const totalBalance = suppliers.reduce((a, b) => a + (b.totalBalance || 0), 0);
+    const totalPaidToSuppliers = suppliers.reduce((sum, s) => sum + (s.payments || []).reduce((pSum, p) => pSum + (p.amount || 0), 0), 0);
+    const totalInvoicesCount = (App.db.supplierInvoices || []).length;
     cardsHTML = `
       <div class="summary-card-item">
         <div class="summary-card-icon icon-emerald"><i class="fa-solid fa-truck-field"></i></div>
         <div><span class="text-xs text-muted">إجمالي المطاحن والموردين</span><h4>${suppliers.length} مطحن</h4></div>
       </div>
       <div class="summary-card-item">
-        <div class="summary-card-icon icon-blue"><i class="fa-solid fa-wheat-awn"></i></div>
-        <div><span class="text-xs text-muted">أنواع الدقيق الموردة</span><h4>3 درجات دقيق</h4></div>
+        <div class="summary-card-icon icon-blue"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+        <div><span class="text-xs text-muted">إجمالي المسدد للمطاحن 💰</span><h4 class="text-success">${App.formatCurrency(totalPaidToSuppliers)}</h4></div>
       </div>
       <div class="summary-card-item">
         <div class="summary-card-icon icon-amber"><i class="fa-solid fa-file-invoice-dollar"></i></div>
-        <div><span class="text-xs text-muted">إجمالي مستحقات المطاحن</span><h4 class="text-danger">${App.formatCurrency(totalBalance)}</h4></div>
+        <div><span class="text-xs text-muted">إجمالي مستحقات المطاحن (علينا)</span><h4 class="text-danger">${App.formatCurrency(totalBalance)}</h4></div>
       </div>
       <div class="summary-card-item">
-        <div class="summary-card-icon icon-purple"><i class="fa-solid fa-circle-check"></i></div>
-        <div><span class="text-xs text-muted">حالة توريدات الخامات</span><h4 class="text-success">مستقرة 🟢</h4></div>
+        <div class="summary-card-icon icon-purple"><i class="fa-solid fa-receipt"></i></div>
+        <div><span class="text-xs text-muted">فواتير التوريد المسجلة</span><h4>${totalInvoicesCount} فاتورة</h4></div>
       </div>
     `;
   } else if (page === 'users') {
