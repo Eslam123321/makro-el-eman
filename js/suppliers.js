@@ -46,7 +46,7 @@ function loadSuppliersTable(suppliersData = null) {
         <div class="text-xs text-muted">${s.address}</div>
       </td>
       <td><span class="badge badge-purple">${s.flourType}</span></td>
-      <td><strong class="text-primary-color">${App.formatCurrency(s.unitPrice)} / طن</strong></td>
+      <td><strong class="text-primary-color">${s.unitPrice > 0 ? App.formatCurrency(s.unitPrice) + ' / طن' : '<span class="text-muted">حسب الفاتورة</span>'}</strong></td>
       <td>
         <strong class="${s.totalBalance > 0 ? 'text-danger' : 'text-success'}">
           ${App.formatCurrency(s.totalBalance)}
@@ -88,65 +88,45 @@ function saveNewSupplier() {
   const name = document.getElementById('sup-name').value.trim();
   const phone = document.getElementById('sup-phone').value.trim();
   const flourType = document.getElementById('sup-flour-type').value;
-  const price = parseFloat(document.getElementById('sup-price').value) || 0;
   const address = document.getElementById('sup-address').value.trim();
-  const notes = document.getElementById('sup-notes').value.trim();
-  const initialTonsInput = document.getElementById('sup-initial-tons');
-  const initialTons = initialTonsInput ? (parseFloat(initialTonsInput.value) || 0) : 0;
-  const openingBalanceInput = document.getElementById('sup-opening-balance');
-  const openingBalance = openingBalanceInput ? (parseFloat(openingBalanceInput.value) || 0) : 0;
 
-  if (!name || !phone || price <= 0) {
-    App.showToast('رجاء ادخل اسم المطحن، الهاتف، وسعر التوريد المحدد', 'warning');
+  if (!name || !phone) {
+    App.showToast('رجاء ادخل اسم المطحن / المورد ورقم الهاتف للتواصل 🌾', 'warning');
     return;
   }
-
-  const initialShipmentCost = initialTons * price;
-  const totalBalance = openingBalance + initialShipmentCost;
 
   const newSup = {
     id: `SUP-${String((App.db.suppliers || []).length + 101)}`,
     name: name,
     phone: phone,
     address: address || 'المنطقة الصناعية',
-    flourType: flourType,
-    unitPrice: price,
-    totalBalance: totalBalance,
+    flourType: flourType || 'دقيق فاخر استخراج 72%',
+    unitPrice: 0,
+    totalBalance: 0,
     batches: [],
     payments: [],
-    notes: notes || 'تعامل جديد'
+    notes: 'تعامل جديد'
   };
-
-  if (initialTons > 0) {
-    newSup.batches.push({
-      id: `BATCH-${Date.now().toString().slice(-4)}`,
-      qtyTons: initialTons,
-      unitPrice: price,
-      totalCost: initialShipmentCost,
-      refNum: 'شحنة افتتاحية أولى',
-      date: App.getNowISO(),
-      flourType: flourType
-    });
-  }
 
   if (!App.db.suppliers) App.db.suppliers = [];
   App.db.suppliers.push(newSup);
   App.save();
 
   loadSuppliersTable();
+  initSupplierInvoiceForm();
   renderPageSummaryCards('suppliers', 'suppliers-summary-cards');
   if (document.getElementById('new-supplier-modal')) closeModal('new-supplier-modal');
 
   // Reset form inputs
   document.getElementById('sup-name').value = '';
   document.getElementById('sup-phone').value = '';
-  document.getElementById('sup-price').value = '';
   document.getElementById('sup-address').value = '';
-  document.getElementById('sup-notes').value = '';
-  if (initialTonsInput) initialTonsInput.value = '';
-  if (openingBalanceInput) openingBalanceInput.value = '';
 
-  App.showToast(`تم إضافة المطحن/المورد (${newSup.name}) واحتساب المستحقات بنجاح 🌾`, 'success');
+  // Close collapsible form if open
+  const formSection = document.getElementById('add-supplier-section');
+  if (formSection) formSection.style.display = 'none';
+
+  App.showToast(`تم إضافة المطحن/المورد (${newSup.name}) إلى السجل بنجاح 🌾`, 'success');
 }
 
 function openSupplyBatchModal(supId) {
@@ -305,25 +285,33 @@ function openSupplierStatementModal(supId) {
       <table class="table mb-6">
         <thead>
           <tr>
-            <th>كود الشحنة</th>
+            <th>كود الفاتورة / الشحنة</th>
             <th>الكمية (بالطن)</th>
             <th>سعر الطن</th>
             <th>القيمة الإجمالية</th>
             <th>رقم الإذن / الملاحظات</th>
             <th>التاريخ والوقت</th>
+            <th class="no-print">معاينة الفاتورة</th>
           </tr>
         </thead>
         <tbody>
           ${batches.length > 0 ? batches.map(b => `
             <tr>
-              <td><strong>${b.id}</strong></td>
+              <td><strong>${b.invoiceId || b.id}</strong></td>
               <td><span class="badge badge-purple">${b.qtyTons} طن</span></td>
               <td>${App.formatCurrency(b.unitPrice)}</td>
               <td><strong class="text-danger">${App.formatCurrency(b.totalCost)}</strong></td>
               <td>${b.refNum || '-'}</td>
               <td>${App.formatTimestamp(b.date)}</td>
+              <td class="no-print">
+                ${b.invoiceId ? `
+                  <button class="btn btn-secondary btn-sm" onclick="previewSupplierInvoice('${b.invoiceId}')" title="معاينة وطباعة الفاتورة الرسمية">
+                    <i class="fa-solid fa-print text-primary-color"></i> الفاتورة 𝓅
+                  </button>
+                ` : '-'}
+              </td>
             </tr>
-          `).join('') : '<tr><td colspan="6" class="text-center text-muted">لا يوجد شحنات مسجلة لهذا المطحن</td></tr>'}
+          `).join('') : '<tr><td colspan="7" class="text-center text-muted">لا يوجد شحنات مسجلة لهذا المطحن</td></tr>'}
         </tbody>
       </table>
 
@@ -570,11 +558,14 @@ function initSupplierInvoiceForm() {
   const suppliers = App.db.suppliers || [];
 
   select.innerHTML = '<option value="">-- اختر المطحن / المورد --</option>' +
-    suppliers.map(s => `
-      <option value="${s.id}">
-        ${s.name} (${s.phone}) - [سعر الطن: ${App.formatCurrency(s.unitPrice)}] - [مستحق: ${App.formatCurrency(s.totalBalance || 0)}]
-      </option>
-    `).join('');
+    suppliers.map(s => {
+      const priceTxt = (s.unitPrice && s.unitPrice > 0) ? ` - [سعر الطن: ${App.formatCurrency(s.unitPrice)}]` : '';
+      return `
+        <option value="${s.id}">
+          ${s.name} (${s.phone})${priceTxt} - [مستحق: ${App.formatCurrency(s.totalBalance || 0)}]
+        </option>
+      `;
+    }).join('');
 
   if (currentVal && suppliers.some(s => s.id === currentVal)) {
     select.value = currentVal;
@@ -592,13 +583,23 @@ function onSupplierSelected(supId) {
   if (!sup) return;
 
   const priceInput = document.getElementById('inv-sup-unit-price');
-  if (priceInput) priceInput.value = sup.unitPrice || 0;
+  if (priceInput) {
+    priceInput.value = (sup.unitPrice && sup.unitPrice > 0) ? sup.unitPrice : '';
+  }
 
   const typeSelect = document.getElementById('inv-sup-flour-type');
   if (typeSelect && sup.flourType) typeSelect.value = sup.flourType;
 
   calculateSupplierInvoiceTotals();
-  App.showToast(`تم اختيار المطحن: (${sup.name}) وتحديد سعر الطن (${App.formatCurrency(sup.unitPrice)})`, 'info');
+
+  if (sup.unitPrice && sup.unitPrice > 0) {
+    App.showToast(`تم اختيار المطحن: (${sup.name}) وسعر الطن السابق (${App.formatCurrency(sup.unitPrice)})`, 'info');
+  } else {
+    App.showToast(`تم اختيار المطحن: (${sup.name}) - يرجى كتابة كمية وسعر الطن للفاتورة 🌾`, 'info');
+    if (priceInput && !priceInput.value) {
+      priceInput.focus();
+    }
+  }
 }
 
 // Real-time calculation of Supplier Invoice
@@ -702,6 +703,7 @@ function previewCurrentSupplierInvoiceDraft() {
   };
 
   renderSupplierInvoicePreview(currentSupplierDraftInvoice, true);
+  bindSupplierInvoiceActions(currentSupplierDraftInvoice);
   openModal('preview-supplier-invoice-modal');
 }
 
@@ -882,6 +884,22 @@ function filterSupplierInvoices(query) {
   loadSupplierInvoicesTable(filtered);
 }
 
+function bindSupplierInvoiceActions(inv) {
+  if (!inv) return;
+
+  const btnPrint = document.getElementById('btn-print-sup-inv');
+  if (btnPrint) btnPrint.onclick = () => window.print();
+
+  const btnPdf = document.getElementById('btn-pdf-sup-inv');
+  if (btnPdf) btnPdf.onclick = () => downloadSupplierInvoicePdf(inv.id);
+
+  const btnImg = document.getElementById('btn-img-sup-inv');
+  if (btnImg) btnImg.onclick = () => downloadSupplierInvoiceAsImage(inv.id);
+
+  const btnWa = document.getElementById('btn-wa-sup-inv');
+  if (btnWa) btnWa.onclick = () => sendSupplierInvoiceWhatsApp(inv.id);
+}
+
 // Preview Supplier Invoice (Confirmed or Draft)
 function previewSupplierInvoice(invId) {
   let inv = (App.db.supplierInvoices || []).find(i => i.id === invId);
@@ -891,18 +909,7 @@ function previewSupplierInvoice(invId) {
   if (!inv) return;
 
   renderSupplierInvoicePreview(inv, !!inv.isDraft);
-
-  const btnPrint = document.getElementById('btn-print-sup-inv');
-  if (btnPrint) btnPrint.onclick = () => window.print();
-
-  const btnPdf = document.getElementById('btn-pdf-sup-inv');
-  if (btnPdf) btnPdf.onclick = () => window.print();
-
-  const btnImg = document.getElementById('btn-img-sup-inv');
-  if (btnImg) btnImg.onclick = () => downloadSupplierInvoiceAsImage(inv.id);
-
-  const btnWa = document.getElementById('btn-wa-sup-inv');
-  if (btnWa) btnWa.onclick = () => sendSupplierInvoiceWhatsApp(inv.id);
+  bindSupplierInvoiceActions(inv);
 
   openModal('preview-supplier-invoice-modal');
 }
@@ -1077,6 +1084,37 @@ function printSupplierInvoiceDirect(invId) {
   setTimeout(() => window.print(), 300);
 }
 
+// Download Invoice as PDF directly
+function downloadSupplierInvoicePdf(invId) {
+  const content = document.getElementById('printable-supplier-invoice-content');
+  if (!content) {
+    window.print();
+    return;
+  }
+
+  if (typeof html2pdf === 'undefined') {
+    App.showToast('جاري استخدام نافذة الطباعة لحفظ الفاتورة PDF...', 'info');
+    window.print();
+    return;
+  }
+
+  App.showToast('جاري تحويل وتنزيل ملف الفاتورة PDF... 📄⏳', 'info');
+  const opt = {
+    margin: [6, 6, 6, 6],
+    filename: `فاتورة_توريد_دقيق_${invId || 'الإيمان'}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(content).save().then(() => {
+    App.showToast('تم تنزيل ملف PDF للفاتورة بنجاح! 📄✨', 'success');
+  }).catch(err => {
+    console.warn('html2pdf fallback:', err);
+    window.print();
+  });
+}
+
 // Download Invoice as Image
 function downloadSupplierInvoiceAsImage(invId) {
   const content = document.getElementById('printable-supplier-invoice-content');
@@ -1091,13 +1129,15 @@ function downloadSupplierInvoiceAsImage(invId) {
     return;
   }
 
-  App.showToast('جاري تجهيز صورة الفاتورة عالية الدقة... ⏳', 'info');
-  html2canvas(content, { scale: 2, useCORS: true }).then(canvas => {
+  App.showToast('جاري استخراج وتنزيل صورة الفاتورة عالية الدقة (PNG)... 🖼️⏳', 'info');
+  html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
     const link = document.createElement('a');
     link.download = `فاتورة_توريد_دقيق_${invId || 'الإيمان'}.png`;
     link.href = canvas.toDataURL('image/png');
+    document.body.appendChild(link);
     link.click();
-    App.showToast('تم تحميل صورة الفاتورة بنجاح! 🖼️', 'success');
+    document.body.removeChild(link);
+    App.showToast('تم تحميل صورة الفاتورة بنجاح! 🖼️✨', 'success');
   }).catch(err => {
     console.error('html2canvas error:', err);
     window.print();
@@ -1106,8 +1146,18 @@ function downloadSupplierInvoiceAsImage(invId) {
 
 // Send Invoice via WhatsApp
 function sendSupplierInvoiceWhatsApp(invId) {
-  const inv = (App.db.supplierInvoices || []).find(i => i.id === invId) || currentSupplierDraftInvoice;
-  if (!inv) return;
+  let inv = (App.db.supplierInvoices || []).find(i => i.id === invId);
+  if (!inv && currentSupplierDraftInvoice) {
+    inv = currentSupplierDraftInvoice;
+  }
+  if (!inv) {
+    App.showToast('عفواً، لا توجد فاتورة محددة للإرسال', 'warning');
+    return;
+  }
+
+  const sup = (App.db.suppliers || []).find(s => s.id === inv.supplierId || s.name === inv.supplierName);
+  const rawPhone = inv.supplierPhone || (sup ? sup.phone : '') || '';
+  let phone = rawPhone.replace(/[^0-9]/g, '');
 
   const msg = encodeURIComponent(
     `🌾 *مصنع الإيمان للمكرونة* 🌾\n` +
@@ -1123,10 +1173,10 @@ function sendSupplierInvoiceWhatsApp(invId) {
     `_شكراً لتعاملكم الراقي مع مصنع الإيمان للمكرونة_ 🌾`
   );
 
-  let phone = (inv.supplierPhone || '').replace(/[^0-9]/g, '');
   if (phone.startsWith('01')) phone = '2' + phone;
   const waUrl = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
   window.open(waUrl, '_blank');
+  App.showToast('تم فتح محادثة الواتساب بنجاح 💬', 'success');
 }
 
 // Delete Supplier Invoice (Super Admin Only)

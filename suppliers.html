@@ -9,9 +9,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="مصنع الإيمان">
-  <link rel="apple-touch-icon" href="image/logo.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="image/icon-192.png">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="image/logo.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="image/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="image/icon-512.png">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/modal.css">
@@ -166,17 +167,17 @@
             </div>
             <div>
               <h3 class="font-bold text-lg">إضافة مطحن / مورد دقيق جديد 🌾</h3>
-              <p class="text-xs text-muted">تسجيل بيانات المطحن وتحديد سعر توريد الطن المخصص لمتابعة الشحنات والمسحوبات</p>
+              <p class="text-xs text-muted">تسجيل بيانات المطحن الأساسية وإضافته لسجل الموردين المعتمدين</p>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4 mb-4">
             <div class="form-group">
-              <label>اسم المطحن / المورد</label>
+              <label>اسم المطحن / المورد <span class="text-danger">*</span></label>
               <input type="text" id="sup-name" class="form-control" placeholder="مثال: مطاحن الدلتا ومصر العليا">
             </div>
             <div class="form-group">
-              <label>رقم الهاتف للتواصل</label>
+              <label>رقم الهاتف للتواصل <span class="text-danger">*</span></label>
               <input type="text" id="sup-phone" class="form-control" placeholder="010XXXXXXXX">
             </div>
           </div>
@@ -191,35 +192,13 @@
               </select>
             </div>
             <div class="form-group">
-              <label>سعر التوريد المحدد لهذا المطحن (جنيه / طن)</label>
-              <input type="number" id="sup-price" class="form-control" placeholder="16500" min="0">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <div class="form-group">
               <label>عنوان المطحن / الفرع</label>
-              <input type="text" id="sup-address" class="form-control" placeholder="طنطا - المنطقة الصناعية">
-            </div>
-            <div class="form-group">
-              <label>كمية الشحنة الأولى الموردة (بالطن) <span class="text-xs text-muted">(اختياري - تحسب تلقائياً)</span></label>
-              <input type="number" id="sup-initial-tons" class="form-control" placeholder="مثال: 10 طن" min="0" step="0.5">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <div class="form-group">
-              <label>رصيد مستحقات سابق قديم للمطحن (ج.م) <span class="text-xs text-muted">(اختياري)</span></label>
-              <input type="number" id="sup-opening-balance" class="form-control" placeholder="0" min="0">
-            </div>
-            <div class="form-group">
-              <label>ملاحظات وشروط التعامل</label>
-              <input type="text" id="sup-notes" class="form-control" placeholder="ملاحظات اختيارية">
+              <input type="text" id="sup-address" class="form-control" placeholder="مثال: طنطا - المنطقة الصناعية">
             </div>
           </div>
 
           <div class="flex justify-end pt-2 border-t">
-            <button class="btn btn-primary" onclick="saveNewSupplier()"><i class="fa-solid fa-check ml-1"></i> حفظ المطحن بالسجل وحساب المستحقات 🌾</button>
+            <button class="btn btn-primary" onclick="saveNewSupplier()"><i class="fa-solid fa-check ml-1"></i> حفظ المطحن بالسجل 🌾</button>
           </div>
         </div>
 

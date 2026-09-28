@@ -1124,10 +1124,7 @@ function renderInvoicePreviewContent(inv, isDraft = false) {
   const confirmContainer = document.getElementById('confirm-save-container');
 
   if (btnPrint) btnPrint.onclick = () => window.print();
-  if (btnPdf) btnPdf.onclick = () => {
-    App.showToast('جاري تحويل وتصدير ملف PDF للفاتورة الرسمية...', 'success');
-    window.print();
-  };
+  if (btnPdf) btnPdf.onclick = () => downloadInvoicePdf(inv.id);
   if (btnImg) btnImg.onclick = () => downloadInvoiceAsImage();
   if (btnWa) btnWa.onclick = () => sendInvoiceWhatsApp(inv.id);
 

@@ -1,5 +1,5 @@
 /* Service Worker for Makro El-Eman ERP PWA */
-const CACHE_NAME = 'makro-eleman-v4';
+const CACHE_NAME = 'makro-eleman-v5';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -19,6 +19,8 @@ const STATIC_ASSETS = [
   './js/app.js',
   './js/firebase-sync.js',
   './image/logo.png',
+  './image/icon-192.png',
+  './image/icon-512.png',
   './manifest.json'
 ];
 

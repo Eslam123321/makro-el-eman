@@ -1039,7 +1039,7 @@ function previewInvoice(invId) {
   if (btnPrint) btnPrint.onclick = () => window.print();
 
   const btnPdf = document.getElementById('btn-pdf-inv');
-  if (btnPdf) btnPdf.onclick = () => window.print();
+  if (btnPdf) btnPdf.onclick = () => downloadInvoicePdf(inv.id);
 
   const btnImg = document.getElementById('btn-img-inv');
   if (btnImg) btnImg.onclick = () => downloadInvoiceAsImage();
@@ -1103,6 +1103,37 @@ async function generateInvoicePdfBlob(invId) {
   }
 }
 
+async function downloadInvoicePdf(invId) {
+  let inv = App.db.invoices ? App.db.invoices.find(i => i.id === invId) : null;
+  if (!inv && typeof currentDraftInvoice !== 'undefined' && currentDraftInvoice && currentDraftInvoice.id === invId) {
+    inv = currentDraftInvoice;
+  }
+  if (!inv && App.db.invoices && App.db.invoices.length > 0) {
+    inv = App.db.invoices[0];
+  }
+  if (!inv) {
+    window.print();
+    return;
+  }
+
+  App.showToast('جاري تحويل وتنزيل ملف الفاتورة PDF... 📄⏳', 'info');
+  const pdfBlob = await generateInvoicePdfBlob(inv.id);
+  if (!pdfBlob) {
+    window.print();
+    return;
+  }
+
+  const blobUrl = URL.createObjectURL(pdfBlob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = `فاتورة_مبيعات_${inv.id}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  App.showToast('تم تنزيل ملف الفاتورة PDF بنجاح! 📄✨', 'success');
+}
+
 async function sendInvoiceWhatsApp(invId) {
   let inv = App.db.invoices ? App.db.invoices.find(i => i.id === invId) : null;
   if (!inv && typeof currentDraftInvoice !== 'undefined' && currentDraftInvoice && currentDraftInvoice.id === invId) {
@@ -1116,40 +1147,28 @@ async function sendInvoiceWhatsApp(invId) {
     return;
   }
 
-  App.showToast('جاري تحضير ملف الفاتورة PDF للمشاركة... 📄', 'info');
+  const cust = (App.db.customers || []).find(c => c.id === inv.customerId || c.name === inv.customerName);
+  const rawPhone = inv.customerPhone || (cust ? cust.phone : '') || '';
+  let phone = rawPhone.replace(/[^0-9]/g, '');
 
-  const pdfBlob = await generateInvoicePdfBlob(inv.id);
-  if (!pdfBlob) {
-    App.showToast('عفواً، تعذر توليد ملف الـ PDF', 'danger');
-    return;
-  }
+  const totalSacks = (inv.items || []).reduce((s, i) => s + (i.qty || 0), 0);
+  const msg = encodeURIComponent(
+    `🌾 *مصنع الإيمان للمكرونة* 🌾\n` +
+    `*فاتورة مبيعات معتمدة*\n\n` +
+    `📄 رقم الفاتورة: ${inv.id}\n` +
+    `👤 العميل: ${inv.customerName}\n` +
+    `📦 الكمية الإجمالية: ${totalSacks} شكارة\n` +
+    `💵 إجمالي الفاتورة الصافي: ${App.formatCurrency(inv.grandTotal)}\n` +
+    `✅ المسدد كاش: ${App.formatCurrency(inv.paidAmount || 0)}\n` +
+    `⏳ المتبقي آجل: ${App.formatCurrency(inv.remainingAmount || 0)}\n` +
+    `📅 التاريخ: ${App.formatTimestamp(inv.date)}\n\n` +
+    `_شكراً لتعاملكم الراقي مع مصنع الإيمان للمكرونة_ 🌾`
+  );
 
-  const pdfFile = new File([pdfBlob], `Invoice-${inv.id}.pdf`, { type: 'application/pdf' });
-
-  // 1. Web Share API Execution (Attaches the real PDF file directly)
-  if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-    try {
-      await navigator.share({
-        files: [pdfFile],
-        title: `فاتورة ${inv.id}`,
-        text: `مرفق فاتورة بصيغة PDF لـ ${inv.customerName}`
-      });
-      App.showToast('تم فتح نافذة إرسال ملف الـ PDF بنجاح! 💬', 'success');
-      return;
-    } catch (err) {
-      if (err.name === 'AbortError') return;
-    }
-  }
-
-  // 2. Direct PDF Download
-  const blobUrl = URL.createObjectURL(pdfBlob);
-  const a = document.createElement('a');
-  a.href = blobUrl;
-  a.download = `Invoice-${inv.id}.pdf`;
-  a.click();
-  URL.revokeObjectURL(blobUrl);
-
-  App.showToast('تم تنزيل ملف الفاتورة PDF على جهازك بنجاح! 📄', 'success');
+  if (phone.startsWith('01')) phone = '2' + phone;
+  const waUrl = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+  window.open(waUrl, '_blank');
+  App.showToast('تم فتح محادثة الواتساب بنجاح 💬', 'success');
 }
 
 // Multi-Tab Realtime Reactivity Listener
