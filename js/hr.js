@@ -566,6 +566,26 @@ function saveEditedEmployee() {
     return;
   }
 
+  // Check duplicate name on edit
+  const dupName = (App.db.employees || []).find(e => 
+    e.id !== empId && e.name && e.name.trim().toLowerCase() === name.toLowerCase()
+  );
+  if (dupName) {
+    App.showToast(`عفواً، الاسم (${name}) مسجل بالفعل لموظف آخر بالكود (${dupName.id}) 🚫`, 'danger');
+    return;
+  }
+
+  // Check duplicate phone on edit
+  if (phone) {
+    const dupPhone = (App.db.employees || []).find(e => 
+      e.id !== empId && e.phone && e.phone.trim().toLowerCase() === phone.toLowerCase()
+    );
+    if (dupPhone) {
+      App.showToast(`عفواً، الهاتف/الكود (${phone}) مسجل بالفعل للموظف (${dupPhone.name}) 🚫`, 'danger');
+      return;
+    }
+  }
+
   emp.name = name;
   emp.phone = phone;
   emp.jobTitle = job || emp.jobTitle;
@@ -685,12 +705,35 @@ function saveNewEmployee() {
     return;
   }
 
+  // Prevent duplicate registration by name
+  const existingByName = (App.db.employees || []).find(e => 
+    e.name && e.name.trim().toLowerCase() === name.toLowerCase()
+  );
+  if (existingByName) {
+    App.showToast(`عفواً، الموظف (${existingByName.name}) مسجل بالفعل بالنظام! ممنوع إضافة الموظف أكثر من مرة واحدة إلا بعد حذف السجل الموجود 🚫`, 'danger');
+    return;
+  }
+
+  // Prevent duplicate registration by phone/code
+  if (phone) {
+    const existingByPhone = (App.db.employees || []).find(e => 
+      e.phone && e.phone.trim().toLowerCase() === phone.toLowerCase()
+    );
+    if (existingByPhone) {
+      App.showToast(`عفواً، رقم الهاتف أو الكود (${phone}) مسجل بالفعل للموظف (${existingByPhone.name})! لا يمكن تكراره 🚫`, 'danger');
+      return;
+    }
+  }
+
+  const dailyRate = Math.round(salary / 30);
+
   const newEmp = {
     id: `EMP-${App.db.employees.length + 1}`,
     name: name,
     phone: phone,
     jobTitle: job || 'عامل مصنع',
     baseSalary: salary,
+    dailyRate: dailyRate,
     hireDate: hireDate,
     payDay: Math.min(31, Math.max(1, payDay || 30)),
     advances: 0,
