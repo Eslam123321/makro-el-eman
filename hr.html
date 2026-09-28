@@ -462,13 +462,18 @@
           </div>
           <div class="form-group">
             <label>الراتب الشهري الأساسي (جنيه) <span class="text-danger">*</span></label>
-            <input type="number" id="edit-emp-salary" class="form-control" min="1">
+            <input type="number" id="edit-emp-salary" class="form-control" min="1" oninput="onEditSalaryInput(this.value)">
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="grid grid-cols-3 gap-4 mb-4">
           <div class="form-group">
-            <label>إجمالي السلف المعلقة / المتبقية (جنيه)</label>
+            <label>قيمة خصم اليوم (تلقائي = الراتب ÷ 30)</label>
+            <input type="number" id="edit-emp-daily-rate" class="form-control" min="0">
+            <span class="text-xs text-muted" style="font-size: 0.72rem; color: #64748b;">تتعدل تلقائياً مع الراتب، ومتاح تعديلها يدوياً</span>
+          </div>
+          <div class="form-group">
+            <label>إجمالي السلف المعلقة (جنيه)</label>
             <input type="number" id="edit-emp-advances" class="form-control" min="0">
           </div>
           <div class="form-group">
