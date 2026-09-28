@@ -41,9 +41,54 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Arabic text normalization for strict duplicate prevention
+function normalizeArabicText(str) {
+  if (!str) return '';
+  return str.toString().trim().toLowerCase()
+    .replace(/[أإآء]/g, 'ا')
+    .replace(/[ة]/g, 'ه')
+    .replace(/[ى]/g, 'ي')
+    .replace(/[\u064B-\u065F]/g, '') // remove tashkeel/harakat
+    .replace(/\s+/g, ' '); // collapse extra spaces
+}
+
+function normalizePhone(str) {
+  if (!str) return '';
+  return str.toString().trim()
+    .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+    .replace(/[\s\-\+\(\)]/g, '')
+    .toLowerCase();
+}
+
+function autoCleanDuplicateEmployees() {
+  if (!App.db.employees || !Array.isArray(App.db.employees)) return;
+  const seenKeys = new Set();
+  const uniqueList = [];
+  let hadDuplicates = false;
+
+  App.db.employees.forEach(emp => {
+    const nName = normalizeArabicText(emp.name);
+    const nPhone = normalizePhone(emp.phone);
+    const key = `${nName}_${nPhone}`;
+
+    if (seenKeys.has(key)) {
+      hadDuplicates = true;
+    } else {
+      seenKeys.add(key);
+      uniqueList.push(emp);
+    }
+  });
+
+  if (hadDuplicates) {
+    App.db.employees = uniqueList;
+    App.save();
+  }
+}
+
 // Initialize / Sync attendance records
 function syncAttendanceRecordsOnLoad() {
   if (!App.db.attendanceLog) App.db.attendanceLog = [];
+  autoCleanDuplicateEmployees();
 
   // Sync each employee's absence count dynamically
   (App.db.employees || []).forEach(emp => {
@@ -566,9 +611,12 @@ function saveEditedEmployee() {
     return;
   }
 
+  const normName = normalizeArabicText(name);
+  const normPhone = normalizePhone(phone);
+
   // Check duplicate name on edit
   const dupName = (App.db.employees || []).find(e => 
-    e.id !== empId && e.name && e.name.trim().toLowerCase() === name.toLowerCase()
+    e.id !== empId && normalizeArabicText(e.name) === normName
   );
   if (dupName) {
     App.showToast(`عفواً، الاسم (${name}) مسجل بالفعل لموظف آخر بالكود (${dupName.id}) 🚫`, 'danger');
@@ -576,9 +624,9 @@ function saveEditedEmployee() {
   }
 
   // Check duplicate phone on edit
-  if (phone) {
+  if (normPhone && normPhone.length > 2) {
     const dupPhone = (App.db.employees || []).find(e => 
-      e.id !== empId && e.phone && e.phone.trim().toLowerCase() === phone.toLowerCase()
+      e.id !== empId && normalizePhone(e.phone) === normPhone
     );
     if (dupPhone) {
       App.showToast(`عفواً، الهاتف/الكود (${phone}) مسجل بالفعل للموظف (${dupPhone.name}) 🚫`, 'danger');
@@ -705,19 +753,22 @@ function saveNewEmployee() {
     return;
   }
 
+  const normName = normalizeArabicText(name);
+  const normPhone = normalizePhone(phone);
+
   // Prevent duplicate registration by name
   const existingByName = (App.db.employees || []).find(e => 
-    e.name && e.name.trim().toLowerCase() === name.toLowerCase()
+    normalizeArabicText(e.name) === normName
   );
   if (existingByName) {
-    App.showToast(`عفواً، الموظف (${existingByName.name}) مسجل بالفعل بالنظام! ممنوع إضافة الموظف أكثر من مرة واحدة إلا بعد حذف السجل الموجود 🚫`, 'danger');
+    App.showToast(`عفواً، الموظف (${existingByName.name}) مسجل بالفعل بالنظام! ممنوع إضافة نفس الموظف أكثر من مرة واحدة إلا بعد حذف السجل السابق 🚫`, 'danger');
     return;
   }
 
   // Prevent duplicate registration by phone/code
-  if (phone) {
+  if (normPhone && normPhone.length > 2) {
     const existingByPhone = (App.db.employees || []).find(e => 
-      e.phone && e.phone.trim().toLowerCase() === phone.toLowerCase()
+      normalizePhone(e.phone) === normPhone
     );
     if (existingByPhone) {
       App.showToast(`عفواً، رقم الهاتف أو الكود (${phone}) مسجل بالفعل للموظف (${existingByPhone.name})! لا يمكن تكراره 🚫`, 'danger');
