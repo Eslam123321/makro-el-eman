@@ -109,7 +109,7 @@ function loadEmployeesTable() {
   }
 
   tbody.innerHTML = filtered.map(emp => {
-    const { net, absenceDeduction } = calculateNetSalary(emp);
+    const { net, absenceDeduction, dailyRate } = calculateNetSalary(emp);
     const phoneDisplay = emp.phone ? `<div class="text-xs text-primary-color font-bold mt-1"><i class="fa-solid fa-phone text-xs"></i> ${emp.phone}</div>` : '';
     const hireDateDisplay = emp.hireDate || '2024-01-15';
     const payDayDisplay = emp.payDay || (emp.payDate ? emp.payDate.split('-')[2] : '30');
