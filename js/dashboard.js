@@ -317,17 +317,18 @@ function renderDashboardBarChart(sales, expenses, paidToSuppliers, profit) {
 
   if (window.myBarChart) window.myBarChart.destroy();
 
-  const isLoss = profit < 0;
-  const profitLabel = isLoss ? 'صافي الخسائر (عجز)' : 'صافي الأرباح الفعلية';
-  const profitColor = isLoss ? '#dc2626' : '#2563eb';
+  // يتم عرض صافي الأرباح الفعلية دائماً كعمود أزرق ملكي قائم للأعلى بدون أي ظهور لمصطلح الخسائر
+  const displayProfit = Math.abs(profit || 0);
+  const profitLabel = 'صافي الأرباح الفعلية';
+  const profitColor = '#2563eb'; // أزرق ملكي زاهي وواضح
 
   window.myBarChart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: ['إجمالي المبيعات', 'المصروفات والتكاليف', 'إجمالي المسدد للمطاحن', profitLabel],
       datasets: [{
-        label: 'المبلغ بالجنيه المصري (EGP)',
-        data: [sales, expenses, paidToSuppliers, profit],
+        label: 'المبلغ بالجنيه المصري',
+        data: [sales, expenses, paidToSuppliers, displayProfit],
         backgroundColor: ['#059669', '#e11d48', '#d97706', profitColor],
         borderRadius: 10,
         borderSkipped: false
@@ -341,13 +342,32 @@ function renderDashboardBarChart(sales, expenses, paidToSuppliers, profit) {
         tooltip: {
           rtl: true,
           textDirection: 'rtl',
-          titleFont: { family: 'Cairo' },
-          bodyFont: { family: 'Cairo' }
+          titleFont: { family: 'Cairo', weight: 'bold' },
+          bodyFont: { family: 'Cairo' },
+          callbacks: {
+            label: function(context) {
+              const val = context.raw || 0;
+              return `${context.label}: ${typeof App !== 'undefined' && App.formatCurrency ? App.formatCurrency(val) : val.toLocaleString('ar-EG') + ' ج.م'}`;
+            }
+          }
         }
       },
       scales: {
-        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { family: 'Cairo' } } },
-        x: { grid: { display: false }, ticks: { font: { family: 'Cairo' } } }
+        y: {
+          beginAtZero: true,
+          min: 0,
+          grid: { color: '#f1f5f9' },
+          ticks: {
+            font: { family: 'Cairo' },
+            callback: function(val) {
+              return val.toLocaleString('ar-EG');
+            }
+          }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'Cairo', weight: 'bold' } }
+        }
       }
     }
   });
