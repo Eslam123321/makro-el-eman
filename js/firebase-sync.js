@@ -347,7 +347,9 @@ const FirebaseSync = {
       if (typeof loadProductsTable === 'function') loadProductsTable();
       if (typeof loadInventoryTable === 'function') loadInventoryTable();
       if (typeof loadCustomersTable === 'function') loadCustomersTable();
+      if (typeof autoReconcileSuppliersLedger === 'function') autoReconcileSuppliersLedger();
       if (typeof loadSuppliersTable === 'function') loadSuppliersTable();
+      if (typeof loadSupplierInvoicesTable === 'function') loadSupplierInvoicesTable();
       if (typeof loadEmployeesTable === 'function') loadEmployeesTable();
       if (typeof loadDailyAttendanceTable === 'function') loadDailyAttendanceTable();
       if (typeof loadExpensesTable === 'function') loadExpensesTable();

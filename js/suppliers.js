@@ -6,6 +6,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   renderAppLayout('suppliers');
+  autoReconcileSuppliersLedger();
   renderPageSummaryCards('suppliers', 'suppliers-summary-cards');
   loadSuppliersTable();
   initSupplierInvoiceForm();
@@ -22,6 +23,100 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 });
+
+// Auto-Reconcile Suppliers Ledger (Batches, Payments, & Invoices)
+function autoReconcileSuppliersLedger() {
+  if (!App.db || !Array.isArray(App.db.suppliers)) return;
+  const suppliers = App.db.suppliers;
+  const invoices = Array.isArray(App.db.supplierInvoices) ? App.db.supplierInvoices : [];
+
+  let hadChanges = false;
+
+  suppliers.forEach(sup => {
+    if (!Array.isArray(sup.batches)) sup.batches = [];
+    if (!Array.isArray(sup.payments)) sup.payments = [];
+
+    const matchingInvoices = invoices.filter(inv =>
+      inv.supplierId === sup.id ||
+      (inv.supplierName && sup.name && inv.supplierName.trim().toLowerCase() === sup.name.trim().toLowerCase())
+    );
+
+    matchingInvoices.forEach(inv => {
+      if (inv.supplierId !== sup.id) {
+        inv.supplierId = sup.id;
+        hadChanges = true;
+      }
+
+      // Sync batches: ensure invoice is represented
+      let batch = sup.batches.find(b => b.invoiceId === inv.id || (inv.refNum && b.refNum === inv.refNum && b.totalCost === inv.grandTotal));
+      if (!batch) {
+        sup.batches.unshift({
+          id: `BATCH-${inv.id.replace(/[^0-9]/g, '').slice(-4) || '99'}`,
+          invoiceId: inv.id,
+          qtyTons: inv.tons || 0,
+          unitPrice: inv.unitPrice || 0,
+          totalCost: inv.grandTotal || 0,
+          refNum: inv.refNum || '-',
+          date: inv.date || App.getNowISO(),
+          flourType: inv.flourType || sup.flourType || 'دقيق خام'
+        });
+        hadChanges = true;
+      } else {
+        if (!batch.invoiceId) {
+          batch.invoiceId = inv.id;
+          hadChanges = true;
+        }
+        if (batch.totalCost !== inv.grandTotal || batch.qtyTons !== inv.tons || batch.unitPrice !== inv.unitPrice) {
+          batch.totalCost = inv.grandTotal;
+          batch.qtyTons = inv.tons;
+          batch.unitPrice = inv.unitPrice;
+          hadChanges = true;
+        }
+      }
+
+      // Sync payments: ensure invoice paidAmount is in sup.payments
+      const paid = inv.paidAmount || 0;
+      let payRecord = sup.payments.find(p => p.invoiceId === inv.id);
+      if (paid > 0) {
+        if (!payRecord) {
+          sup.payments.unshift({
+            id: `PAY-${inv.id.replace(/[^0-9]/g, '').slice(-4) || '99'}`,
+            invoiceId: inv.id,
+            amount: paid,
+            method: inv.paymentType === 'كاش' ? 'كاش (نقداً من خزينة المصنع)' : 'دفعة مع فاتورة التوريد',
+            date: inv.date || App.getNowISO(),
+            notes: `سداد مرتبط بفاتورة التوريد (${inv.id})`
+          });
+          hadChanges = true;
+        } else if (payRecord.amount !== paid) {
+          payRecord.amount = paid;
+          hadChanges = true;
+        }
+      } else if (paid === 0 && payRecord) {
+        sup.payments = sup.payments.filter(p => p.invoiceId !== inv.id);
+        hadChanges = true;
+      }
+    });
+
+    // Accurate calculation of remaining balance (Total supplies - Total payments)
+    const totSupplies = sup.batches.reduce((sum, b) => sum + (b.totalCost || 0), 0);
+    const totPayments = sup.payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const expectedBalance = Math.max(0, totSupplies - totPayments);
+
+    if (sup.totalBalance !== expectedBalance) {
+      sup.totalBalance = expectedBalance;
+      hadChanges = true;
+    }
+  });
+
+  if (hadChanges) {
+    App.save();
+  }
+}
+if (typeof App !== 'undefined') {
+  App.autoReconcileSuppliersLedger = autoReconcileSuppliersLedger;
+}
+
 
 function loadSuppliersTable(suppliersData = null) {
   const tbody = document.getElementById('suppliers-list-tbody');
@@ -249,6 +344,11 @@ function openSupplierStatementModal(supId) {
   const payments = sup.payments || [];
   const logoSrc = (typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png';
 
+  const totalSupplies = batches.reduce((sum, b) => sum + (b.totalCost || 0), 0);
+  const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const remainingBalance = Math.max(0, totalSupplies - totalPaid);
+  sup.totalBalance = remainingBalance;
+
   container.innerHTML = `
     <div id="printable-supplier-statement" class="p-6 bg-white rounded-xl border">
       <div class="flex justify-between items-center border-b pb-4 mb-4">
@@ -269,15 +369,15 @@ function openSupplierStatementModal(supId) {
       <div class="grid grid-cols-4 gap-3 mb-6">
         <div class="card bg-light p-3">
           <span class="text-xs text-muted block">إجمالي قيمة التوريدات</span>
-          <h3 class="text-primary-color mt-1">${App.formatCurrency(batches.reduce((sum, b) => sum + (b.totalCost || 0), 0))}</h3>
+          <h3 class="text-primary-color mt-1">${App.formatCurrency(totalSupplies)}</h3>
         </div>
         <div class="card bg-light p-3" style="background: #f0fdf4; border-color: #bbf7d0;">
           <span class="text-xs text-muted font-bold text-success block">إجمالي المسدد كاش ودفوعات</span>
-          <h3 class="text-success font-bold mt-1">${App.formatCurrency(payments.reduce((sum, p) => sum + (p.amount || 0), 0))}</h3>
+          <h3 class="text-success font-bold mt-1">${App.formatCurrency(totalPaid)}</h3>
         </div>
         <div class="card bg-light p-3" style="background: #fee2e2; border-color: #fca5a5;">
           <span class="text-xs text-muted font-bold text-danger block">صافي المستحقات المتبقية</span>
-          <h3 class="text-danger font-bold mt-1">${App.formatCurrency(sup.totalBalance || 0)}</h3>
+          <h3 class="text-danger font-bold mt-1">${App.formatCurrency(remainingBalance)}</h3>
         </div>
         <div class="card bg-light p-3">
           <span class="text-xs text-muted block">نوع وسعر الخامة المعتمد</span>
@@ -807,6 +907,8 @@ function submitSupplierInvoice() {
   document.getElementById('inv-sup-paid').value = '0';
   document.getElementById('inv-sup-ref').value = '';
   document.getElementById('inv-sup-notes').value = '';
+  const payTypeSelect = document.getElementById('inv-sup-payment-type');
+  if (payTypeSelect) payTypeSelect.value = 'آجل';
   calculateSupplierInvoiceTotals();
 
   App.showToast(`تم إصدار وتأكيد فاتورة توريد الدقيق (${invId}) بنجاح! 🌾📄`, 'success');
@@ -991,23 +1093,56 @@ function saveEditedSupplierInvoice() {
 
   const sup = (App.db.suppliers || []).find(s => s.id === (selectedSupId || inv.supplierId));
   if (sup) {
-    sup.totalBalance = Math.max(0, (sup.totalBalance || 0) + remDiff);
-    // Update batch record inside sup.batches
-    if (sup.batches) {
-      const b = sup.batches.find(x => x.invoiceId === inv.id);
-      if (b) {
-        b.qtyTons = tons;
-        b.unitPrice = price;
-        b.totalCost = grandTotal;
-        b.flourType = flourType;
-        b.refNum = refNum;
-      }
+    if (!sup.batches) sup.batches = [];
+    let b = sup.batches.find(x => x.invoiceId === inv.id);
+    if (b) {
+      b.qtyTons = tons;
+      b.unitPrice = price;
+      b.totalCost = grandTotal;
+      b.flourType = flourType;
+      b.refNum = refNum;
+    } else {
+      sup.batches.unshift({
+        id: `BATCH-${inv.id.replace(/[^0-9]/g, '').slice(-4) || Date.now().toString().slice(-4)}`,
+        invoiceId: inv.id,
+        qtyTons: tons,
+        unitPrice: price,
+        totalCost: grandTotal,
+        refNum: refNum || '-',
+        date: inv.date || App.getNowISO(),
+        flourType: flourType
+      });
     }
+
+    if (!sup.payments) sup.payments = [];
+    let p = sup.payments.find(x => x.invoiceId === inv.id);
+    if (paid > 0) {
+      if (p) {
+        p.amount = paid;
+        p.method = payType === 'كاش' ? 'كاش (نقداً من خزينة المصنع)' : 'دفعة مع فاتورة التوريد';
+      } else {
+        sup.payments.unshift({
+          id: `PAY-${inv.id.replace(/[^0-9]/g, '').slice(-4) || Date.now().toString().slice(-4)}`,
+          invoiceId: inv.id,
+          amount: paid,
+          method: payType === 'كاش' ? 'كاش (نقداً من خزينة المصنع)' : 'دفعة مع فاتورة التوريد',
+          date: inv.date || App.getNowISO(),
+          notes: `سداد مرتبط بفاتورة التوريد (${inv.id})`
+        });
+      }
+    } else if (p) {
+      sup.payments = sup.payments.filter(x => x.invoiceId !== inv.id);
+    }
+
+    // Recalculate supplier balance
+    const totSupplies = sup.batches.reduce((sum, item) => sum + (item.totalCost || 0), 0);
+    const totPayments = sup.payments.reduce((sum, item) => sum + (item.amount || 0), 0);
+    sup.totalBalance = Math.max(0, totSupplies - totPayments);
   }
 
   // Treasury adjustment if paid cash changed
   if (paidDiff !== 0) {
-    App.db.treasuryBalance = (App.db.treasuryBalance || 0) - paidDiff;
+    App.db.treasury = Math.max(0, (App.db.treasury || 0) - paidDiff);
   }
 
   inv.tons = tons;
@@ -1360,9 +1495,11 @@ function deleteSupplierInvoice(invId) {
       // Revert Supplier Balance
       const sup = (App.db.suppliers || []).find(s => s.id === inv.supplierId || s.name === inv.supplierName);
       if (sup) {
-        sup.totalBalance = Math.max(0, (sup.totalBalance || 0) - (inv.remainingAmount || 0));
         if (sup.batches) sup.batches = sup.batches.filter(b => b.invoiceId !== invId && b.refNum !== inv.refNum);
         if (sup.payments) sup.payments = sup.payments.filter(p => p.invoiceId !== invId);
+        const totSupplies = (sup.batches || []).reduce((sum, item) => sum + (item.totalCost || 0), 0);
+        const totPayments = (sup.payments || []).reduce((sum, item) => sum + (item.amount || 0), 0);
+        sup.totalBalance = Math.max(0, totSupplies - totPayments);
       }
 
       // Revert Treasury if cash was paid

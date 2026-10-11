@@ -75,6 +75,71 @@ class StorageManager {
       if (!Array.isArray(parsed.users)) parsed.users = [];
       if (!Array.isArray(parsed.supplierInvoices)) parsed.supplierInvoices = [];
       
+      // Auto-reconcile Suppliers Ledger (Batches, Payments & Balances)
+      if (Array.isArray(parsed.suppliers) && Array.isArray(parsed.supplierInvoices)) {
+        parsed.suppliers.forEach(sup => {
+          if (!Array.isArray(sup.batches)) sup.batches = [];
+          if (!Array.isArray(sup.payments)) sup.payments = [];
+
+          const matchingInvoices = parsed.supplierInvoices.filter(inv =>
+            inv.supplierId === sup.id ||
+            (inv.supplierName && sup.name && inv.supplierName.trim().toLowerCase() === sup.name.trim().toLowerCase())
+          );
+
+          matchingInvoices.forEach(inv => {
+            if (inv.supplierId !== sup.id) {
+              inv.supplierId = sup.id;
+            }
+
+            // Sync batches: ensure invoice is in sup.batches
+            let batch = sup.batches.find(b => b.invoiceId === inv.id || (inv.refNum && b.refNum === inv.refNum && b.totalCost === inv.grandTotal));
+            if (!batch) {
+              sup.batches.unshift({
+                id: `BATCH-${inv.id.replace(/[^0-9]/g, '').slice(-4) || '99'}`,
+                invoiceId: inv.id,
+                qtyTons: inv.tons || 0,
+                unitPrice: inv.unitPrice || 0,
+                totalCost: inv.grandTotal || 0,
+                refNum: inv.refNum || '-',
+                date: inv.date || new Date().toISOString(),
+                flourType: inv.flourType || sup.flourType || 'دقيق خام'
+              });
+            } else {
+              if (!batch.invoiceId) batch.invoiceId = inv.id;
+              batch.totalCost = inv.grandTotal || 0;
+              batch.qtyTons = inv.tons || 0;
+              batch.unitPrice = inv.unitPrice || 0;
+              if (inv.refNum) batch.refNum = inv.refNum;
+            }
+
+            // Sync payments: ensure invoice paidAmount is in sup.payments
+            const paid = inv.paidAmount || 0;
+            let payRecord = sup.payments.find(p => p.invoiceId === inv.id);
+            if (paid > 0) {
+              if (!payRecord) {
+                sup.payments.unshift({
+                  id: `PAY-${inv.id.replace(/[^0-9]/g, '').slice(-4) || '99'}`,
+                  invoiceId: inv.id,
+                  amount: paid,
+                  method: inv.paymentType === 'كاش' ? 'كاش (نقداً من خزينة المصنع)' : 'دفعة مع فاتورة التوريد',
+                  date: inv.date || new Date().toISOString(),
+                  notes: `سداد مرتبط بفاتورة التوريد (${inv.id})`
+                });
+              } else {
+                payRecord.amount = paid;
+              }
+            } else if (paid === 0 && payRecord) {
+              sup.payments = sup.payments.filter(p => p.invoiceId !== inv.id);
+            }
+          });
+
+          // Accurate calculation of remaining balance (Total supplies - Total payments)
+          const totSupplies = sup.batches.reduce((sum, b) => sum + (b.totalCost || 0), 0);
+          const totPayments = sup.payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+          sup.totalBalance = Math.max(0, totSupplies - totPayments);
+        });
+      }
+      
       // Auto-reconcile live Treasury cash liquidity (Active Net Cash Invoices - Operating Expenses)
       const totalCashInvoices = (parsed.invoices || []).reduce((sum, inv) => {
         if (inv.status === 'مرتجعة بالكامل') return sum;
@@ -1895,7 +1960,12 @@ function renderPageSummaryCards(page, containerId) {
   } else if (page === 'suppliers') {
     const suppliers = App.db.suppliers || [];
     const totalBalance = suppliers.reduce((a, b) => a + (b.totalBalance || 0), 0);
-    const totalPaidToSuppliers = suppliers.reduce((sum, s) => sum + (s.payments || []).reduce((pSum, p) => pSum + (p.amount || 0), 0), 0);
+    const totalPaidInvoices = (App.db.supplierInvoices || []).reduce((sum, inv) => sum + (inv.paidAmount || 0), 0);
+    const totalManualPayments = suppliers.reduce((sum, s) => {
+      const manualPays = (s.payments || []).filter(p => !p.invoiceId);
+      return sum + manualPays.reduce((pSum, p) => pSum + (p.amount || 0), 0);
+    }, 0);
+    const totalPaidToSuppliers = totalPaidInvoices + totalManualPayments;
     const totalInvoicesCount = (App.db.supplierInvoices || []).length;
     cardsHTML = `
       <div class="summary-card-item">
