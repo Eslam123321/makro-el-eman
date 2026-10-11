@@ -688,7 +688,6 @@ function renderFinancialAuditReportContent() {
 
   let totalSales = 0;
   let totalSacksSold = 0;
-  let totalCOGS = 0;
 
   invoices.forEach(inv => {
     if (inv.status === 'مرتجعة بالكامل') return;
@@ -696,14 +695,27 @@ function renderFinancialAuditReportContent() {
     (inv.items || []).forEach(item => {
       const activeQty = Math.max(0, (item.qty || 0) - (item.returnedQty || 0));
       totalSacksSold += activeQty;
-      const prd = products.find(p => p.id === item.id || p.name === item.name);
-      const cost = prd ? prd.costPrice : (item.price * 0.8);
-      totalCOGS += (cost * activeQty);
     });
   });
 
+  // Pasta tons: 1 ton = 10 sacks (sacks * 10)
+  const totalTonsPasta = totalSacksSold * 10;
   const totalExp = expenses.reduce((a, b) => a + (b.amount || 0), 0);
-  const netProfit = totalSales - totalCOGS - totalExp;
+
+  // Total paid to flour mills in the chosen period
+  const periodSupplierInvoicesPaid = (App.db.supplierInvoices || [])
+    .filter(inv => dateFilterFn(inv.date))
+    .reduce((sum, inv) => sum + (inv.paidAmount || 0), 0);
+
+  const periodManualSupplierPaid = (App.db.suppliers || []).reduce((sum, s) => {
+    const manualPays = (s.payments || []).filter(p => !p.invoiceId && dateFilterFn(p.date));
+    return sum + manualPays.reduce((pSum, p) => pSum + (p.amount || 0), 0);
+  }, 0);
+
+  const totalPaidToSuppliersInPeriod = periodSupplierInvoicesPaid + periodManualSupplierPaid;
+
+  // Actual net profit = Sales revenue - Expenses - Total paid to suppliers
+  const netProfit = totalSales - totalExp - totalPaidToSuppliersInPeriod;
   const logoSrc = (typeof APP_INVOICE_LOGO !== 'undefined' && APP_INVOICE_LOGO) ? APP_INVOICE_LOGO : 'image/logo.png';
 
   container.innerHTML = `
@@ -727,29 +739,41 @@ function renderFinancialAuditReportContent() {
       </div>
 
       <!-- Financial Metrics Grid -->
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 16px;">
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align: center;">
-          <span style="font-size: 0.75rem; color: #64748b; font-weight: bold; display: block;">الشكاير المباعة بالفترة</span>
-          <strong style="font-size: 1.15rem; color: #059669; display: block; margin-top: 2px;">${totalSacksSold} شكارة</strong>
-          <span style="font-size: 0.7rem; color: #94a3b8;">(${invoices.length} فاتورة مسجلة)</span>
+          <span style="font-size: 0.72rem; color: #64748b; font-weight: bold; display: block;">الشكاير المباعة</span>
+          <strong style="font-size: 1.05rem; color: #059669; display: block; margin-top: 2px;">${totalSacksSold.toLocaleString('ar-EG')} شكارة</strong>
+          <span style="font-size: 0.68rem; color: #94a3b8;">(${invoices.length} فاتورة مسجلة)</span>
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; text-align: center;">
+          <span style="font-size: 0.72rem; color: #15803d; font-weight: bold; display: block;">أطنان المكرونة 🌾</span>
+          <strong style="font-size: 1.05rem; color: #16a34a; display: block; margin-top: 2px;">${totalTonsPasta.toLocaleString('ar-EG')} طن</strong>
+          <span style="font-size: 0.68rem; color: #15803d; font-weight: 600;">(الشكاير × 10)</span>
         </div>
 
         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px; text-align: center;">
-          <span style="font-size: 0.75rem; color: #1e40af; font-weight: bold; display: block;">إيرادات المبيعات</span>
-          <strong style="font-size: 1.15rem; color: #1d4ed8; display: block; margin-top: 2px;">${App.formatCurrency(totalSales)}</strong>
-          <span style="font-size: 0.7rem; color: #1e40af;">مبيعات الفترة</span>
+          <span style="font-size: 0.72rem; color: #1e40af; font-weight: bold; display: block;">إيرادات المبيعات</span>
+          <strong style="font-size: 1.05rem; color: #1d4ed8; display: block; margin-top: 2px;">${App.formatCurrency(totalSales)}</strong>
+          <span style="font-size: 0.68rem; color: #1e40af;">مبيعات الفترة</span>
         </div>
 
-        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px; text-align: center;">
-          <span style="font-size: 0.75rem; color: #92400e; font-weight: bold; display: block;">التكلفة التشغيلية (COGS)</span>
-          <strong style="font-size: 1.15rem; color: #b45309; display: block; margin-top: 2px;">${App.formatCurrency(totalCOGS)}</strong>
-          <span style="font-size: 0.7rem; color: #92400e;">تكلفة البضاعة المباعة</span>
+        <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 10px; text-align: center;">
+          <span style="font-size: 0.72rem; color: #be123c; font-weight: bold; display: block;">إجمالي المصروفات 💸</span>
+          <strong style="font-size: 1.05rem; color: #e11d48; display: block; margin-top: 2px;">${App.formatCurrency(totalExp)}</strong>
+          <span style="font-size: 0.68rem; color: #be123c;">المصروفات الشهرية</span>
+        </div>
+
+        <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 10px; text-align: center;">
+          <span style="font-size: 0.72rem; color: #854d0e; font-weight: bold; display: block;">المسدد للمطاحن 💰</span>
+          <strong style="font-size: 1.05rem; color: #ca8a04; display: block; margin-top: 2px;">${App.formatCurrency(totalPaidToSuppliersInPeriod)}</strong>
+          <span style="font-size: 0.68rem; color: #854d0e;">مسدد بالفترة</span>
         </div>
 
         <div style="background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 8px; padding: 10px; text-align: center;">
-          <span style="font-size: 0.75rem; color: #065f46; font-weight: bold; display: block;">صافي الربح الفعلي</span>
-          <strong style="font-size: 1.25rem; color: #047857; display: block; margin-top: 2px;">${App.formatCurrency(netProfit)}</strong>
-          <span style="font-size: 0.7rem; color: #065f46; font-weight: bold;">بعد خصم المصروفات</span>
+          <span style="font-size: 0.72rem; color: #065f46; font-weight: bold; display: block;">صافي الربح الفعلي 🏆</span>
+          <strong style="font-size: 1.15rem; color: ${netProfit >= 0 ? '#047857' : '#dc2626'}; display: block; margin-top: 2px;">${App.formatCurrency(netProfit)}</strong>
+          <span style="font-size: 0.68rem; color: #065f46; font-weight: bold;">(المبيعات - المصروفات - المسدد)</span>
         </div>
       </div>
 

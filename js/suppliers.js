@@ -346,6 +346,7 @@ function openSupplierStatementModal(supId) {
 
   const totalSupplies = batches.reduce((sum, b) => sum + (b.totalCost || 0), 0);
   const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const totalTons = batches.reduce((sum, b) => sum + (b.qtyTons || 0), 0);
   const remainingBalance = Math.max(0, totalSupplies - totalPaid);
   sup.totalBalance = remainingBalance;
 
@@ -366,7 +367,11 @@ function openSupplierStatementModal(supId) {
         </div>
       </div>
 
-      <div class="grid grid-cols-4 gap-3 mb-6">
+      <div class="grid gap-3 mb-6" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));">
+        <div class="card bg-light p-3">
+          <span class="text-xs text-muted block">إجمالي الكمية بالطن 🌾</span>
+          <h3 class="text-primary-color mt-1" style="color: #0284c7;">${totalTons.toLocaleString('ar-EG')} طن</h3>
+        </div>
         <div class="card bg-light p-3">
           <span class="text-xs text-muted block">إجمالي قيمة التوريدات</span>
           <h3 class="text-primary-color mt-1">${App.formatCurrency(totalSupplies)}</h3>

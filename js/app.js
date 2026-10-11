@@ -1967,10 +1967,23 @@ function renderPageSummaryCards(page, containerId) {
     }, 0);
     const totalPaidToSuppliers = totalPaidInvoices + totalManualPayments;
     const totalInvoicesCount = (App.db.supplierInvoices || []).length;
+
+    // Total tons supplied across all flour mills
+    const totalTonsFromInvoices = (App.db.supplierInvoices || []).reduce((sum, inv) => sum + (inv.tons || 0), 0);
+    const totalTonsFromStandaloneBatches = suppliers.reduce((sum, s) => {
+      const manualBatches = (s.batches || []).filter(b => !b.invoiceId);
+      return sum + manualBatches.reduce((bSum, b) => bSum + (b.qtyTons || 0), 0);
+    }, 0);
+    const totalTonsSupplied = totalTonsFromInvoices + totalTonsFromStandaloneBatches;
+
     cardsHTML = `
       <div class="summary-card-item">
         <div class="summary-card-icon icon-emerald"><i class="fa-solid fa-truck-field"></i></div>
         <div><span class="text-xs text-muted">إجمالي المطاحن والموردين</span><h4>${suppliers.length} مطحن</h4></div>
+      </div>
+      <div class="summary-card-item">
+        <div class="summary-card-icon icon-cyan" style="background: rgba(6, 182, 212, 0.1); color: #0891b2;"><i class="fa-solid fa-weight-hanging"></i></div>
+        <div><span class="text-xs text-muted">إجمالي الكمية الموردة (بالطن) 🌾</span><h4 class="text-primary-color">${totalTonsSupplied.toLocaleString('ar-EG')} طن</h4></div>
       </div>
       <div class="summary-card-item">
         <div class="summary-card-icon icon-blue"><i class="fa-solid fa-hand-holding-dollar"></i></div>
