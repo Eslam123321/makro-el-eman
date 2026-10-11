@@ -85,8 +85,23 @@ function loadDashboardData() {
   
   const currentSales = filteredInvoices.reduce((a, b) => a + getNetSales(b), 0);
   const currentExp = filteredExpenses.reduce((a, b) => a + b.amount, 0);
-  const currentCOGS = getCOGS(filteredInvoices);
-  const currentNetProfit = currentSales - currentCOGS - currentExp;
+
+  const dateFilterFn = (dStr) => {
+    if (!dStr) return false;
+    if (currentDashboardFilter === 'today') return dStr.startsWith(todayStr);
+    if (currentDashboardFilter === 'month') return dStr.startsWith(monthStr);
+    if (currentDashboardFilter === 'year') return dStr.startsWith(yearStr);
+    return true;
+  };
+
+  const currentPaidToSuppliers = (App.db.supplierInvoices || []).filter(i => dateFilterFn(i.date)).reduce((sum, i) => sum + (i.paidAmount || 0), 0)
+    + (App.db.suppliers || []).reduce((sum, s) => {
+      const pays = (s.payments || []).filter(p => !p.invoiceId && dateFilterFn(p.date));
+      return sum + pays.reduce((pSum, p) => pSum + (p.amount || 0), 0);
+    }, 0);
+
+  // Net actual profit = Sales - Expenses - Paid to Suppliers
+  const currentNetProfit = currentSales - currentExp - currentPaidToSuppliers;
 
   // Complete Financial Balance (Liquidity, Customer Debts, Supplier Dues)
   const totalDebts = (customers || []).reduce((a, b) => a + (b.totalDebt || 0), 0);
@@ -141,7 +156,7 @@ function loadDashboardData() {
   }
 
 
-  renderDashboardBarChart(currentSales, currentCOGS + currentExp, currentNetProfit);
+  renderDashboardBarChart(currentSales, currentExp, currentPaidToSuppliers, currentNetProfit);
   renderSalesDonutChart(filteredInvoices, products);
   renderProductProfitabilityTable('product-profit-tbody', filteredInvoices);
   loadRecentInvoicesTable(invoices);
@@ -296,24 +311,24 @@ function loadRecentInvoicesTable(invList = null) {
   }
 }
 
-function renderDashboardBarChart(sales, expenses, profit) {
+function renderDashboardBarChart(sales, expenses, paidToSuppliers, profit) {
   const ctx = document.getElementById('financeChart');
   if (!ctx) return;
 
   if (window.myBarChart) window.myBarChart.destroy();
 
   const isLoss = profit < 0;
-  const profitLabel = isLoss ? 'صافي الخسائر (عجز مصاريف)' : 'صافي الأرباح الفعلية';
+  const profitLabel = isLoss ? 'صافي الخسائر (عجز)' : 'صافي الأرباح الفعلية';
   const profitColor = isLoss ? '#dc2626' : '#2563eb';
 
   window.myBarChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['إجمالي المبيعات', 'التكاليف والمصروفات', profitLabel],
+      labels: ['إجمالي المبيعات', 'المصروفات والتكاليف', 'إجمالي المسدد للمطاحن', profitLabel],
       datasets: [{
         label: 'المبلغ بالجنيه المصري (EGP)',
-        data: [sales, expenses, profit],
-        backgroundColor: ['#059669', '#e11d48', profitColor],
+        data: [sales, expenses, paidToSuppliers, profit],
+        backgroundColor: ['#059669', '#e11d48', '#d97706', profitColor],
         borderRadius: 10,
         borderSkipped: false
       }]
